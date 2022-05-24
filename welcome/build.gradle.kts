@@ -1,5 +1,5 @@
 /*
- * Main build file for the "platform" project.
+ * Main build file for the "welcome" example.
  */
 
 group = "welcome"

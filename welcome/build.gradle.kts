@@ -29,8 +29,8 @@ tasks.register("upload") {
     dependsOn(build)
 
     doLast {
-        var devHome  = file("${projectDir}/../..")
-        val stageDir = "$devHome/staging/platform"
+        val userHome = System.getProperty("user.home")
+        val stageDir = "$userHome/xqiz.it/platform"
         val account  = "acme"
         val libDir   = "$stageDir/$account/lib"
 

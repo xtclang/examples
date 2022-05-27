@@ -3,7 +3,7 @@
  */
 
 val webapp = project(":webapp");
-val xdkExe = "$projectDir/xdk/bin"
+val xdkBin = "$projectDir/xdk/bin"
 
 tasks.register("clean") {
     group       = "Build"
@@ -38,7 +38,7 @@ val compileWelcome = tasks.register("compileWelcome") {
 
         if (src > dest || rsrc > dest) {
             project.exec {
-                commandLine("$xdkExe/xtc", "-verbose", "-rebuild",
+                commandLine("$xdkBin/xtc", "-verbose", "-rebuild",
                             "-o", "$libDir",
                             "-L", "$libDir",
                             "$srcModule")
@@ -62,7 +62,7 @@ val compileWelcomeDB = tasks.register("compileWelcomeDB") {
 
     if (src > dest) {
         project.exec {
-            commandLine("$xdkExe/xtc", "-verbose",
+            commandLine("$xdkBin/xtc", "-verbose",
                         "-o", "$libDir",
                         "$srcModule")
         }

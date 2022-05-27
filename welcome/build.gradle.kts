@@ -24,7 +24,7 @@ tasks.register<Copy>("updateXdk") {
 
     var xvmHome = System.getProperty("xvm.home")
     if (xvmHome == null || xvmHome == "") {
-        xvmHome = "../../../xvm"
+        xvmHome = "../../xvm"
     }
 
     val xdkExt = "$xvmHome/xdk/build/xdk"

@@ -9,7 +9,7 @@ tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
 
-    delete("$buildDir")
+    delete(buildDir)
 }
 
 tasks.register("build") {

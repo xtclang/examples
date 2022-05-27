@@ -8,7 +8,7 @@ tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
 
-    delete("$buildDir")
+    delete(buildDir)
 }
 
 tasks.register("build") {
@@ -40,7 +40,7 @@ val copyContent = tasks.register("copyContent") {
         println("Copying static content from $buildDir to $webContent")
 
         copy {
-            from("$buildDir")
+            from(buildDir)
             into(webContent)
         }
     }

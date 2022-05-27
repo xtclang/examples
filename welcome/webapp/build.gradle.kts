@@ -31,7 +31,10 @@ tasks.register("build") {
 }
 
 val copyContent = tasks.register("copyContent") {
-    dependsOn(npmBuild)
+    project.exec {
+        workingDir(projectDir)
+        commandLine("npm", "run", "build")
+    }
 
     doLast {
         println("Copying static content from $buildDir to $webContent")
@@ -40,12 +43,5 @@ val copyContent = tasks.register("copyContent") {
             from("$buildDir")
             into(webContent)
         }
-    }
-}
-
-val npmBuild = tasks.register("npmBuild") {
-    project.exec {
-        workingDir(projectDir)
-        commandLine("npm", "run", "build")
     }
 }

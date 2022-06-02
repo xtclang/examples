@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><body>
+  <p id="demo">Run the bank stress test.</p>
+
+  <button id="run"    onclick="run()">Start the test</button>
+  <button id="report" onclick="report()">Report</button>
+  <button id="reset"  onclick="reset()">Reset</button>
+
+  <pre id="log"></pre>
+
+  <script>
+    function run()
+      {
+      fetch("run");
+      }
+
+    function report()
+      {
+      let log = document.getElementById("log");
+      fetch("report")
+          .then(response => response.text(),
+                err      => log.innerHTML = err.message)
+          .then(text     => log.innerHTML = text);
+      }
+
+    function reset()
+      {
+      document.getElementById("log").innerHTML = "...";
+      }
+  </script>
+
+</body></html>

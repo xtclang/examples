@@ -1,12 +1,5 @@
 /**
  * This is a test app for the Bank demo.
- *
- *  To prepare the test, follow steps 1-5 outlined in welcome.x.
- *
- *  To run the test:
- *      curl -i -w '\n' -X GET http://[domain]:8080/run
- *
- * See [Bank] database module.
  */
 @web.WebModule
 module BankStressTest

@@ -6,7 +6,6 @@ val appModuleName = "welcome"
 val dbModuleName  = "welcomeDB"
 
 val webapp = project(":webapp");
-val xdkBin = "$projectDir/xdk/bin"
 
 tasks.register("clean") {
     group       = "Build"
@@ -41,7 +40,7 @@ val compileAppModule = tasks.register("compileAppModule") {
 
         if (src > dest || rsrc > dest) {
             project.exec {
-                commandLine("$xdkBin/xtc", "-verbose", "-rebuild",
+                commandLine("xtc", "-verbose", "-rebuild",
                             "-o", "$libDir",
                             "-L", "$libDir",
                             "$srcModule")
@@ -65,7 +64,7 @@ val compileDbModule = tasks.register("compileDbModule") {
 
     if (src > dest) {
         project.exec {
-            commandLine("$xdkBin/xtc", "-verbose",
+            commandLine("xtc", "-verbose",
                         "-o", "$libDir",
                         "$srcModule")
         }

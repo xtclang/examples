@@ -46,3 +46,8 @@ As a temporary process, do the following:
        cd myApp/webapp 
        npm install
        npm start
+
+3. "Upload" the resulting .xtc file using the gradle command (from within the myApp directory):
+       
+       cd myApp
+       gradle upload

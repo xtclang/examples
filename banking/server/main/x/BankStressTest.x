@@ -91,11 +91,11 @@ module BankStressTest
         @Concurrent
         void doBusiness(Duration duration)
             {
-            Int      tryCount = 0;
-            Int      txCount  = 0;
-            DateTime start    = clock.now;
-            DateTime close    = start + duration;
-            Random   rnd      = new ecstasy.numbers.PseudoRandom(branchId);
+            Int    tryCount = 0;
+            Int    txCount  = 0;
+            Time   start    = clock.now;
+            Time   close    = start + duration;
+            Random rnd      = new ecstasy.numbers.PseudoRandom(branchId);
 
             status = Open;
             bank.log.add($"Branch {branchId} opened");
@@ -105,7 +105,7 @@ module BankStressTest
                 {
                 if (++tryCount % 100 == 0)
                     {
-                    DateTime now = clock.now;
+                    Time now = clock.now;
                     if (now < close)
                         {
                         bank.log.add(

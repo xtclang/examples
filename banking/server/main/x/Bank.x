@@ -76,21 +76,20 @@ module Bank
 
             if (amount < 0)
                 {
-// TODO GG: fix!!!
-//                assert accounts.require(id, e -> e.exists && e.value.balance + amount >= 0)
-//                    as $"not enough funds to withdraw {format(-amount)} from account {id}";
+                assert accounts.require(id, e -> e.exists && e.value.balance + amount >= 0)
+                    as $"not enough funds to withdraw {format(-amount)} from account {id}";
                 }
 
-//            accounts.defer(id, e ->
-//                {
-//                if (e.exists && e.value.balance + amount >= 0)
-//                    {
-//                    e.value = e.value.changeBalance(amount);
-//                    return True;
-//                    }
-//                return False;
-//                });
-//            holding.adjustBy(amount);
+            accounts.defer(id, e ->
+                {
+                if (e.exists && e.value.balance + amount >= 0)
+                    {
+                    e.value = e.value.changeBalance(amount);
+                    return True;
+                    }
+                return False;
+                });
+            holding.adjustBy(amount);
             }
 
         void transfer(Int idFrom, Int idTo, Int amount)

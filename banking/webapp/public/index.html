@@ -11,7 +11,11 @@
   <script>
     function run()
       {
-      fetch("run");
+      let log = document.getElementById("log");
+      fetch("run")
+          .then(response => response.text(),
+                err      => log.innerHTML = err.message)
+          .then(text     => log.innerHTML = text);
       }
 
     function report()

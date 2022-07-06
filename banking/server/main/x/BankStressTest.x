@@ -26,6 +26,14 @@ module BankStressTest
         @web.Get("/run")
         String run()
             {
+            for (Branch branch : branches)
+                {
+                if (branch.status == Open)
+                    {
+                    return "Bank is already open";
+                    }
+                }
+
             branches = new Branch[BRANCHES](i -> new Branch(i.toUInt64()));
             for (Branch branch : branches)
                 {

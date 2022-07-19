@@ -2,8 +2,10 @@
  * Build the "server" modules.
  */
 
-val appModuleName = "welcome"
-val dbModuleName  = "welcomeDB"
+val appModuleName  = "welcome"
+val dbModuleName   = "welcomeDB"
+val testModuleName = "welcomeTest"
+
 
 val webapp = project(":webapp");
 
@@ -72,4 +74,45 @@ val compileDbModule = tasks.register("compileDbModule") {
     else {
         println("$libDir/$dbModuleName.xtc is up to date")
         }
+}
+
+val compileTest = tasks.register("compileTest") {
+    group        = "Build"
+    description  = "Compile $testModuleName module"
+
+    dependsOn(compileDbModule)
+
+    doLast {
+        val srcModule = "$projectDir/main/x/$testModuleName.x"
+        val libDir    = "$buildDir"
+
+        val src  = file("$srcModule").lastModified()
+        val dest = file("$libDir/$testModuleName.xtc").lastModified()
+
+        if (src > dest) {
+            project.exec {
+                commandLine("xtc",
+                            "-o", "$libDir",
+                            "-L", "$libDir",
+                            "$srcModule")
+            }
+        }
+    }
+}
+
+tasks.register("runTest") {
+    group       = "Run"
+    description = "Run the standalone test"
+
+    dependsOn(compileTest)
+
+    doLast {
+        val libDir = "$buildDir"
+
+        project.exec {
+            commandLine("xec",
+                        "-L", "$libDir",
+                        "$libDir/$testModuleName.xtc")
+        }
+    }
 }

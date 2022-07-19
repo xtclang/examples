@@ -1,8 +1,8 @@
 # production
-build
-
-# xdk
-xdk
+build/
 
 # web-resources
 main/resources/webapp
+
+# data directory
+data/

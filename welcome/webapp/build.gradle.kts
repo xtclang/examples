@@ -9,6 +9,7 @@ tasks.register("clean") {
     description = "Delete previous build results"
 
     delete(buildDir)
+    delete(webContent)
 }
 
 tasks.register("build") {

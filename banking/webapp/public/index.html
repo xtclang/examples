@@ -12,7 +12,7 @@
     function run()
       {
       let log = document.getElementById("log");
-      fetch("run")
+      fetch("stress/run")
           .then(response => response.text(),
                 err      => log.innerHTML = err.message)
           .then(text     => log.innerHTML = text);
@@ -21,7 +21,7 @@
     function report()
       {
       let log = document.getElementById("log");
-      fetch("report")
+      fetch("stress/report")
           .then(response => response.text(),
                 err      => log.innerHTML = err.message)
           .then(text     => log.innerHTML = text);

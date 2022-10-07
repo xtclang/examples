@@ -20,7 +20,7 @@ class App extends Component {
     componentDidMount() {
       this.interval = setInterval(() => this.tick(), 1000);
       fetch('/welcome')
-        .then(response => response.text())
+        .then(response => response.json())
         .then(data => this.setState(state => ({count: data})));
     }
 

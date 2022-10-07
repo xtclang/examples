@@ -1,7 +1,7 @@
 /**
  * This is a test app for the Bank demo.
  */
-@web.WebModule
+@web.WebApp
 module BankStressTest
     {
     package web import web.xtclang.org;
@@ -18,12 +18,13 @@ module BankStressTest
     static Int      BRANCHES      = 24;
     static Int      MAX_ACCOUNTS  = 100;
 
-    @web.WebService
+    @web.WebService("/stress")
     service Test
         {
         Branch[] branches = [];
 
-        @web.Get("/run")
+        @web.Produces(Text)
+        @web.Get("run")
         String run()
             {
             for (Branch branch : branches)
@@ -61,7 +62,8 @@ module BankStressTest
             return "Bank is open";
             }
 
-        @web.Get("/report")
+        @web.Produces(Text)
+        @web.Get("report")
         String report()
             {
             StringBuffer buf = new StringBuffer();
@@ -81,7 +83,7 @@ module BankStressTest
             }
         }
 
-    @web.StaticContent(/webapp, ALL_TYPE)
+    @web.StaticContent("/", /webapp)
     service Content
         {
         }

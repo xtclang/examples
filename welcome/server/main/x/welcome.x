@@ -1,7 +1,7 @@
 /**
  * This is a simple Ecstasy-based web application.
  */
-@web.WebModule
+@web.WebApp
 module welcome
     {
     package web import web.xtclang.org;
@@ -19,7 +19,7 @@ module welcome
             }
         }
 
-    @web.StaticContent(/webapp, ALL_TYPE)
+    @web.StaticContent("/", /webapp)
     service Content
         {
         }

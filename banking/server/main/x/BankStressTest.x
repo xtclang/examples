@@ -83,7 +83,7 @@ module BankStressTest
             }
         }
 
-    @web.StaticContent("/", /webapp)
+    @web.StaticContent("/", Directory:/webapp)
     service Content
         {
         }

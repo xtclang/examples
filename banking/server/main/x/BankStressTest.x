@@ -1,7 +1,7 @@
 /**
  * This is a test app for the Bank demo.
  */
-@web.WebApp
+@WebApp
 module BankStressTest
     {
     package web import web.xtclang.org;
@@ -14,17 +14,19 @@ module BankStressTest
     import Bank.oodb.DBClosed;
     import Bank.oodb.CommitFailed;
 
+    import web.*;
+
     static Duration TEST_DURATION = Duration:30s;
     static Int      BRANCHES      = 24;
     static Int      MAX_ACCOUNTS  = 100;
 
-    @web.WebService("/stress")
+    @WebService("/stress")
     service Test
         {
         Branch[] branches = [];
 
-        @web.Produces(Text)
-        @web.Get("run")
+        @Get("run")
+        @Produces(Text)
         String run()
             {
             for (Branch branch : branches)
@@ -62,8 +64,8 @@ module BankStressTest
             return "Bank is open";
             }
 
-        @web.Produces(Text)
-        @web.Get("report")
+        @Get("report")
+        @Produces(Text)
         String report()
             {
             StringBuffer buf = new StringBuffer();
@@ -83,7 +85,7 @@ module BankStressTest
             }
         }
 
-    @web.StaticContent("/", Directory:/webapp)
+    @StaticContent("/", /webapp)
     service Content
         {
         }

@@ -1,5 +1,8 @@
 # production
-build
+build/
 
 # gradle
-.gradle
+.gradle/
+
+# Intellij
+.idea/

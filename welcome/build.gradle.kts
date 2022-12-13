@@ -33,7 +33,7 @@ tasks.register("upload") {
 
     doLast {
         val userHome = System.getProperty("user.home")
-        val stageDir = "$userHome/xqiz.it/platform"
+        val stageDir = "$userHome/xqiz.it/users"
         val account  = "acme"
         val libDir   = "$stageDir/$account/lib"
 

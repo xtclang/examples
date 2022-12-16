@@ -2,10 +2,10 @@
  * This is a simple Ecstasy-based web application.
  */
 @WebApp
-module welcome
+module welcome.examples.org
     {
     package web import web.xtclang.org;
-    package db  import welcomeDB;
+    package db  import welcomeDB.examples.org;
 
     import web.*;
 

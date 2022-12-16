@@ -1,5 +1,5 @@
 @oodb.Database
-module welcomeDB
+module welcomeDB.examples.org
     {
     package oodb import oodb.xtclang.org;
 

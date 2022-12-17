@@ -41,6 +41,8 @@ tasks.register("upload") {
         copy {
             from("${serverDir}/build")
             into(libDir)
+
+            rename("(.+).xtc", "$1.examples.org.xtc")
         }
     }
 }

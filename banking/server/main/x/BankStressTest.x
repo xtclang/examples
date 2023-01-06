@@ -90,7 +90,7 @@ module BankStressTest
         {
         }
 
-    service Branch(UInt branchId)
+    service Branch(UInt64 branchId)
         {
         @Inject Connection bank;
         @Inject Clock      clock;

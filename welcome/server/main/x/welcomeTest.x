@@ -19,7 +19,7 @@ module welcomeTest
         using (WelcomeSchema schema =
                 jsondb.createConnection("welcomeDB", dataDir, buildDir).as(WelcomeSchema))
             {
-            console.println($"Welcome! You are guest #{schema.count.next()}");
+            console.print($"Welcome! You are guest #{schema.count.next()}");
             }
         }
     }

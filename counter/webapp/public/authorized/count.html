@@ -8,12 +8,12 @@
       {
       let user = document.getElementById("user");
 
-      fetch("api/user")
+      fetch("/api/user")
           .then(response => response.text(),
                 err      => user.innerHTML = err.message)
           .then(text     => user.innerHTML = text == '' ? 'anonymous' : text);
 
-      fetch("api/count")
+      fetch("/api/count")
           .then(response => response.json(),
                 err      => count.innerHTML = err.message)
           .then(cnt      => count.innerHTML =

@@ -33,7 +33,10 @@ module count.examples.org
         @Get("count")
         Int count(Session session)
             {
-            return schema.counters.getOrDefault(getUser(session), 0);
+            String user  = getUser(session);
+            Int    count = schema.counters.getOrDefault(user, 0);
+            schema.counters.put(user, ++count);
+            return count;
             }
         }
 

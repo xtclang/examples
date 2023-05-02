@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><body>
+  <h1>Hello: <span id="user"></span></h1>
+  <h3>This is your <span id="count"></span> visit to this site.</h3>
+
+  <script>
+    window.onload = (event) =>
+      {
+      let user = document.getElementById("user");
+
+      fetch("api/user")
+          .then(response => response.text(),
+                err      => user.innerHTML = err.message)
+          .then(text     => user.innerHTML = text == '' ? 'anonymous' : text);
+
+      fetch("api/count")
+          .then(response => response.json(),
+                err      => count.innerHTML = err.message)
+          .then(cnt      => count.innerHTML =
+                cnt == 1 ? 'first'  :
+                cnt == 2 ? 'second' :
+                cnt == 3 ? 'third'  :
+                           '' + cnt + '-th');
+      };
+  </script>
+</body></html>

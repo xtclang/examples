@@ -10,14 +10,6 @@ val webapp = project(":webapp");
 
 val serverDir = "${server.projectDir}"
 
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-
-    dependsOn(server.tasks["clean"])
-    dependsOn(webapp.tasks["clean"])
-}
-
 val build = tasks.register("build") {
     group       = "Build"
     description = "Build all"

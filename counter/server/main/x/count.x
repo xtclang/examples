@@ -1,11 +1,12 @@
 /**
- * This is a simple Ecstasy-based web application.
+ * This is a simple Ecstasy-based web application that utilizes "webauth" module.
  */
 @WebApp
 module count.examples.org
     {
-    package db  import countDB.examples.org;
-    package web import web.xtclang.org;
+    package auth import webauth.xtclang.org;
+    package db   import countDB.examples.org;
+    package web  import web.xtclang.org;
 
     import web.*;
     import web.security.*;
@@ -42,6 +43,6 @@ module count.examples.org
 
     Authenticator createAuthenticator()
         {
-        return new DigestAuthenticator(new FixedRealm("count", ["acme"="password"]));
+        return new DigestAuthenticator(new auth.DBRealm("count"));
         }
     }

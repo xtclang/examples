@@ -1,7 +1,7 @@
 @oodb.Database
 module countDB.examples.org
     {
-    package auth import webauth.xtclang.org inject(auth.Configuration startingCfg) using AuthInjector;
+    package auth import webauth.xtclang.org;
     package oodb import oodb.xtclang.org;
 
     import ecstasy.mgmt.ResourceProvider;
@@ -12,18 +12,5 @@ module countDB.examples.org
         @RO oodb.DBMap<String, Int> counters;
 
         @RO auth.AuthSchema authSchema;
-        }
-
-    static service AuthInjector
-            implements ResourceProvider
-        {
-        @Override
-        ResourceProvider.Supplier getResource(Type type, String name)
-            {
-            return type == auth.Configuration
-                    ? new auth.Configuration(["admin"="password"], configured=False)
-                    : throw new Exception($|Unsupported resource: type="{type}" name="{name}"
-                                         );
-            }
         }
     }

@@ -21,7 +21,7 @@ module welcomeTest
         Directory buildDir = curDir.dirFor("build").ensure();
 
         using (WelcomeSchema schema =
-                jsondb.createConnection("welcomeDB.examples.org", dataDir, buildDir).as(WelcomeSchema))
+                jsondb.createConnection(db.qualifiedName, dataDir, buildDir).as(WelcomeSchema))
             {
             console.print($"Welcome! You are guest #{schema.count.next()}");
             }

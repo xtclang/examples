@@ -1,10 +1,14 @@
 /**
- * This is a simple console-based db test.
+ * This is a simple console-based db test. To run it, use the following commands:
+ *
+ *  cd welcome
+ *  xtc -o server/build -L server/build server/main/x/welcomeTest.x
+ *  xec -L server/build server/main/x/welcomeTest
  */
 module welcomeTest
     {
     package jsondb import jsondb.xtclang.org;
-    package db import welcomeDB;
+    package db import welcomeDB.examples.org;
 
     import db.WelcomeSchema;
 
@@ -17,7 +21,7 @@ module welcomeTest
         Directory buildDir = curDir.dirFor("build").ensure();
 
         using (WelcomeSchema schema =
-                jsondb.createConnection("welcomeDB", dataDir, buildDir).as(WelcomeSchema))
+                jsondb.createConnection("welcomeDB.examples.org", dataDir, buildDir).as(WelcomeSchema))
             {
             console.print($"Welcome! You are guest #{schema.count.next()}");
             }

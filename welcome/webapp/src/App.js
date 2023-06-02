@@ -7,7 +7,7 @@ class App extends Component {
       super();
       this.state = {seconds: 0, count: 0};
       this.handleClick = this.handleClick.bind(this);
-      }
+    }
 
     tick() {
       this.setState(state => ({seconds: state.seconds + 1}));
@@ -15,7 +15,7 @@ class App extends Component {
 
     handleClick() {
       this.setState(state => ({seconds: 0}));
-      }
+    }
 
     componentDidMount() {
       this.interval = setInterval(() => this.tick(), 1000);
@@ -38,7 +38,7 @@ class App extends Component {
           Timer:{this.state.seconds}
         </div>
         );
-      }
-  }
+    }
+}
 
 export default App

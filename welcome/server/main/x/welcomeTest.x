@@ -5,15 +5,13 @@
  *  xtc -o server/build -L server/build server/main/x/welcomeTest.x
  *  xec -L server/build server/main/x/welcomeTest
  */
-module welcomeTest
-    {
+module welcomeTest {
     package jsondb import jsondb.xtclang.org;
     package db import welcomeDB.examples.org;
 
     import db.WelcomeSchema;
 
-    void run()
-        {
+    void run() {
         @Inject Console console;
         @Inject Directory curDir;
 
@@ -21,9 +19,8 @@ module welcomeTest
         Directory buildDir = curDir.dirFor("build").ensure();
 
         using (WelcomeSchema schema =
-                jsondb.createConnection(db.qualifiedName, dataDir, buildDir).as(WelcomeSchema))
-            {
+                jsondb.createConnection(db.qualifiedName, dataDir, buildDir).as(WelcomeSchema)) {
             console.print($"Welcome! You are guest #{schema.count.next()}");
-            }
         }
     }
+}

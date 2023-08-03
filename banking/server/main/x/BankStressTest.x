@@ -63,7 +63,7 @@ module BankStressTest {
                 if (branch.status == Open) {
                     buf.append($"Branch {branch.branchId} performed {branch.totalTx} transactions");
                 } else {
-                    buf.append($"Branch {branch.branchId} is closed");
+                    buf.append($"Branch {branch.branchId} is closed after {branch.totalTx} transactions");
                 }
                 buf.append('\n');
             }
@@ -173,7 +173,7 @@ module BankStressTest {
                 }
             }
 
-            bank.log.add($"Branch {branchId} closed");
+            bank.log.add($"Branch {branchId} closed after {totalTx} transactions ({tryCount} ops)");
             status = Closed;
         }
     }

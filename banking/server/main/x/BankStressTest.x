@@ -60,12 +60,20 @@ module BankStressTest {
         String report() {
             StringBuffer buf = new StringBuffer();
             for (Branch branch : branches) {
+                String verb;
                 if (branch.status == Open) {
-                    buf.append($"Branch {branch.branchId} performed {branch.totalTx} transactions");
+                    verb = "performed";
                 } else {
-                    buf.append($"Branch {branch.branchId} is closed after {branch.totalTx} transactions");
+                    verb = "closed after";
                 }
-                buf.append('\n');
+                Int totalTx     = branch.totalTx;
+                Int totalOps    = branch.totalOps;
+                Int totalAudits = branch.totalAudits;
+                buf.append($|Branch {branch.branchId} {verb} {totalTx} transactions \
+                            |and {totalAudits} audits after {totalOps} ops averaging \
+                            |{(totalOps.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
+                            |ops/sec\n
+                            );
             }
             return buf.size == 0 ? "Not started" : buf.truncate(-1);
         }
@@ -82,25 +90,26 @@ module BankStressTest {
         @Atomic public/private Status status = Initial;
 
         @Atomic public/private Int totalTx;
+        @Atomic public/private Int totalAudits;
+        @Atomic public/private Int totalOps;
 
         @Concurrent
         void doBusiness(Duration duration) {
-            Int    tryCount = 0;
-            Int    txCount  = 0;
-            Time   start    = clock.now;
-            Time   close    = start + duration;
-            Random rnd      = new ecstasy.numbers.PseudoRandom(branchId);
+            Int    txCount = 0;
+            Time   start   = clock.now;
+            Time   close   = start + duration;
+            Random rnd     = new ecstasy.numbers.PseudoRandom(branchId);
 
             status = Open;
             bank.log.add($"Branch {branchId} opened");
 
             business:
             while (True) {
-                if (++tryCount % 100 == 0) {
+                if (++totalOps % 100 == 0) {
                     Time now = clock.now;
                     if (now < close) {
                         bank.log.add(
-                            $|Branch {branchId} performed {100 + txCount} transactions in \
+                            $|Branch {branchId} performed {txCount} transactions in \
                              |{(now - start).seconds} seconds
                              );
                         txCount = 0;
@@ -116,8 +125,8 @@ module BankStressTest {
                     switch (rnd.int(100)) {
                     case 0..1:
                         op = "OpenAccount";
+                        txCount++;
                         if (!bank.accounts.contains(acctId)) {
-                            txCount++;
                             totalTx++;
                             bank.openAccount(acctId, 256_00);
                         }
@@ -125,8 +134,8 @@ module BankStressTest {
 
                     case 2..3:
                         op = "CloseAccount";
+                        txCount++;
                         if (bank.accounts.contains(acctId)) {
-                            txCount++;
                             totalTx++;
                             bank.closeAccount(acctId);
                         }
@@ -134,8 +143,8 @@ module BankStressTest {
 
                     case 4..49:
                         op = "Deposit or Withdrawal";
+                        txCount++;
                         if (Account acc := bank.accounts.get(acctId)) {
-                            txCount++;
                             totalTx++;
                             Int amount = rnd.boolean() ? acc.balance/2 : -acc.balance/2;
                             bank.depositOrWithdraw(acctId, amount);
@@ -145,11 +154,11 @@ module BankStressTest {
                     case 50..98:
                         op = "Transfer";
                         Int acctIdTo = rnd.int(MAX_ACCOUNTS);
+                        txCount++;
                         if (acctIdTo != acctId,
                                 Account accFrom := bank.accounts.get(acctId),
                                 bank.accounts.contains(acctIdTo),
                                 accFrom.balance > 100) {
-                            txCount++;
                             totalTx++;
                             bank.transfer(acctId, acctIdTo, accFrom.balance / 2);
                         }
@@ -158,7 +167,7 @@ module BankStressTest {
                     case 99:
                         op = "Audit";
                         txCount++;
-                        totalTx++;
+                        totalAudits++;
                         bank.log.add($"Branch {branchId} audited amount is {Bank.format(bank.audit())}");
                         break;
                     }
@@ -173,7 +182,9 @@ module BankStressTest {
                 }
             }
 
-            bank.log.add($"Branch {branchId} closed after {totalTx} transactions ({tryCount} ops)");
+            bank.log.add($|Branch {branchId} closed after {totalTx} transactions and \
+                          |{totalAudits} audits
+                          );
             status = Closed;
         }
     }

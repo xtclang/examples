@@ -9,28 +9,35 @@
   <pre id="log"></pre>
 
   <script>
-    function run()
-      {
+    let timer = null;
+
+    function run() {
       let log = document.getElementById("log");
       fetch("stress/run")
           .then(response => response.text(),
                 err      => log.innerHTML = err.message)
           .then(text     => log.innerHTML = text);
-      }
 
-    function report()
-      {
+      timer = setTimeout(report, 2000);
+    }
+
+    function report() {
       let log = document.getElementById("log");
       fetch("stress/report")
           .then(response => response.text(),
                 err      => log.innerHTML = err.message)
           .then(text     => log.innerHTML = text);
-      }
 
-    function reset()
-      {
+      console.log("reporting " + timer);
+      timer = setTimeout(report, 2000);
+    }
+
+    function reset() {
       document.getElementById("log").innerHTML = "...";
+      if (timer != null) {
+        clearTimeout(timer);
       }
+    }
   </script>
 
 </body></html>

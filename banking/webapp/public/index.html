@@ -28,14 +28,13 @@
                 err      => log.innerHTML = err.message)
           .then(text     => log.innerHTML = text);
 
-      console.log("reporting " + timer);
       timer = setTimeout(report, 2000);
     }
 
     function reset() {
       document.getElementById("log").innerHTML = "...";
       if (timer != null) {
-        clearTimeout(timer);
+          clearTimeout(timer);
       }
     }
   </script>

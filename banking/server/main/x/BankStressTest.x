@@ -71,7 +71,7 @@ module BankStressTest {
                 Int totalAudits = branch.totalAudits;
                 buf.append($|Branch {branch.branchId} {verb} {totalTx} transactions \
                             |and {totalAudits} audits after {totalOps} ops averaging \
-                            |{(totalOps.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
+                            |{(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
                             |ops/sec\n
                             );
             }

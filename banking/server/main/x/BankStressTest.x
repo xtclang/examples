@@ -58,24 +58,37 @@ module BankStressTest {
         @Get("report")
         @Produces(Text)
         String report() {
-            StringBuffer buf = new StringBuffer();
+            StringBuffer buf     = new StringBuffer();
+            Boolean      done    = True;
+            Int          totalTx = 0;
             for (Branch branch : branches) {
-                Int totalTx     = branch.totalTx;
-                Int totalOps    = branch.totalOps;
-                Int totalAudits = branch.totalAudits;
+                Int txCount     = branch.totalTx;
+                Int opsCount    = branch.totalOps;
+                Int auditsCount = branch.totalAudits;
                 if (branch.status == Open) {
-                    buf.append($|Branch {branch.branchId} performed {totalTx} transactions \
-                            |and {totalAudits} audits after {totalOps} ops\n
+                    done = False;
+                    buf.append($|Branch {branch.branchId} performed {txCount} transactions \
+                            |and {auditsCount} audits after {opsCount} ops\n
                             );
                 } else {
-                    buf.append($|Branch {branch.branchId} closed after {totalTx} transactions \
-                            |and {totalAudits} audits after {totalOps} ops averaging \
-                            |{(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
+                    buf.append($|Branch {branch.branchId} closed after {txCount} transactions \
+                            |and {auditsCount} audits after {opsCount} ops averaging \
+                            |{(txCount.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
                             |tx/sec\n
                             );
                 }
+                totalTx += txCount;
             }
-            return buf.size == 0 ? "Not started" : buf.truncate(-1);
+            buf.append($|-----------------
+                        |Total count: {totalTx} transactions
+                        );
+
+            if (done) {
+                buf.append($|, {(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
+                            |tx/sec
+                            );
+            }
+            return buf.size == 0 ? "Not started" : buf.toString();
         }
     }
 

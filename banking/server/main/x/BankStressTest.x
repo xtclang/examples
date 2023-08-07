@@ -60,20 +60,20 @@ module BankStressTest {
         String report() {
             StringBuffer buf = new StringBuffer();
             for (Branch branch : branches) {
-                String verb;
-                if (branch.status == Open) {
-                    verb = "performed";
-                } else {
-                    verb = "closed after";
-                }
                 Int totalTx     = branch.totalTx;
                 Int totalOps    = branch.totalOps;
                 Int totalAudits = branch.totalAudits;
-                buf.append($|Branch {branch.branchId} {verb} {totalTx} transactions \
+                if (branch.status == Open) {
+                    buf.append($|Branch {branch.branchId} performed {totalTx} transactions \
+                            |and {totalAudits} audits after {totalOps} ops\n
+                            );
+                } else {
+                    buf.append($|Branch {branch.branchId} closed after {totalTx} transactions \
                             |and {totalAudits} audits after {totalOps} ops averaging \
                             |{(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
                             |tx/sec\n
                             );
+                }
             }
             return buf.size == 0 ? "Not started" : buf.truncate(-1);
         }

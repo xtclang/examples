@@ -72,7 +72,7 @@ module BankStressTest {
                 buf.append($|Branch {branch.branchId} {verb} {totalTx} transactions \
                             |and {totalAudits} audits after {totalOps} ops averaging \
                             |{(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
-                            |ops/sec\n
+                            |tx/sec\n
                             );
             }
             return buf.size == 0 ? "Not started" : buf.truncate(-1);

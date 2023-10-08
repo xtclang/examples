@@ -9,3 +9,6 @@ data/
 
 # Intellij
 .idea/
+
+# Node/yarn/npm
+package-lock.json

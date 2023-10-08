@@ -38,9 +38,11 @@ val copyContent = tasks.register<Copy>("copyContent") {
     into(webContent)
 }
 
-tasks.register("testLocal") {
-    project.exec {
-        workingDir(projectDir)
-        commandLine("npx", "http-server", "-a", "localhost", "-p", "8080")
+val testLocal by tasks.registering {
+    doLast {
+        project.exec {
+            workingDir(projectDir)
+            commandLine("npx", "http-server", "-a", "localhost", "-p", "8080")
+        }
     }
 }

@@ -6,6 +6,9 @@ val appModuleName  = "welcome"
 val dbModuleName   = "welcomeDB"
 val testModuleName = "welcomeTest"
 
+dependencies {
+
+}
 
 val webapp = project(":webapp");
 
@@ -29,6 +32,8 @@ val compileAppModule = tasks.register("compileAppModule") {
 
     dependsOn(compileDbModule)
     dependsOn(webapp.tasks["build"])
+
+    // Copy all the web app stuff into the resources.
 
     doLast {
         val srcModule   = "$projectDir/main/x/$appModuleName.x"

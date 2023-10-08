@@ -5,8 +5,8 @@
 group = "banking"
 version = "0.1.0"
 
-val server = project(":server");
-val webapp = project(":webapp");
+val server = project(":server")
+val webapp = project(":webapp")
 
 val serverDir = "${server.projectDir}"
 
@@ -33,7 +33,6 @@ tasks.register("upload") {
         copy {
             from("${serverDir}/build")
             into(libDir)
-
             rename("(.+).xtc", "$1.examples.org.xtc")
         }
     }

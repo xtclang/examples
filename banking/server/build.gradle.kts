@@ -39,7 +39,7 @@ val compileAppModule = tasks.register("compileAppModule") {
         val dest = file("$libDir/$appModuleName.xtc").lastModified()
 
         if (src > dest || rsrc > dest) {
-            project.exec {
+            exec {
                 commandLine("xtc", "-verbose", "-rebuild",
                             "-o", "$libDir",
                             "-L", "$libDir",
@@ -63,7 +63,7 @@ val compileDbModule = tasks.register("compileDbModule") {
     val dest = file("$libDir/$dbModuleName.xtc").lastModified()
 
     if (src > dest) {
-        project.exec {
+        exec {
             commandLine("xtc", "-verbose",
                         "-o", "$libDir",
                         "$srcModule")

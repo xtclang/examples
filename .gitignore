@@ -12,3 +12,4 @@ data/
 
 # Node/yarn/npm
 **/package-lock.json
+node_modules

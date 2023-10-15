@@ -1,32 +1,28 @@
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
+import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_TASK_NAME
+
 /*
  * Build the "server" modules.
  */
+
+plugins {
+    base
+}
 
 val appModuleName  = "welcome"
 val dbModuleName   = "welcomeDB"
 val testModuleName = "welcomeTest"
 
-dependencies {
+val webapp = project(":webapp")
+val buildDir = layout.buildDirectory
 
-}
-
-val webapp = project(":webapp");
-
-tasks.register("clean") {
-    group       = "Build"
-    description = "Delete previous build results"
-
-    delete(buildDir)
-}
-
-tasks.register("build") {
+tasks.named(BUILD_TASK_NAME) {
     group       = "Build"
     description = "Build server modules"
-
     dependsOn(compileAppModule)
 }
 
-val compileAppModule = tasks.register("compileAppModule") {
+val compileAppModule by tasks.registering {
     group       = "Build"
     description = "Compile $appModuleName module"
 
@@ -34,55 +30,45 @@ val compileAppModule = tasks.register("compileAppModule") {
     dependsOn(webapp.tasks["build"])
 
     // Copy all the web app stuff into the resources.
+    val srcModule   = "$projectDir/main/x/$appModuleName.x"
+    val resourceDir = "$projectDir/main/resources"
+    val libDir      = "$buildDir"
 
-    doLast {
-        val srcModule   = "$projectDir/main/x/$appModuleName.x"
-        val resourceDir = "$projectDir/main/resources"
-        val libDir      = "$buildDir"
-
-        val src  = file("$srcModule").lastModified()
-        val rsrc = fileTree("$resourceDir").getFiles().stream().
-                mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dest = file("$libDir/$appModuleName.xtc").lastModified()
-
-        if (src > dest || rsrc > dest) {
-            project.exec {
-                commandLine("xtc", "-verbose", "-rebuild",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
-            }
-        }
-        else {
+    val src  = file(srcModule).lastModified()
+    val rsrc = fileTree(resourceDir).files.stream().mapToLong(File::lastModified).max().orElse(0)
+    val dest = file("$libDir/$appModuleName.xtc").lastModified()
+    onlyIf {
+        val updates = src > dest || rsrc > dest
+        if (!updates) {
             println("$libDir/$appModuleName.xtc is up to date")
-            }
+        }
+        updates
+    }
+    doLast {
+        exec {
+            commandLine("xtc", "-verbose", "-rebuild", "-o", libDir, "-L", libDir, srcModule)
+        }
     }
 }
 
 val compileDbModule = tasks.register("compileDbModule") {
-    group       = "Build"
+    group       = BUILD_GROUP
     description = "Compile $dbModuleName database module"
 
     val srcModule = "${projectDir}/main/x/$dbModuleName.x"
     val libDir    = "$buildDir"
-
-    val src  = file("$srcModule").lastModified()
+    val src  = file(srcModule).lastModified()
     val dest = file("$libDir/$dbModuleName.xtc").lastModified()
-
-    if (src > dest) {
-        project.exec {
-            commandLine("xtc", "-verbose",
-                        "-o", "$libDir",
-                        "$srcModule")
-        }
+    onlyIf {
+        src > dest
     }
-    else {
-        println("$libDir/$dbModuleName.xtc is up to date")
-        }
+    exec {
+        commandLine("xtc", "-verbose", "-o", libDir, srcModule)
+    }
 }
 
 val compileTest = tasks.register("compileTest") {
-    group        = "Build"
+    group       = BUILD_GROUP
     description  = "Compile $testModuleName module"
 
     dependsOn(compileDbModule)
@@ -90,34 +76,25 @@ val compileTest = tasks.register("compileTest") {
     doLast {
         val srcModule = "$projectDir/main/x/$testModuleName.x"
         val libDir    = "$buildDir"
-
-        val src  = file("$srcModule").lastModified()
+        val src  = file(srcModule).lastModified()
         val dest = file("$libDir/$testModuleName.xtc").lastModified()
-
-        if (src > dest) {
-            project.exec {
-                commandLine("xtc",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
-            }
+        onlyIf {
+            src > dest
+        }
+        exec {
+            commandLine("xtc", "-o", libDir, "-L", libDir, srcModule)
         }
     }
 }
 
 tasks.register("runTest") {
-    group       = "Run"
+    group       = "application"
     description = "Run the standalone test"
-
     dependsOn(compileTest)
-
     doLast {
-        val libDir = "$buildDir"
-
-        project.exec {
-            commandLine("xec",
-                        "-L", "$libDir",
-                        "$libDir/$testModuleName.xtc")
+        val libDir = buildDir
+        exec {
+            commandLine("xec", "-L", libDir, "$libDir/$testModuleName.xtc")
         }
     }
 }

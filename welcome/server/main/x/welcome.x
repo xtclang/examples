@@ -18,6 +18,6 @@ module welcome.examples.org {
         }
     }
 
-    @StaticContent("/", /webapp)
+    @StaticContent("/", /webapp/) // TODO: remove trailing '/'
     service Content {}
 }

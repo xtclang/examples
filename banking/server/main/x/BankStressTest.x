@@ -92,7 +92,7 @@ module BankStressTest {
         }
     }
 
-    @StaticContent("/", /webapp)
+    @StaticContent("/", /public)
     service Content {}
 
     service Branch(UInt64 branchId) {

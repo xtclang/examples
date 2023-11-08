@@ -6,8 +6,8 @@ val appModuleName  = "welcome"
 val dbModuleName   = "welcomeDB"
 val testModuleName = "welcomeTest"
 
-
-val webapp = project(":webapp");
+val webapp   = project(":webapp");
+val buildDir = layout.buildDirectory.get()
 
 tasks.register("clean") {
     group       = "Build"
@@ -32,25 +32,15 @@ val compileAppModule = tasks.register("compileAppModule") {
 
     doLast {
         val srcModule   = "$projectDir/main/x/$appModuleName.x"
-        val resourceDir = "$projectDir/main/resources"
-        val libDir      = "$buildDir"
+        val resourceDir = "${webapp.projectDir}/build"
 
-        val src  = file("$srcModule").lastModified()
-        val rsrc = fileTree("$resourceDir").getFiles().stream().
-                mapToLong({f -> f.lastModified()}).max().orElse(0)
-        val dest = file("$libDir/$appModuleName.xtc").lastModified()
-
-        if (src > dest || rsrc > dest) {
-            project.exec {
-                commandLine("xtc", "-verbose", "-rebuild",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
-            }
+        project.exec {
+            commandLine("xtc", "-verbose",
+                        "-o", "$buildDir",
+                        "-L", "$buildDir",
+                        "-r", "$resourceDir",
+                        "$srcModule")
         }
-        else {
-            println("$libDir/$appModuleName.xtc is up to date")
-            }
     }
 }
 
@@ -59,21 +49,12 @@ val compileDbModule = tasks.register("compileDbModule") {
     description = "Compile $dbModuleName database module"
 
     val srcModule = "${projectDir}/main/x/$dbModuleName.x"
-    val libDir    = "$buildDir"
 
-    val src  = file("$srcModule").lastModified()
-    val dest = file("$libDir/$dbModuleName.xtc").lastModified()
-
-    if (src > dest) {
-        project.exec {
-            commandLine("xtc", "-verbose",
-                        "-o", "$libDir",
-                        "$srcModule")
-        }
+    project.exec {
+        commandLine("xtc", "-verbose",
+                    "-o", "$buildDir",
+                    "$srcModule")
     }
-    else {
-        println("$libDir/$dbModuleName.xtc is up to date")
-        }
 }
 
 val compileTest = tasks.register("compileTest") {
@@ -84,18 +65,12 @@ val compileTest = tasks.register("compileTest") {
 
     doLast {
         val srcModule = "$projectDir/main/x/$testModuleName.x"
-        val libDir    = "$buildDir"
 
-        val src  = file("$srcModule").lastModified()
-        val dest = file("$libDir/$testModuleName.xtc").lastModified()
-
-        if (src > dest) {
-            project.exec {
-                commandLine("xtc",
-                            "-o", "$libDir",
-                            "-L", "$libDir",
-                            "$srcModule")
-            }
+        project.exec {
+            commandLine("xtc",
+                        "-o", "$buildDir",
+                        "-L", "$buildDir",
+                        "$srcModule")
         }
     }
 }
@@ -107,12 +82,10 @@ tasks.register("runTest") {
     dependsOn(compileTest)
 
     doLast {
-        val libDir = "$buildDir"
-
         project.exec {
             commandLine("xec",
-                        "-L", "$libDir",
-                        "$libDir/$testModuleName.xtc")
+                        "-L", "$buildDir",
+                        "$buildDir/$testModuleName.xtc")
         }
     }
 }

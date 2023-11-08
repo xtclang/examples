@@ -2,13 +2,12 @@
  * Build the "webapp" content.
  */
 
-val webContent = "${project(":server").projectDir}/main/resources/webapp"
+val webContent = "${projectDir}/build"
 
 tasks.register("clean") {
     group       = "Build"
     description = "Delete previous build results"
 
-    delete(buildDir)
     delete(webContent)
 }
 
@@ -24,25 +23,16 @@ tasks.register("build") {
             mapToLong({f -> f.lastModified()}).max().orElse(0)
 
     if (src1 > dest || src2 > dest) {
-        dependsOn(copyContent)
+        dependsOn(buildContent)
         }
     else {
         println("$webContent is up to date")
         }
 }
 
-val copyContent = tasks.register("copyContent") {
+val buildContent = tasks.register("buildContent") {
     project.exec {
         workingDir(projectDir)
         commandLine("npm", "run", "build")
-    }
-
-    doLast {
-        println("Copying static content from $buildDir to $webContent")
-
-        copy {
-            from(buildDir)
-            into(webContent)
-        }
     }
 }

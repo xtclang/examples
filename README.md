@@ -47,7 +47,4 @@ As a temporary process, do the following:
        npm install
        npm start
 
-3. "Upload" the resulting .xtc file using the gradle command (from within the myApp directory):
-       
-       cd myApp
-       gradle upload
+3. Use the platform UI to upload and run the applications

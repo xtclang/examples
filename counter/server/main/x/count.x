@@ -12,11 +12,11 @@ module count.examples.org {
     import web.*;
     import web.security.*;
 
-    @StaticContent("/", /webapp/index.html)
+    @StaticContent("/", /public/index.html)
     service Home {}
 
     @LoginRequired
-    @StaticContent("authorized", /webapp/authorized)
+    @StaticContent("authorized", /public/authorized/)
     service CounterPages {}
 
     @LoginRequired

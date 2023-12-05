@@ -1,42 +1,46 @@
 <!DOCTYPE html>
-<html><body>
-  <p id="demo">Run the bank stress test.</p>
+<html>
+  <head>
+    <title>Bank Stress Test</title>
+  </head>
+  <body>
+    <p id="demo">Run the bank stress test.</p>
 
-  <button id="run"    onclick="run()">Start the test</button>
-  <button id="report" onclick="report()">Report</button>
-  <button id="reset"  onclick="reset()">Reset</button>
+    <button id="run"    onclick="run()">Start the test</button>
+    <button id="report" onclick="report()">Report</button>
+    <button id="reset"  onclick="reset()">Reset</button>
 
-  <pre id="log"></pre>
+    <pre id="log"></pre>
 
-  <script>
-    let timer = null;
+    <script>
+      let timer = null;
 
-    function run() {
-      let log = document.getElementById("log");
-      fetch("stress/run")
-          .then(response => response.text(),
-                err      => log.innerHTML = err.message)
-          .then(text     => log.innerHTML = text);
+      function run() {
+        let log = document.getElementById("log");
+        fetch("stress/run")
+            .then(response => response.text(),
+                  err      => log.innerHTML = err.message)
+            .then(text     => log.innerHTML = text);
 
-      timer = setTimeout(report, 2000);
-    }
-
-    function report() {
-      let log = document.getElementById("log");
-      fetch("stress/report")
-          .then(response => response.text(),
-                err      => log.innerHTML = err.message)
-          .then(text     => log.innerHTML = text);
-
-      timer = setTimeout(report, 2000);
-    }
-
-    function reset() {
-      document.getElementById("log").innerHTML = "...";
-      if (timer != null) {
-          clearTimeout(timer);
+        timer = setTimeout(report, 2000);
       }
-    }
-  </script>
 
-</body></html>
+      function report() {
+        let log = document.getElementById("log");
+        fetch("stress/report")
+            .then(response => response.text(),
+                  err      => log.innerHTML = err.message)
+            .then(text     => log.innerHTML = text);
+
+        timer = setTimeout(report, 2000);
+      }
+
+      function reset() {
+        document.getElementById("log").innerHTML = "...";
+        if (timer != null) {
+            clearTimeout(timer);
+        }
+      }
+    </script>
+</body>
+</html>

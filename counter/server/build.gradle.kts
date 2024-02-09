@@ -33,7 +33,7 @@ val compileAppModule = tasks.register("compileAppModule") {
         val resourceDir = "${webapp.projectDir}"
 
         project.exec {
-            commandLine("xcc", "-verbose",
+            commandLine("xcc", "--verbose",
                         "-o", buildDir,
                         "-L", buildDir,
                         "-r", resourceDir,
@@ -49,7 +49,7 @@ val compileDbModule = tasks.register("compileDbModule") {
     val srcModule = "${projectDir}/main/x/$dbModuleName.x"
 
     project.exec {
-        commandLine("xcc", "-verbose",
+        commandLine("xcc", "--verbose",
                     "-o", buildDir,
                     srcModule)
     }

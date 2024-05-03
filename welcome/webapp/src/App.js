@@ -5,20 +5,8 @@ class App extends Component {
 
     constructor() {
       super();
-      this.state = {seconds: 0, name: "", count: 0};
+      this.state = {seconds: 0, name: "", count: ""};
       this.handleClick = this.handleClick.bind(this);
-    }
-
-    tick() {
-      this.setState(state => ({seconds: state.seconds + 1}));
-    }
-
-    handleClick() {
-      this.setState(state => ({seconds: 0}));
-    }
-
-    componentDidMount() {
-      this.interval = setInterval(() => this.tick(), 1000);
 
       fetch('/welcome/org')
         .then(response => response.json())
@@ -34,6 +22,18 @@ class App extends Component {
                                   '' + data + '-th';
             this.setState(state => ({count: count}));
             });
+    }
+
+    tick() {
+      this.setState(state => ({seconds: state.seconds + 1}));
+    }
+
+    handleClick() {
+      this.setState(state => ({seconds: 0}));
+    }
+
+    componentDidMount() {
+      this.interval = setInterval(() => this.tick(), 1000);
     }
 
     componentWillUnmount() {

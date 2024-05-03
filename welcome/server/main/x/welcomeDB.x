@@ -5,6 +5,6 @@ module welcomeDB.examples.org {
     interface WelcomeSchema
             extends oodb.RootSchema {
 
-        @RO oodb.DBCounter count;
+        @RO oodb.DBMap<String, Int> counters;
     }
 }

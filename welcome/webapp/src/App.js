@@ -5,7 +5,7 @@ class App extends Component {
 
     constructor() {
       super();
-      this.state = {seconds: 0, count: 0};
+      this.state = {seconds: 0, name: "", count: 0};
       this.handleClick = this.handleClick.bind(this);
     }
 
@@ -19,9 +19,21 @@ class App extends Component {
 
     componentDidMount() {
       this.interval = setInterval(() => this.tick(), 1000);
-      fetch('/welcome')
+
+      fetch('/welcome/org')
         .then(response => response.json())
-        .then(data => this.setState(state => ({count: data})));
+        .then(name => this.setState(state => ({name: name})));
+
+      fetch('/welcome/count')
+        .then(response => response.json())
+        .then(data =>
+            {
+            var count = data == 1 ? 'first'  :
+                        data == 2 ? 'second' :
+                        data == 3 ? 'third'  :
+                                  '' + data + '-th';
+            this.setState(state => ({count: count}));
+            });
     }
 
     componentWillUnmount() {
@@ -31,7 +43,7 @@ class App extends Component {
     render() {
       return (
         <div>
-          Welcome! You are visitor #{this.state.count}
+          Welcome to {this.state.name}! This is your {this.state.count} visit to our site!
           <p/>
           <button onClick={this.handleClick}>Reset timer</button>
           <p/>

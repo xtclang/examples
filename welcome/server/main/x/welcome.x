@@ -12,9 +12,20 @@ module welcome.examples.org {
     service SimpleApi {
         @Inject db.WelcomeSchema schema;
 
-        @Get
+        @Get("org")
+        String organization() {
+            @Inject String org;
+            return org;
+        }
+
+        @Get("count")
         Int count() {
-            return schema.count.next();
+            assert RequestIn request ?= this.request;
+
+            String address = request.client?[0].toString() : "Unknown";
+            Int    count   = schema.counters.getOrDefault(address, 0);
+            schema.counters.put(address, ++count);
+            return count;
         }
     }
 

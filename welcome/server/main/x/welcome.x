@@ -22,7 +22,7 @@ module welcome.examples.org {
         Int count() {
             assert RequestIn request ?= this.request;
 
-            String address = request.client?[0].toString() : "Unknown";
+            String address = request.client.toString();
             Int    count   = schema.counters.getOrDefault(address, 0);
             schema.counters.put(address, ++count);
             return count;

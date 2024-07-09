@@ -5,6 +5,7 @@
 val appModuleName  = "welcome"
 val dbModuleName   = "welcomeDB"
 val testModuleName = "welcomeTest"
+val cliModuleName  = "welcomeCLI"
 
 val webapp   = project(":webapp");
 val buildDir = layout.buildDirectory.get()
@@ -21,6 +22,7 @@ tasks.register("build") {
     description = "Build server modules"
 
     dependsOn(compileAppModule)
+    dependsOn(compileCLI)
 }
 
 val compileAppModule = tasks.register("compileAppModule") {
@@ -65,6 +67,22 @@ val compileTest = tasks.register("compileTest") {
 
     doLast {
         val srcModule = "$projectDir/main/x/$testModuleName.x"
+
+        project.exec {
+            commandLine("xcc",
+                        "-o", buildDir,
+                        "-L", buildDir,
+                        srcModule)
+        }
+    }
+}
+
+val compileCLI = tasks.register("compileCLI") {
+    group        = "Build"
+    description  = "Compile $cliModuleName module"
+
+    doLast {
+        val srcModule = "$projectDir/main/x/$cliModuleName.x"
 
         project.exec {
             commandLine("xcc",

@@ -24,10 +24,7 @@ module welcomeCLI.examples.org
     @Override
     void run(String[] args) {
         console.print("*** Welcome Command Line Tool");
-
-        String welcomeUri = console.readLine($"Enter welcome host: ");
-        Gateway.resetClient(welcomeUri);
-
+        Gateway.resetClient();
         super([]);
     }
 
@@ -35,9 +32,9 @@ module welcomeCLI.examples.org
         private @Unassigned Client client;
         private @Unassigned String welcomeUri;
 
-        void resetClient(String welcomeUri) {
+        void resetClient() {
             client          = new HttpClient();
-            this.welcomeUri = welcomeUri;
+            this.welcomeUri = console.readLine($"Enter welcome host: ");
         }
 
         String send(RequestOut request) {

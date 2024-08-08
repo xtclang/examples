@@ -51,6 +51,7 @@ module BankStressTest {
 
             // schedule a periodic check
             @Inject Timer timer;
+            timer.start();
             timer.schedule(Duration.ofSeconds(10), &checkOpen(branches, timer));
             return "Bank is open";
         }

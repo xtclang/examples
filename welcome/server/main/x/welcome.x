@@ -19,9 +19,7 @@ module welcome.examples.org {
         }
 
         @Get("count")
-        Int count() {
-            assert RequestIn request ?= this.request;
-
+        Int count(RequestIn request) {
             using (val tx = schema.dbConnection.createTransaction()) {
                 String address = request.client.toString();
                 Int    count   = tx.counters.getOrDefault(address, 0);

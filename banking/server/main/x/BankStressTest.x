@@ -80,16 +80,19 @@ module BankStressTest {
                 }
                 totalTx += txCount;
             }
+            if (totalTx == 0) {
+                return "Not started";
+            }
+
             buf.append($|-----------------
                         |Total count: {totalTx} transactions
                         );
-
             if (done) {
                 buf.append($|, {(totalTx.toFloat()/TEST_DURATION.seconds).toString().leftJustify(4)} \
                             |tx/sec
                             );
             }
-            return buf.size == 0 ? "Not started" : buf.toString();
+            return buf.toString();
         }
     }
 

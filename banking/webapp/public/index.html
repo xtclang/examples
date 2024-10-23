@@ -7,7 +7,7 @@
     <p id="demo">Run the bank stress test.</p>
 
     <button id="run"    onclick="run()">Start the test</button>
-    <button id="report" onclick="report()">Report</button>
+    <button id="report" onclick="report(true)">Report</button>
     <button id="reset"  onclick="reset()">Reset</button>
 
     <pre id="log"></pre>
@@ -18,28 +18,45 @@
       function run() {
         let log = document.getElementById("log");
         fetch("stress/run")
-            .then(response => response.text(),
-                  err      => log.innerHTML = err.message)
-            .then(text     => log.innerHTML = text);
-
-        timer = setTimeout(report, 2000);
+            .then(response => {
+                      if (response.ok) {
+                          return response.text();
+                      } else {
+                          throw new Error(`Http Error: ${response.status}`);
+                      }},
+                  err => log.innerHTML = err.message)
+            .then(text => {
+                    log.innerHTML = text;
+                    timer = setTimeout(report, 2000);
+                  })
+            .catch(err => log.innerHTML = err.message);
       }
 
-      function report() {
+      function report(once) {
         let log = document.getElementById("log");
         fetch("stress/report")
-            .then(response => response.text(),
-                  err      => log.innerHTML = err.message)
-            .then(text     => log.innerHTML = text);
-
-        timer = setTimeout(report, 2000);
+            .then(response => {
+                      if (response.ok) {
+                          return response.text();
+                      } else {
+                          throw new Error(`Http Error: ${response.status}`);
+                      }},
+                  err => log.innerHTML = err.message)
+            .then(text => {
+                    log.innerHTML = text;
+                    if (!once) {
+                        timer = setTimeout(report, 2000);
+                    }
+                  })
+            .catch(err => log.innerHTML = err.message);
       }
 
       function reset() {
-        document.getElementById("log").innerHTML = "...";
-        if (timer != null) {
-            clearTimeout(timer);
-        }
+          document.getElementById("log").innerHTML = "...";
+          if (timer != null) {
+              clearTimeout(timer);
+              timer = null;
+          }
       }
     </script>
 </body>

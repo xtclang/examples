@@ -20,7 +20,7 @@ module welcome.examples.org {
 
         @Get("count")
         Int count(RequestIn request) {
-            using (val tx = schema.dbConnection.createTransaction()) {
+            using (val tx = schema.connection.createTransaction()) {
                 String address = request.client.toString();
                 Int    count   = tx.counters.getOrDefault(address, 0);
                 tx.counters.put(address, ++count);

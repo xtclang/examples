@@ -27,10 +27,12 @@ module count.examples.org {
 
         @Get("count")
         Int count(Session session) {
-            String user  = getUser(session);
-            Int    count = schema.counters.getOrDefault(user, 0);
-            schema.counters.put(user, ++count);
-            return count;
+            String user = getUser(session);
+            using (schema.createTransaction()) {
+                Int count = schema.counters.getOrDefault(user, 0);
+                schema.counters.put(user, ++count);
+                return count;
+            }
         }
     }
 }

@@ -2,11 +2,13 @@
 <html><body>
   <h1>Hello: <span id="user"></span></h1>
   <h3>This is your <span id="count"></span> visit to this site.</h3>
+  <h1><a href="#" id="logout">Logout</a></h1>
 
   <script>
     window.onload = (event) =>
       {
-      let user = document.getElementById("user");
+      let user   = document.getElementById("user");
+      let logout = document.getElementById("logout");
 
       fetch("/api/user")
           .then(response => response.text(),
@@ -22,5 +24,11 @@
                 cnt == 3 ? 'third'  :
                            '' + cnt + '-th');
       };
+
+  logout.addEventListener('click', (event) => {
+    event.preventDefault();
+    fetch('/.well-known/auth/mgmt/users/me/logout', {method: 'POST'})
+      .then(() => { window.location.href = '/'; });
+  });
   </script>
 </body></html>

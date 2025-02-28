@@ -25,15 +25,15 @@ module count.examples.org {
         @LoginRequired
         @Get("user")
         @Produces(Text)
-        String getUser() = session?.principal?.name : "";
+        String userName() = session?.userName? : assert;
 
         @LoginRequired
         @Get("count")
         Int count() {
-            String user = getUser();
             using (schema.createTransaction()) {
-                Int count = schema.counters.getOrDefault(user, 0);
-                schema.counters.put(user, ++count);
+                Int    id    = principalId;
+                Int    count = schema.counters.getOrDefault(id, 0);
+                schema.counters.put(id, ++count);
                 return count;
             }
         }
@@ -43,10 +43,12 @@ module count.examples.org {
         @LoginRequired
         @Restrict
         @Get("quiet-count")
-        Int quietCount() = schema.counters.getOrDefault(getUser(), 0);
+        Int quietCount() = schema.counters.getOrDefault(principalId, 0);
 
         @Restrict
         @Get("all-count")
         Int allCount() = schema.counters.reduce(0, (v, e) -> v + e.value);
+
+        @RO Int principalId.get() = session?.principal?.principalId : assert;
     }
 }

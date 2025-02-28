@@ -6,7 +6,7 @@ module countDB.examples.org {
     interface CountSchema
             extends oodb.RootSchema {
 
-        @RO oodb.DBMap<String, Int> counters;
+        @RO oodb.DBMap<Int, Int> counters;
 
         @RO auth.AuthSchema authSchema;
     }

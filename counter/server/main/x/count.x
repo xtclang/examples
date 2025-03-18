@@ -10,7 +10,7 @@ module count.examples.org {
     import web.security.*;
 
     /**
-     * The public website area (no authentication is required).
+     * The public website area (no authentication is necessary).
      */
     @StaticContent("/", /public/index.html)
     service Home {}
@@ -37,7 +37,7 @@ module count.examples.org {
         String userName() = session?.userName? : assert;
 
         /**
-         * The endpoint triggered when an authenticated user enters the "protected" application area.
+         * Triggered when an authenticated user enters the "protected" application area.
          */
         @LoginRequired
         @Get("count")

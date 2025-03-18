@@ -6,8 +6,14 @@ module countDB.examples.org {
     interface CountSchema
             extends oodb.RootSchema {
 
+        /**
+         * Number of times a user for a given id has logged in.
+         */
         @RO oodb.DBMap<Int, Int> counters;
 
+        /**
+         * Persistent authentication info.
+         */
         @RO auth.AuthSchema authSchema;
     }
 }

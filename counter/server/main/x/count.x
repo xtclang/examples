@@ -9,9 +9,15 @@ module count.examples.org {
     import web.*;
     import web.security.*;
 
+    /**
+     * The public website area (no authentication is necessary).
+     */
     @StaticContent("/", /public/index.html)
     service Home {}
 
+    /**
+     * The protected website area (authentication is required).
+     */
     @LoginRequired
     @StaticContent("/authorized", /public/authorized/)
     service CounterPages {}
@@ -22,11 +28,17 @@ module count.examples.org {
     service CounterApi {
         @Inject db.CountSchema schema;
 
+        /**
+         * The authenticated user id.
+         */
         @LoginRequired
         @Get("user")
         @Produces(Text)
         String userName() = session?.userName? : assert;
 
+        /**
+         * Triggered when an authenticated user enters the "protected" application area.
+         */
         @LoginRequired
         @Get("count")
         Int count() {

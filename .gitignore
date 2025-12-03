@@ -2,6 +2,7 @@
 build/
 
 # tests
+# TODO: Wtf is this relative to the root?
 data/
 
 # gradle
@@ -9,3 +10,6 @@ data/
 
 # Intellij
 .idea/
+
+# Claude
+.claude/

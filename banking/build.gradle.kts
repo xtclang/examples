@@ -2,5 +2,10 @@
  * Main build file for the "banking" example.
  */
 
-group = "banking"
-version = "0.1.0"
+plugins {
+    alias(libs.plugins.xtc)
+}
+
+dependencies {
+    xdkDistribution(libs.xdk)
+}

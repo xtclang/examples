@@ -2,5 +2,11 @@
  * Main build file for the "counter" example.
  */
 
-group = "banking"
-version = "0.1.0"
+plugins {
+    alias(libs.plugins.xtc)
+}
+
+dependencies {
+    xdkDistribution(libs.xdk)
+}
+

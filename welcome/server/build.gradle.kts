@@ -7,7 +7,7 @@ val dbModuleName   = "welcomeDB"
 val testModuleName = "welcomeTest"
 val cliModuleName  = "welcomeCLI"
 
-val webapp   = project(":webapp");
+val webApp   = project(":webapp");
 val buildDir = layout.buildDirectory.get()
 
 tasks.register("clean") {
@@ -21,89 +21,47 @@ tasks.register("build") {
     group       = "Build"
     description = "Build server modules"
 
-    dependsOn(compileAppModule)
-    dependsOn(compileCLI)
+    dependsOn("compileAppModule")
+    dependsOn("compileCLI")
 }
 
-val compileAppModule = tasks.register("compileAppModule") {
-    group       = "Build"
-    description = "Compile $appModuleName module"
+tasks.register<Exec>("compileAppModule") {
+    val libDir    = "${rootProject.projectDir}/lib"
+    val srcModule   = "$projectDir/main/x/$appModuleName.x"
+    val resourceDir = "${webApp.projectDir}"
 
-    dependsOn(compileDbModule)
-    dependsOn(webapp.tasks["build"])
+    dependsOn("compileDbModule")
+    dependsOn(webApp.tasks["build"])
 
-    doLast {
-        val srcModule   = "$projectDir/main/x/$appModuleName.x"
-        val resourceDir = "${webapp.projectDir}"
-
-        project.exec {
-            commandLine("xcc", "--verbose",
-                        "-o", buildDir,
-                        "-L", buildDir,
-                        "-r", resourceDir,
-                        srcModule)
-        }
-    }
+    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, "-r", resourceDir, srcModule)
 }
 
-val compileDbModule = tasks.register("compileDbModule") {
-    group       = "Build"
-    description = "Compile $dbModuleName database module"
-
+tasks.register<Exec>("compileDbModule") {
     val srcModule = "${projectDir}/main/x/$dbModuleName.x"
 
-    project.exec {
-        commandLine("xcc", "--verbose",
-                    "-o", buildDir,
-                    srcModule)
-    }
+    commandLine("xcc", "--verbose", "-o", buildDir, srcModule)
 }
 
-val compileTest = tasks.register("compileTest") {
-    group        = "Build"
-    description  = "Compile $testModuleName module"
+tasks.register<Exec>("compileTest") {
+    val srcModule = "$projectDir/main/x/$testModuleName.x"
 
-    dependsOn(compileDbModule)
+    dependsOn("compileDbModule")
 
-    doLast {
-        val srcModule = "$projectDir/main/x/$testModuleName.x"
-
-        project.exec {
-            commandLine("xcc",
-                        "-o", buildDir,
-                        "-L", buildDir,
-                        srcModule)
-        }
-    }
+    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
 }
 
-val compileCLI = tasks.register("compileCLI") {
-    group        = "Build"
-    description  = "Compile $cliModuleName module"
+tasks.register<Exec>("compileCLI") {
+    val srcModule = "${projectDir}/main/x/$cliModuleName.x"
 
-    doLast {
-        val srcModule = "$projectDir/main/x/$cliModuleName.x"
+    dependsOn("compileDbModule")
 
-        project.exec {
-            commandLine("xcc",
-                        "-o", buildDir,
-                        "-L", buildDir,
-                        srcModule)
-        }
-    }
+    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
 }
 
-tasks.register("runTest") {
-    group       = "Run"
-    description = "Run the standalone test"
+tasks.register<Exec>("runTest") {
+    val srcModule = "${projectDir}/main/x/$cliModuleName.x"
 
-    dependsOn(compileTest)
+    dependsOn("compileTest")
 
-    doLast {
-        project.exec {
-            commandLine("xec",
-                        "-L", "$buildDir",
-                        "$buildDir/$testModuleName.xtc")
-        }
-    }
+    commandLine("xec", "-L", buildDir, "$buildDir/$testModuleName.xtc")
 }

@@ -23,16 +23,14 @@ tasks.register("build") {
             mapToLong({f -> f.lastModified()}).max().orElse(0)
 
     if (src1 > dest || src2 > dest) {
-        dependsOn(buildContent)
+        dependsOn("buildContent")
         }
     else {
         println("$webContent is up to date")
         }
 }
 
-val buildContent = tasks.register("buildContent") {
-    project.exec {
-        workingDir(projectDir)
-        commandLine("npm", "run", "build")
-    }
+tasks.register<Exec>("buildContent") {
+    workingDir(projectDir)
+    commandLine("npm", "run", "build")
 }

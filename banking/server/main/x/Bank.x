@@ -60,7 +60,7 @@ module Bank {
         }
 
         void closeAccount(Int id) {
-            assert Account acc := accounts.get(id) as $"account {id} doesn't exists";
+            assert Account acc := accounts.get(id) as $"account {id} doesn't exist";
 
             accounts.remove(id);
 
@@ -68,7 +68,7 @@ module Bank {
         }
 
         void depositOrWithdraw(Int id, Int amount) {
-            assert accounts.get(id) as $"account {id} doesn't exists";
+            assert accounts.get(id) as $"account {id} doesn't exist";
 
             if (amount < 0) {
                 assert accounts.require(id, e -> e.exists && e.value.balance + amount >= 0)
@@ -87,8 +87,8 @@ module Bank {
 
         void transfer(Int idFrom, Int idTo, Int amount) {
             assert idFrom != idTo as $"invalid transfer within an account";
-            assert Account accFrom := accounts.get(idFrom) as $"account {idFrom} doesn't exists";
-            assert Account accTo   := accounts.get(idTo)   as $"account {idTo} doesn't exists";
+            assert Account accFrom := accounts.get(idFrom) as $"account {idFrom} doesn't exist";
+            assert Account accTo   := accounts.get(idTo)   as $"account {idTo} doesn't exist";
             assert amount > 0 as $"invalid transfer amount: {format(amount)}";
 
             // theoretically speaking, we could use the "require" here, e.g.:
@@ -122,8 +122,10 @@ module Bank {
     }
 
     static String format(Int amount) {
-        (Int dollars, Int cents) = amount /% 100;
-        return $"${dollars}.{cents.abs()}";
+        String sign = amount < 0 ? "-" : "";
+        (Int dollars, Int cents) = amount.abs() /% 100;
+        String pad = cents < 10 ? "0" : "";
+        return $"${sign}{dollars}.{pad}{cents}";
     }
 
     typedef (oodb.Connection<BankSchema>  + BankSchema) as Connection;

@@ -188,7 +188,6 @@ module BankTest {
         }
 
         @Test
-        @xunit.annotations.Disabled("tests skipped until DBMap.defer() is fixed")
         void shouldDepositAmount() {
             using (bank.createTransaction()) {
                 bank.depositOrWithdraw(accountId, 100);
@@ -198,7 +197,6 @@ module BankTest {
         }
 
         @Test
-        @xunit.annotations.Disabled("tests skipped until DBMap.defer() is fixed")
         void shouldUpdateBankHoldingOnDeposit() {
             Int holdingBefore = bank.holding.get();
             using (bank.createTransaction()) {
@@ -208,7 +206,6 @@ module BankTest {
         }
 
         @Test
-        @xunit.annotations.Disabled("tests skipped until DBMap.defer() is fixed")
         void shouldWithdrawAmount() {
             using (bank.createTransaction()) {
                 bank.depositOrWithdraw(accountId, -100);
@@ -218,7 +215,6 @@ module BankTest {
         }
 
         @Test
-        @xunit.annotations.Disabled("tests skipped until DBMap.defer() is fixed")
         void shouldUpdateBankHoldingOnWithdrawal() {
             Int holdingBefore = bank.holding.get();
             using (bank.createTransaction()) {

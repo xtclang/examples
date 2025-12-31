@@ -3,6 +3,8 @@ build/
 
 # tests
 data/
+test-output/
+xunit/
 
 # gradle
 .gradle/

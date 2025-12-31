@@ -1,5 +1,11 @@
 /**
  * Tests for the Bank database.
+ *
+ * To run it from banking/server directory, use the following commands:
+ *      xtc build -L build -o build main/x/BankTest.x
+ *      xtc test -L build BankTest
+ *
+ * Temporary test databases will be created under "banking/server/xunit/test-output" directory.
  */
 module BankTest {
     package Bank    import Bank;
@@ -369,5 +375,3 @@ module BankTest {
        }
     }
 }
-
-

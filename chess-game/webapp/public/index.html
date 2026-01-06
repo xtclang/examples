@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1629;
+      --panel: #0d2136;
+      --accent: #e3b341;
+      --muted: #7c8aa5;
+      --light: #f5f7fb;
+      --dark-square: #20344e;
+      --light-square: #2e4467;
+      --selection: #b0e3ff;
+      --shadow: 0 10px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, rgba(227, 179, 65, 0.12), transparent 30%),
+                  radial-gradient(circle at 80% 0%, rgba(55, 178, 255, 0.18), transparent 30%),
+                  var(--bg);
+      font-family: "Space Grotesk", system-ui, sans-serif;
+      color: var(--light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    main {
+      width: min(1200px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .board-pane {
+      background: transparent;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      width: min(82vmin, 680px);
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      margin: 0 auto;
+    }
+
+    .square {
+      border: none;
+      width: 100%;
+      height: 100%;
+      font-size: 26px;
+      color: var(--light);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    .square.dark { background: var(--dark-square); }
+    .square.light { background: var(--light-square); }
+    .square.selected { outline: 2px solid var(--selection); outline-offset: -4px; }
+    .square:hover { transform: translateY(-1px); }
+
+    .status {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 16px;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 16px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 14px;
+      border-radius: 12px;
+    }
+
+    .label { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+    .value { font-size: 18px; font-weight: 600; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    button.action {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--accent);
+      border: none;
+      color: #1c1605;
+      font-weight: 700;
+      letter-spacing: 0.25px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      box-shadow: 0 8px 24px rgba(227, 179, 65, 0.35);
+    }
+
+    button.action.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--light);
+      box-shadow: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    button.action:hover { transform: translateY(-1px); }
+
+    .log {
+      background: rgba(0, 0, 0, 0.22);
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 120px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: var(--light);
+    }
+
+    .pill::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.22);
+    }
+
+    @media (max-width: 960px) {
+      body { padding: 16px; }
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="board-pane">
+      <h1>Chess Playground</h1>
+      <p class="subtitle">Pick a square to move from, then a square to move to. All logic lives on the server.</p>
+      <div id="board" class="board"></div>
+    </section>
+
+    <section>
+      <div class="status">
+        <div class="card">
+          <div class="label">Turn</div>
+          <div class="value" id="turn">…</div>
+        </div>
+        <div class="card">
+          <div class="label">Status</div>
+          <div class="value" id="status">…</div>
+        </div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="card">
+          <div class="label">Your Score</div>
+          <div class="value" id="playerScore">0</div>
+        </div>
+        <div class="card">
+          <div class="label">Opponent Score</div>
+          <div class="value" id="opponentScore">0</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="action" id="reset">Reset Game</button>
+        <button class="action secondary" id="refresh">Refresh State</button>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="label">Selection</div>
+        <div class="value" id="selection">Pick any square</div>
+      </div>
+
+      <div class="log" id="log">Waiting for server…</div>
+    </section>
+  </main>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const turnEl = document.getElementById('turn');
+    const statusEl = document.getElementById('status');
+    const selectionEl = document.getElementById('selection');
+    const logEl = document.getElementById('log');
+    const playerScoreEl = document.getElementById('playerScore');
+    const opponentScoreEl = document.getElementById('opponentScore');
+    const resetBtn = document.getElementById('reset');
+    const refreshBtn = document.getElementById('refresh');
+
+    const pieceMap = {
+      r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',
+      R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',
+      '.': ''
+    };
+
+    let selection = null;
+    let cachedBoard = [];
+    let opponentRefresh = null;
+
+    function algebraic(row, col) {
+      const file = String.fromCharCode('a'.charCodeAt(0) + col);
+      const rank = 8 - row;
+      return `${file}${rank}`;
+    }
+
+    function renderBoard(boardRows) {
+      cachedBoard = boardRows;
+      boardEl.innerHTML = '';
+      boardRows.forEach((rowString, rowIdx) => {
+        [...rowString].forEach((ch, colIdx) => {
+          const btn = document.createElement('button');
+          btn.className = `square ${(rowIdx + colIdx) % 2 === 0 ? 'dark' : 'light'}`;
+          btn.dataset.square = algebraic(rowIdx, colIdx);
+          btn.textContent = pieceMap[ch] ?? '';
+          if (selection === btn.dataset.square) {
+            btn.classList.add('selected');
+          }
+          btn.addEventListener('click', () => handleSquareClick(btn.dataset.square));
+          boardEl.appendChild(btn);
+        });
+      });
+    }
+
+    function setMessage(text) {
+      logEl.textContent = text;
+    }
+
+    function handleSquareClick(square) {
+      if (!selection) {
+        selection = square;
+        selectionEl.textContent = `From ${square}`;
+        renderBoard(cachedBoard);
+        return;
+      }
+
+      if (selection === square) {
+        selection = null;
+        selectionEl.textContent = 'Pick any square';
+        renderBoard(cachedBoard);
+        return;
+      }
+
+      const from = selection;
+      const to = square;
+      selection = null;
+      selectionEl.textContent = 'Sending move…';
+      sendMove(from, to);
+    }
+
+    async function sendMove(from, to) {
+      try {
+        const res = await fetch(`/api/move/${from}/${to}`, {
+          method: 'POST'
+        });
+        const payload = await res.json();
+        applyState(payload);
+        selectionEl.textContent = 'Pick any square';
+      } catch (err) {
+        setMessage('Move failed: ' + err.message);
+      }
+    }
+
+    async function loadState() {
+      setMessage('Syncing with server…');
+      try {
+        const res = await fetch('/api/state');
+        const payload = await res.json();
+        applyState(payload);
+      } catch (err) {
+        setMessage('Could not reach the chess server.');
+      }
+    }
+
+    async function resetGame() {
+      setMessage('Resetting…');
+      try {
+        const res = await fetch('/api/reset', { method: 'POST' });
+        const payload = await res.json();
+        applyState(payload);
+      } catch (err) {
+        setMessage('Reset failed: ' + err.message);
+      }
+    }
+
+    function applyState(state) {
+      if (!state || !state.board) {
+        setMessage('Unexpected response from server.');
+        return;
+      }
+      if (opponentRefresh !== null) {
+        clearTimeout(opponentRefresh);
+        opponentRefresh = null;
+      }
+      renderBoard(state.board);
+      turnEl.textContent = state.turn ?? '—';
+      statusEl.textContent = state.status ?? '—';
+      selectionEl.textContent = 'Pick any square';
+      playerScoreEl.textContent = state.playerScore ?? 0;
+      opponentScoreEl.textContent = state.opponentScore ?? 0;
+      const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready for a move';
+      setMessage(`${state.message || 'Synced.'}\n${move}`);
+      if (state.opponentPending) {
+        opponentRefresh = setTimeout(loadState, 3100);
+      }
+    }
+
+    resetBtn.addEventListener('click', resetGame);
+    refreshBtn.addEventListener('click', loadState);
+
+    loadState();
+  </script>
+</body>
+</html>

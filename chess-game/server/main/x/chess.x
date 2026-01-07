@@ -49,7 +49,7 @@ module chess.examples.org {
             using (schema.createTransaction()) {
                 GameRecord record = ensureGame();
                 try {
-                    MoveOutcome result = tryApplyMove(record, from, target, Null);
+                    MoveOutcome result = ChessLogic.applyHumanMove(record, from, target, Null);
                     if (result.ok) {
                         GameRecord current = maybeResolveAuto(result.record);
                         saveGame(current);
@@ -67,7 +67,7 @@ module chess.examples.org {
         ApiState reset() {
             using (schema.createTransaction()) {
                 schema.games.remove(gameId);
-                GameRecord reset = resetGame();
+                GameRecord reset = ChessLogic.resetGame();
                 schema.games.put(gameId, reset);
                 pendingActive = False;
                 autoApplied   = False;
@@ -80,7 +80,7 @@ module chess.examples.org {
         @RO Int gameId.get() = 1;
 
         GameRecord ensureGame() {
-            GameRecord record = schema.games.getOrDefault(gameId, defaultGame());
+            GameRecord record = schema.games.getOrDefault(gameId, ChessLogic.defaultGame());
             if (!schema.games.contains(gameId)) {
                 schema.games.put(gameId, record);
             }
@@ -95,7 +95,7 @@ module chess.examples.org {
             Boolean pending = pendingActive && isOpponentPending(record);
             String  detail  = message ?: describeState(record, pending);
             return new ApiState(
-                    boardRows(record.board),
+                    ChessLogic.boardRows(record.board),
                     record.turn.toString(),
                     record.status.toString(),
                     detail,
@@ -156,7 +156,7 @@ module chess.examples.org {
 
             Duration waited = now - pendingStart;
             if (waited >= moveDelay) {
-                AutoResponse reply = autoMove(record);
+                AutoResponse reply = ChessLogic.autoMove(record);
                 pendingActive = False;
                 autoApplied   = True;
                 return reply.record;

@@ -1,39 +1,34 @@
 module chessLogic.examples.org {
     package db import chessDB.examples.org;
 
-    import db.ChessSchema
-    import db.GameRecord
-    import db.GameStatus
-    import db.Color
+    import db.ChessSchema;
+    import db.GameRecord;
+    import db.GameStatus;
+    import db.Color;
 
+service ChessLogic {
+    static Int BOARD_SIZE = 8;
+    static Int FILE_STEP = 1;
+    static Int RANK_STEP = 8;
+    static Char FILE_MIN = 'a';
+    static Char FILE_MAX = 'h';
+    static Char RANK_MIN = '1';
+    static Char RANK_MAX = '8';
+    static Int SQUARE_STRING_LENGTH = 2;
+    static Int INVALID_SQUARE = -1;
+    static Int MAX_RANK_INDEX = 7;
+    static Int WHITE_PAWN_START_RANK = 6;
+    static Int BLACK_PAWN_START_RANK = 1;
+    static Int WHITE_PROMOTION_RANK = 0;
+    static Int BLACK_PROMOTION_RANK = 7;
+    static Int CENTER_FILE = 3;
+    static Int CENTER_RANK = 3;
+    static Int CENTER_BONUS_BASE = 5;
+    static Int PROMOTION_BONUS = 8;
+    static Int CHECKMATE_SCORE = 1000;
+    static Int MIN_SCORE = -10000;
 
-    const MoveOutcome(Boolean ok, GameRecord record, String message);
-
-    const AutoResponse(Boolean moved, GameRecord record, String message);
-
-    private const val BOARD_SIZE = 8
-    private const val FILE_MIN = 'a'
-    private const val FILE_MAX = 'h'
-    private const val RANK_MIN = '1'
-    private const val RANK_MAX = '8'
-    private const val INVALID_SQUARE = -1
-    private const val TOTAL_SQUARES = BOARD_SIZE * BOARD_SIZE;
-    private const val RANK_STEP = BOARD_SIZE;
-    private const val FILE_STEP = 1;
-    private const val MAX_RANK_INDEX = BOARD_SIZE - 1;
-    private const val CENTER_FILE = 3;
-    private const val CENTER_RANK = 3;
-    private const val WHITE_PAWN_START_RANK = 6;
-    private const val BLACK_PAWN_START_RANK = 1;
-    private const val WHITE_PROMOTION_RANK = 0;
-    private const val BLACK_PROMOTION_RANK = MAX_RANK_INDEX;
-    private const val SQUARE_STRING_LENGTH = 2;
-    private const val CHECKMATE_SCORE = 1000;
-    private const val PROMOTION_BONUS = 5;
-    private const val CENTER_BONUS_BASE = 4;
-    private const val MIN_SCORE = -1_000_000;
-
-    MoveOutcome tryApplyMove(GameRecord record, String fromSquare, String toSquare, String? promotion = Null) {
+    static MoveOutcome applyHumanMove(GameRecord record, String fromSquare, String toSquare, String? promotion = Null) {
         if (record.status != GameStatus.Ongoing) {
             return new MoveOutcome(False, record, "Game already finished");
         }
@@ -68,7 +63,7 @@ module chessLogic.examples.org {
         return new MoveOutcome(True, updated, updated.lastMove ?: "Move applied");
     }
 
-    AutoResponse autoMove(GameRecord record) {
+    static AutoResponse autoMove(GameRecord record) {
         if (record.status != GameStatus.Ongoing || record.turn != Color.Black) {
             return new AutoResponse(False, record, "Ready for a move");
         }
@@ -78,7 +73,7 @@ module chessLogic.examples.org {
         Int    bestScore = MIN_SCORE;
         AutoResponse? best = Null;
 
-        for (Int from : 0 ..< squares; ++from) {
+        for (Int from : 0 ..< squares) {
             Char piece = board[from];
             if (piece == '.' || colorOf(piece) != Color.Black) {
                 continue;
@@ -110,7 +105,9 @@ module chessLogic.examples.org {
             }
         }
 
-        return best?;
+        if (best != Null) {
+            return best;
+        }
 
         GameRecord stalemate = new GameRecord(record.board,
                                                     record.turn,
@@ -121,11 +118,11 @@ module chessLogic.examples.org {
         return new AutoResponse(False, stalemate, "Opponent has no legal moves");
     }
 
-    GameRecord defaultGame() {
+    static GameRecord defaultGame() {
         return new GameRecord(INITIAL_BOARD, Color.White);
     }
 
-    GameRecord resetGame() {
+    static GameRecord resetGame() {
         return new GameRecord(INITIAL_BOARD,
                                  Color.White,
                                  GameStatus.Ongoing,
@@ -134,9 +131,9 @@ module chessLogic.examples.org {
                                  0);
     }
 
-    String[] boardRows(String board) {
+    static String[] boardRows(String board) {
         String[] rows = new String[](BOARD_SIZE);
-        for (Int i : 0 ..< BOARD_SIZE; ++i) {
+        for (Int i : 0 ..< BOARD_SIZE) {
             rows[i] = board[i * BOARD_SIZE ..< (i + 1) * BOARD_SIZE];
         }
         return rows;
@@ -144,7 +141,7 @@ module chessLogic.examples.org {
 
     // ----- internal helpers -------------------------------------------------
 
-    GameRecord applyMove(GameRecord record, Char[] board, Int from, Int to, String? promotion) {
+    static GameRecord applyMove(GameRecord record, Char[] board, Int from, Int to, String? promotion) {
         Char piece = board[from];
         Color mover = colorOf(piece);
         Char target = board[to];
@@ -177,7 +174,7 @@ module chessLogic.examples.org {
                                  opponentScore);
     }
 
-    GameStatus detectStatus(Char[] board) {
+    static GameStatus detectStatus(Char[] board) {
         Boolean whiteHasPieces = False;
         Boolean blackHasPieces = False;
         for (Char c : board) {
@@ -197,7 +194,7 @@ module chessLogic.examples.org {
         return GameStatus.Ongoing;
     }
 
-    Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
+    static Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
         Color mover = colorOf(piece);
         Int fromFile   = fileIndex(from);
         Int fromRank   = rankIndex(from);
@@ -266,7 +263,7 @@ module chessLogic.examples.org {
         }
     }
 
-    Boolean clearPath(Char[] board, Int from, Int to, Int step) {
+    static Boolean clearPath(Char[] board, Int from, Int to, Int step) {
         for (Int idx = from + step; idx != to; idx += step) {
             if (board[idx] != '.') {
                 return False;
@@ -275,7 +272,7 @@ module chessLogic.examples.org {
         return True;
     }
 
-    Int evaluateMove(Char piece, Char target, Int to, GameStatus status) {
+    static Int evaluateMove(Char piece, Char target, Int to, GameStatus status) {
         Int score = pieceValue(target);
         score += positionBonus(to);
         if (status == GameStatus.Checkmate) {
@@ -289,23 +286,23 @@ module chessLogic.examples.org {
 
     enum PieceType { Pawn, Knight, Bishop, Rook, Queen, King }
 
-    static Map<Char, Int> PIECE_VALUES = Map.of(
-        'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100,
-        'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100
-    );
+    static Map<Char, Int> PIECE_VALUES = Map:[
+        'P'=1, 'N'=3, 'B'=3, 'R'=5, 'Q'=9, 'K'=100,
+        'p'=1, 'n'=3, 'b'=3, 'r'=5, 'q'=9, 'k'=100
+    ];
     
-    Int pieceValue(Char piece) {
+    static Int pieceValue(Char piece) {
         return PIECE_VALUES.getOrDefault(piece, 0);
     }
 
-    Int positionBonus(Int index) {
+    static Int positionBonus(Int index) {
         Int file = fileIndex(index);
         Int rank = rankIndex(index);
         Int centerDistance = (file - CENTER_FILE).abs() + (rank - CENTER_RANK).abs();
         return CENTER_BONUS_BASE - centerDistance;
     }
 
-    Int parseSquare(String square) {
+    static Int parseSquare(String square) {
         if (square.size != SQUARE_STRING_LENGTH) {
             return INVALID_SQUARE;
         }
@@ -319,7 +316,7 @@ module chessLogic.examples.org {
         return (MAX_RANK_INDEX - r) * 8 + f;
     }
 
-    String formatSquare(Int index) {
+    static String formatSquare(Int index) {
         Int r = MAX_RANK_INDEX - rankIndex(index);
         Int f = fileIndex(index);
         Char file = FILE_MIN + f;
@@ -327,14 +324,14 @@ module chessLogic.examples.org {
         return $"{file}{rank}";
     }
 
-    Int fileIndex(Int index) = index % BOARD_SIZE;
-    Int rankIndex(Int index) = index / BOARD_SIZE;
+    static Int fileIndex(Int index) = index % BOARD_SIZE;
+    static Int rankIndex(Int index) = index / BOARD_SIZE;
 
-    Color colorOf(Char piece) {
+    static Color colorOf(Char piece) {
         return piece >= FILE_MIN && piece <= 'z' ? Color.Black : Color.White;
     }
 
-    Char upper(Char piece) {
+    static Char upper(Char piece) {
         if (piece >= FILE_MIN && piece <= 'z') {
             Int offset = piece - FILE_MIN;
             return 'A' + offset;
@@ -342,7 +339,7 @@ module chessLogic.examples.org {
         return piece;
     }
 
-    Char promoteIfNeeded(Char piece, Int to, String? promotion) {
+    static Char promoteIfNeeded(Char piece, Int to, String? promotion) {
         if (upper(piece) != 'P') {
             return piece;
         }
@@ -358,7 +355,7 @@ module chessLogic.examples.org {
         return piece;
     }
 
-    Char[] cloneBoard(String board) {
+    static Char[] cloneBoard(String board) {
         Int size    = board.size;
         Char[] copy = new Char[size];
         for (Int i = 0; i < size; ++i) {
@@ -376,4 +373,9 @@ module chessLogic.examples.org {
             "........" +
             "PPPPPPPP" +
             "RNBQKBNR";
+}
+
+    const MoveOutcome(Boolean ok, GameRecord record, String message) {}
+
+    const AutoResponse(Boolean moved, GameRecord record, String message) {}
 }

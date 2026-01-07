@@ -5,7 +5,7 @@ module chessLogic.examples.org {
     import db.GameRecord;
     import db.GameStatus;
     import db.Color;
-
+~
 service ChessLogic {
     static Int BOARD_SIZE = 8;
     static Int FILE_STEP = 1;

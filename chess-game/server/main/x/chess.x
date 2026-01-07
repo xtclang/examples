@@ -5,6 +5,11 @@ module chess.examples.org {
     package web    import web.xtclang.org;
 
     import web.*;
+    import db.ChessSchema;
+    import db.GameRecord;
+    import db.GameStatus;
+    import db.Color;
+    import logic.*;
 
     /** Serve the static client. */
     @StaticContent("/", /public/index.html)
@@ -16,7 +21,7 @@ module chess.examples.org {
      */
     @WebService("/api")
     service ChessApi {
-        @Inject db.ChessSchema schema;
+        @Inject ChessSchema schema;
         @Inject Clock         clock;
 
         @Atomic private Boolean pendingActive;
@@ -29,8 +34,8 @@ module chess.examples.org {
         @Produces(Json)
         ApiState state() {
             using (schema.createTransaction()) {
-                db.GameRecord record = ensureGame();
-                db.GameRecord updated = maybeResolveAuto(record);
+                GameRecord record = ensureGame();
+                GameRecord updated = maybeResolveAuto(record);
                 if (autoApplied) {
                     saveGame(updated);
                 }
@@ -42,11 +47,11 @@ module chess.examples.org {
         @Produces(Json)
         ApiState move(String from, String target) {
             using (schema.createTransaction()) {
-                db.GameRecord record = ensureGame();
+                GameRecord record = ensureGame();
                 try {
-                    logic.MoveOutcome result = logic.tryApplyMove(record, from, target, Null);
+                    MoveOutcome result = tryApplyMove(record, from, target, Null);
                     if (result.ok) {
-                        db.GameRecord current = maybeResolveAuto(result.record);
+                        GameRecord current = maybeResolveAuto(result.record);
                         saveGame(current);
                         return toApiState(current, Null);
                     }
@@ -62,7 +67,7 @@ module chess.examples.org {
         ApiState reset() {
             using (schema.createTransaction()) {
                 schema.games.remove(gameId);
-                db.GameRecord reset = logic.resetGame();
+                GameRecord reset = resetGame();
                 schema.games.put(gameId, reset);
                 pendingActive = False;
                 autoApplied   = False;
@@ -74,23 +79,23 @@ module chess.examples.org {
 
         @RO Int gameId.get() = 1;
 
-        db.GameRecord ensureGame() {
-            db.GameRecord record = schema.games.getOrDefault(gameId, logic.defaultGame());
+        GameRecord ensureGame() {
+            GameRecord record = schema.games.getOrDefault(gameId, defaultGame());
             if (!schema.games.contains(gameId)) {
                 schema.games.put(gameId, record);
             }
             return record;
         }
 
-        void saveGame(db.GameRecord record) {
+        void saveGame(GameRecord record) {
             schema.games.put(gameId, record);
         }
 
-        ApiState toApiState(db.GameRecord record, String? message) {
+        ApiState toApiState(GameRecord record, String? message = Null) {
             Boolean pending = pendingActive && isOpponentPending(record);
             String  detail  = message ?: describeState(record, pending);
             return new ApiState(
-                    logic.boardRows(record.board),
+                    boardRows(record.board),
                     record.turn.toString(),
                     record.status.toString(),
                     detail,
@@ -100,18 +105,18 @@ module chess.examples.org {
                     pending);
         }
 
-        Boolean isOpponentPending(db.GameRecord record) {
-            return record.status == db.GameStatus.Ongoing && record.turn == db.Color.Black;
+        Boolean isOpponentPending(GameRecord record) {
+            return record.status == GameStatus.Ongoing && record.turn == Color.Black;
         }
 
-        String describeState(db.GameRecord record, Boolean pending) {
+        String describeState(GameRecord record, Boolean pending) {
             switch (record.status) {
-            case db.GameStatus.Checkmate:
-                return record.turn == db.Color.White
+            case GameStatus.Checkmate:
+                return record.turn == Color.White
                         ? "Opponent captured all your pieces. Game over."
                         : "You captured every opponent piece. Victory!";
 
-            case db.GameStatus.Stalemate:
+            case GameStatus.Stalemate:
                 return "Only kings remain. Stalemate.";
 
             default:
@@ -125,7 +130,7 @@ module chess.examples.org {
                         : $"You moved {move}. Opponent thinking...";
             }
 
-            if (record.turn == db.Color.White) {
+            if (record.turn == Color.White) {
                 return move == Null
                         ? "Your move."
                         : $"Opponent moved {move}. Your move.";
@@ -134,7 +139,7 @@ module chess.examples.org {
             return "Your move.";
         }
 
-        db.GameRecord maybeResolveAuto(db.GameRecord record) {
+        GameRecord maybeResolveAuto(GameRecord record) {
             autoApplied = False;
 
             if (!isOpponentPending(record)) {
@@ -151,7 +156,7 @@ module chess.examples.org {
 
             Duration waited = now - pendingStart;
             if (waited >= moveDelay) {
-                logic.AutoResponse reply = logic.autoMove(record);
+                AutoResponse reply = autoMove(record);
                 pendingActive = False;
                 autoApplied   = True;
                 return reply.record;

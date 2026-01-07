@@ -1,12 +1,40 @@
 module chessLogic.examples.org {
     package db import chessDB.examples.org;
 
-    const MoveOutcome(Boolean ok, db.GameRecord record, String message);
+    import db.ChessSchema
+    import db.GameRecord
+    import db.GameStatus
+    import db.Color
 
-    const AutoResponse(Boolean moved, db.GameRecord record, String message);
 
-    MoveOutcome tryApplyMove(db.GameRecord record, String fromSquare, String toSquare, String? promotion) {
-        if (record.status != db.GameStatus.Ongoing) {
+    const MoveOutcome(Boolean ok, GameRecord record, String message);
+
+    const AutoResponse(Boolean moved, GameRecord record, String message);
+
+    private const val BOARD_SIZE = 8
+    private const val FILE_MIN = 'a'
+    private const val FILE_MAX = 'h'
+    private const val RANK_MIN = '1'
+    private const val RANK_MAX = '8'
+    private const val INVALID_SQUARE = -1
+    private const val TOTAL_SQUARES = BOARD_SIZE * BOARD_SIZE;
+    private const val RANK_STEP = BOARD_SIZE;
+    private const val FILE_STEP = 1;
+    private const val MAX_RANK_INDEX = BOARD_SIZE - 1;
+    private const val CENTER_FILE = 3;
+    private const val CENTER_RANK = 3;
+    private const val WHITE_PAWN_START_RANK = 6;
+    private const val BLACK_PAWN_START_RANK = 1;
+    private const val WHITE_PROMOTION_RANK = 0;
+    private const val BLACK_PROMOTION_RANK = MAX_RANK_INDEX;
+    private const val SQUARE_STRING_LENGTH = 2;
+    private const val CHECKMATE_SCORE = 1000;
+    private const val PROMOTION_BONUS = 5;
+    private const val CENTER_BONUS_BASE = 4;
+    private const val MIN_SCORE = -1_000_000;
+
+    MoveOutcome tryApplyMove(GameRecord record, String fromSquare, String toSquare, String? promotion = Null) {
+        if (record.status != GameStatus.Ongoing) {
             return new MoveOutcome(False, record, "Game already finished");
         }
 
@@ -22,7 +50,7 @@ module chessLogic.examples.org {
             return new MoveOutcome(False, record, "No piece on source square");
         }
 
-        db.Color mover = colorOf(piece);
+        Color mover = colorOf(piece);
         if (mover != record.turn) {
             return new MoveOutcome(False, record, "Not your turn");
         }
@@ -36,23 +64,23 @@ module chessLogic.examples.org {
             return new MoveOutcome(False, record, "Illegal move for that piece");
         }
 
-        db.GameRecord updated = applyMove(record, cloneBoard(record.board), from, to, promotion);
+        GameRecord updated = applyMove(record, cloneBoard(record.board), from, to, promotion);
         return new MoveOutcome(True, updated, updated.lastMove ?: "Move applied");
     }
 
-    AutoResponse autoMove(db.GameRecord record) {
-        if (record.status != db.GameStatus.Ongoing || record.turn != db.Color.Black) {
+    AutoResponse autoMove(GameRecord record) {
+        if (record.status != GameStatus.Ongoing || record.turn != Color.Black) {
             return new AutoResponse(False, record, "Ready for a move");
         }
 
         Char[] board = cloneBoard(record.board);
         Int    squares = board.size;
-        Int    bestScore = -1_000_000;
+        Int    bestScore = MIN_SCORE;
         AutoResponse? best = Null;
 
-        for (Int from = 0; from < squares; ++from) {
+        for (Int from : 0 ..< squares; ++from) {
             Char piece = board[from];
-            if (piece == '.' || colorOf(piece) != db.Color.Black) {
+            if (piece == '.' || colorOf(piece) != Color.Black) {
                 continue;
             }
 
@@ -62,7 +90,7 @@ module chessLogic.examples.org {
                 }
 
                 Char target = board[to];
-                if (target != '.' && colorOf(target) == db.Color.Black) {
+                if (target != '.' && colorOf(target) == Color.Black) {
                     continue;
                 }
 
@@ -71,7 +99,7 @@ module chessLogic.examples.org {
                 }
 
                 Char[] boardCopy      = cloneBoard(record.board);
-                db.GameRecord updated = applyMove(record, boardCopy, from, to, Null);
+                GameRecord updated = applyMove(record, boardCopy, from, to, Null);
                 Int score             = evaluateMove(piece, target, to, updated.status);
                 String message        = $"Opponent moves {formatSquare(from)}{formatSquare(to)}";
 
@@ -82,45 +110,43 @@ module chessLogic.examples.org {
             }
         }
 
-        if (best != Null) {
-            return best;
-        }
+        return best?;
 
-        db.GameRecord stalemate = new db.GameRecord(record.board,
+        GameRecord stalemate = new GameRecord(record.board,
                                                     record.turn,
-                                                    db.GameStatus.Stalemate,
+                                                    GameStatus.Stalemate,
                                                     record.lastMove,
                                                     record.playerScore,
                                                     record.opponentScore);
         return new AutoResponse(False, stalemate, "Opponent has no legal moves");
     }
 
-    db.GameRecord defaultGame() {
-        return new db.GameRecord(INITIAL_BOARD, db.Color.White);
+    GameRecord defaultGame() {
+        return new GameRecord(INITIAL_BOARD, Color.White);
     }
 
-    db.GameRecord resetGame() {
-        return new db.GameRecord(INITIAL_BOARD,
-                                 db.Color.White,
-                                 db.GameStatus.Ongoing,
+    GameRecord resetGame() {
+        return new GameRecord(INITIAL_BOARD,
+                                 Color.White,
+                                 GameStatus.Ongoing,
                                  Null,
                                  0,
                                  0);
     }
 
     String[] boardRows(String board) {
-        String[] rows = new Array<String>(8);
-        for (Int i = 0; i < 8; ++i) {
-            rows[i] = board[i * 8 ..< (i + 1) * 8];
+        String[] rows = new String[](BOARD_SIZE);
+        for (Int i : 0 ..< BOARD_SIZE; ++i) {
+            rows[i] = board[i * BOARD_SIZE ..< (i + 1) * BOARD_SIZE];
         }
         return rows;
     }
 
     // ----- internal helpers -------------------------------------------------
 
-    db.GameRecord applyMove(db.GameRecord record, Char[] board, Int from, Int to, String? promotion) {
+    GameRecord applyMove(GameRecord record, Char[] board, Int from, Int to, String? promotion) {
         Char piece = board[from];
-        db.Color mover = colorOf(piece);
+        Color mover = colorOf(piece);
         Char target = board[to];
         Boolean captured = target != '.';
 
@@ -129,21 +155,21 @@ module chessLogic.examples.org {
         board[from] = '.';
 
         String newBoard = new String(board);
-        db.Color next   = mover == db.Color.White ? db.Color.Black : db.Color.White;
-        db.GameStatus status = detectStatus(board);
+        Color next   = mover == Color.White ? Color.Black : Color.White;
+        GameStatus status = detectStatus(board);
         String moveTag = formatSquare(from) + formatSquare(to);
 
         Int playerScore   = record.playerScore;
         Int opponentScore = record.opponentScore;
         if (captured) {
-            if (mover == db.Color.White) {
+            if (mover == Color.White) {
                 ++playerScore;
             } else {
                 ++opponentScore;
             }
         }
 
-        return new db.GameRecord(newBoard,
+        return new GameRecord(newBoard,
                                  next,
                                  status,
                                  moveTag,
@@ -151,14 +177,14 @@ module chessLogic.examples.org {
                                  opponentScore);
     }
 
-    db.GameStatus detectStatus(Char[] board) {
+    GameStatus detectStatus(Char[] board) {
         Boolean whiteHasPieces = False;
         Boolean blackHasPieces = False;
         for (Char c : board) {
             if (c == '.') {
                 continue;
             }
-            if (colorOf(c) == db.Color.White) {
+            if (colorOf(c) == Color.White) {
                 whiteHasPieces = True;
             } else {
                 blackHasPieces = True;
@@ -166,13 +192,13 @@ module chessLogic.examples.org {
         }
 
         if (!whiteHasPieces || !blackHasPieces) {
-            return db.GameStatus.Checkmate;
+            return GameStatus.Checkmate;
         }
-        return db.GameStatus.Ongoing;
+        return GameStatus.Ongoing;
     }
 
     Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
-        db.Color mover = colorOf(piece);
+        Color mover = colorOf(piece);
         Int fromFile   = fileIndex(from);
         Int fromRank   = rankIndex(from);
         Int toFile     = fileIndex(to);
@@ -185,14 +211,14 @@ module chessLogic.examples.org {
         Char type = upper(piece);
         switch (type) {
         case 'P':
-            Int dir      = mover == db.Color.White ? -1 : +1;
-            Int startRow = mover == db.Color.White ? 6 : 1;
+            Int dir      = mover == Color.White ? -1 : +1;
+            Int startRow = mover == Color.White ? WHITE_PAWN_START_RANK : BLACK_PAWN_START_RANK;
             Char target  = board[to];
             if (df == 0 && dr == dir && target == '.') {
                 return True;
             }
             if (df == 0 && dr == dir * 2 && fromRank == startRow && target == '.') {
-                Int mid = from + dir * 8;
+                Int mid = from + dir * RANK_STEP;
                 return board[mid] == '.';
             }
             if (adf == 1 && dr == dir && target != '.' && colorOf(target) != mover) {
@@ -205,29 +231,29 @@ module chessLogic.examples.org {
 
         case 'B':
             if (adf == adr && adf != 0) {
-                Int step = (dr > 0 ? 8 : -8) + (df > 0 ? 1 : -1);
+                Int step = (dr > 0 ? RANK_STEP : -RANK_STEP) + (df > 0 ? FILE_STEP : -FILE_STEP);
                 return clearPath(board, from, to, step);
             }
             return False;
 
         case 'R':
             if (df == 0 && adr != 0) {
-                Int step = dr > 0 ? 8 : -8;
+                Int step = dr > 0 ? RANK_STEP : -RANK_STEP;
                 return clearPath(board, from, to, step);
             }
             if (dr == 0 && adf != 0) {
-                Int step = df > 0 ? 1 : -1;
+                Int step = df > 0 ? FILE_STEP : -FILE_STEP;
                 return clearPath(board, from, to, step);
             }
             return False;
 
         case 'Q':
             if (df == 0 || dr == 0) {
-                Int step = df == 0 ? (dr > 0 ? 8 : -8) : (df > 0 ? 1 : -1);
+                Int step = df == 0 ? (dr > 0 ? RANK_STEP : -RANK_STEP) : (df > 0 ? FILE_STEP : -FILE_STEP);
                 return clearPath(board, from, to, step);
             }
             if (adf == adr && adf != 0) {
-                Int step = (dr > 0 ? 8 : -8) + (df > 0 ? 1 : -1);
+                Int step = (dr > 0 ? RANK_STEP : -RANK_STEP) + (df > 0 ? FILE_STEP : -FILE_STEP);
                 return clearPath(board, from, to, step);
             }
             return False;
@@ -249,75 +275,68 @@ module chessLogic.examples.org {
         return True;
     }
 
-    Int evaluateMove(Char piece, Char target, Int to, db.GameStatus status) {
+    Int evaluateMove(Char piece, Char target, Int to, GameStatus status) {
         Int score = pieceValue(target);
         score += positionBonus(to);
-        if (status == db.GameStatus.Checkmate) {
-            score += 1000;
+        if (status == GameStatus.Checkmate) {
+            score += CHECKMATE_SCORE;
         }
-        if (upper(piece) == 'P' && (to / 8 == 0 || to / 8 == 7)) {
-            score += 5;
+        if (upper(piece) == 'P' && (rankIndex(to) == WHITE_PROMOTION_RANK || rankIndex(to) == BLACK_PROMOTION_RANK)) {
+            score += PROMOTION_BONUS;
         }
         return score;
     }
 
+    enum PieceType { Pawn, Knight, Bishop, Rook, Queen, King }
+
+    static Map<Char, Int> PIECE_VALUES = Map.of(
+        'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 100,
+        'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 100
+    );
+    
     Int pieceValue(Char piece) {
-        switch (upper(piece)) {
-        case 'P':
-            return 1;
-        case 'N':
-        case 'B':
-            return 3;
-        case 'R':
-            return 5;
-        case 'Q':
-            return 9;
-        case 'K':
-            return 100;
-        default:
-            return 0;
-        }
+        return PIECE_VALUES.getOrDefault(piece, 0);
     }
 
     Int positionBonus(Int index) {
         Int file = fileIndex(index);
         Int rank = rankIndex(index);
-        Int centerDistance = (file - 3).abs() + (rank - 3).abs();
-        return 4 - centerDistance;
+        Int centerDistance = (file - CENTER_FILE).abs() + (rank - CENTER_RANK).abs();
+        return CENTER_BONUS_BASE - centerDistance;
     }
 
     Int parseSquare(String square) {
-        if (square.size != 2) {
-            return -1;
+        if (square.size != SQUARE_STRING_LENGTH) {
+            return INVALID_SQUARE;
         }
         Char file = square[0];
         Char rank = square[1];
-        if (file < 'a' || file > 'h' || rank < '1' || rank > '8') {
-            return -1;
+        if (file < FILE_MIN || file > FILE_MAX || rank < RANK_MIN || rank > RANK_MAX) {
+            return INVALID_SQUARE;
         }
-        Int f = file - 'a';
-        Int r = rank - '1';
-        return (7 - r) * 8 + f;
+        Int f = file - FILE_MIN;
+        Int r = rank - RANK_MIN;
+        return (MAX_RANK_INDEX - r) * 8 + f;
     }
 
     String formatSquare(Int index) {
-        Int r = 7 - rankIndex(index);
+        Int r = MAX_RANK_INDEX - rankIndex(index);
         Int f = fileIndex(index);
-        Char file = 'a' + f;
-        Char rank = '1' + r;
+        Char file = FILE_MIN + f;
+        Char rank = RANK_MIN + r;
         return $"{file}{rank}";
     }
 
-    Int fileIndex(Int index) = index % 8;
-    Int rankIndex(Int index) = index / 8;
+    Int fileIndex(Int index) = index % BOARD_SIZE;
+    Int rankIndex(Int index) = index / BOARD_SIZE;
 
-    db.Color colorOf(Char piece) {
-        return piece >= 'a' && piece <= 'z' ? db.Color.Black : db.Color.White;
+    Color colorOf(Char piece) {
+        return piece >= FILE_MIN && piece <= 'z' ? Color.Black : Color.White;
     }
 
     Char upper(Char piece) {
-        if (piece >= 'a' && piece <= 'z') {
-            Int offset = piece - 'a';
+        if (piece >= FILE_MIN && piece <= 'z') {
+            Int offset = piece - FILE_MIN;
             return 'A' + offset;
         }
         return piece;
@@ -328,13 +347,13 @@ module chessLogic.examples.org {
             return piece;
         }
         Int rank = rankIndex(to);
-        Boolean isWhite = colorOf(piece) == db.Color.White;
-        if ((isWhite && rank == 0) || (!isWhite && rank == 7)) {
+        Boolean isWhite = colorOf(piece) == Color.White;
+        if ((isWhite && rank == WHITE_PROMOTION_RANK) || (!isWhite && rank == BLACK_PROMOTION_RANK)) {
             Char promo = 'Q';
             if (promotion != Null && promotion.size == 1) {
                 promo = upper(promotion[0]);
             }
-            return isWhite ? promo : ('a' + (promo - 'A'));
+            return isWhite ? promo : (FILE_MIN + (promo - 'A'));
         }
         return piece;
     }

@@ -18,7 +18,7 @@ module chessDB.examples.org {
      */
     const GameRecord(String board,
                      Color  turn,
-                     GameStatus status = GameStatus.Ongoing,
+                     GameStatus status = Ongoing,
                      String? lastMove = Null,
                      Int playerScore = 0,
                      Int opponentScore = 0) {}

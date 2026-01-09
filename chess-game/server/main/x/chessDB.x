@@ -137,11 +137,21 @@ module chessDB.examples.org {
         /**
          * Create an OnlineGame from a GameRecord with additional online fields.
          */
-        static OnlineGame fromGameRecord(GameRecord rec, String roomCode, String whitePlayerId,
-                                          String? blackPlayerId, GameMode mode) {
-            return new OnlineGame(rec.board, rec.turn, rec.status, rec.lastMove,
-                                   rec.playerScore, rec.opponentScore, roomCode,
-                                   whitePlayerId, blackPlayerId, mode);
+        static OnlineGame fromGameRecord(GameRecord rec,
+                                          String roomCode,
+                                          String whitePlayerId,
+                                          String? blackPlayerId,
+                                          GameMode mode) {
+            return new OnlineGame(rec.board,
+                                     rec.turn,
+                                     rec.status,
+                                     rec.lastMove,
+                                     rec.playerScore,
+                                     rec.opponentScore,
+                                     roomCode,
+                                     whitePlayerId,
+                                     blackPlayerId,
+                                     mode);
         }
 
         /**

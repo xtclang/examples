@@ -61,7 +61,8 @@ module ChessBoard.examples.org {
          * Clone the board to a mutable array.
          */
         static Char[] cloneBoard(String board) {
-            return board.toCharArray();
+            Char[] mutable = new Char[64](i -> board[i]);
+            return mutable;
         }
 
         /**

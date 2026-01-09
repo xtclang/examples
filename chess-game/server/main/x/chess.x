@@ -358,4 +358,155 @@ module chess.examples.org {
                    Int opponentScore,
                    Boolean opponentPending);
 
+    /**
+     * OnlineChessApi Service
+     * 
+     * RESTful API service for online multiplayer chess game operations.
+     * Provides endpoints for:
+     * - Creating new game rooms
+     * - Joining existing game rooms
+     * - Making moves in online games
+     * - Getting game state for online games
+     * - Leaving/abandoning games
+     * 
+     * All operations use room codes and player session IDs for authentication.
+     */
+    @WebService("/api/online")
+    service OnlineChessApi {
+        // Injected dependencies
+        @Inject ChessSchema schema;
+        @Inject Random      random;
+
+        /**
+         * POST /api/online/create
+         */
+        @Post("create")
+        @Produces(Json)
+        RoomCreated createRoom() {
+            using (schema.createTransaction()) {
+                String roomCode = OnlineChessLogic.generateRoomCode(code -> schema.onlineGames.contains(code));
+                String playerId = OnlineChessLogic.generatePlayerId();
+                GameRecord baseGame = ChessLogic.resetGame();
+                OnlineGame game = OnlineGame.fromGameRecord(
+                    baseGame, roomCode, playerId, Null, GameMode.Multiplayer);
+                schema.onlineGames.put(roomCode, game);
+                return new RoomCreated(roomCode, playerId, "Room created! Share the code with your opponent.");
+            }
+        }
+
+        /**
+         * POST /api/online/join/{roomCode}
+         */
+        @Post("join/{roomCode}")
+        @Produces(Json)
+        OnlineApiState joinRoom(String roomCode) {
+            using (schema.createTransaction()) {
+                if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                    if (game.isFull()) {
+                        return OnlineChessLogic.toOnlineApiState(game, "", "Room is full.");
+                    }
+                    String playerId = OnlineChessLogic.generatePlayerId();
+                    OnlineGame updated = new OnlineGame(
+                        game.board, game.turn, game.status, game.lastMove,
+                        game.playerScore, game.opponentScore, game.roomCode,
+                        game.whitePlayerId, playerId, game.mode);
+                    schema.onlineGames.put(roomCode, updated);
+                    return OnlineChessLogic.toOnlineApiState(updated, playerId, "Joined the game! You are Black.");
+                }
+                return new OnlineApiState(
+                    [], "White", "Ongoing", "Room not found.",
+                    Null, 0, 0, False, roomCode, "", False, False, "Multiplayer", "");
+            }
+        }
+
+        /**
+         * GET /api/online/state/{roomCode}/{playerId}
+         */
+        @Get("state/{roomCode}/{playerId}")
+        @Produces(Json)
+        OnlineApiState getState(String roomCode, String playerId) {
+            using (schema.createTransaction()) {
+                if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                    return OnlineChessLogic.toOnlineApiState(game, playerId, Null);
+                }
+                return new OnlineApiState(
+                    [], "White", "Ongoing", "Room not found.",
+                    Null, 0, 0, False, roomCode, "", False, False, "Multiplayer", playerId);
+            }
+        }
+
+        /**
+         * POST /api/online/reset/{roomCode}
+         */
+        @Post("reset/{roomCode}")
+        @Produces(Json)
+        OnlineApiState resetGame(String roomCode) {
+            using (schema.createTransaction()) {
+                if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                    GameRecord reset = ChessLogic.resetGame();
+                    OnlineGame updated = new OnlineGame(
+                        reset.board, reset.turn, reset.status, reset.lastMove,
+                        reset.playerScore, reset.opponentScore, game.roomCode,
+                        game.whitePlayerId, game.blackPlayerId, game.mode);
+                    schema.onlineGames.put(roomCode, updated);
+                    return OnlineChessLogic.toOnlineApiState(updated, game.whitePlayerId, "Game reset!");
+                }
+                return new OnlineApiState(
+                    [], "White", "Ongoing", "Room not found.",
+                    Null, 0, 0, False, roomCode, "", False, False, "Multiplayer", "");
+            }
+        }
+
+        /**
+         * POST /api/online/move/{roomCode}/{playerId}/{from}/{target}
+         */
+        @Post("move/{roomCode}/{playerId}/{from}/{target}")
+        @Produces(Json)
+        OnlineApiState makeMove(String roomCode, String playerId, String from, String target) {
+            using (schema.createTransaction()) {
+                if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                    if (!game.isFull()) {
+                        return OnlineChessLogic.toOnlineApiState(game, playerId, "Waiting for opponent to join.");
+                    }
+                    Color? playerColor = game.getPlayerColor(playerId);
+                    if (playerColor == Null) {
+                        return OnlineChessLogic.toOnlineApiState(game, playerId, "You are not a player in this game.");
+                    }
+                    if (playerColor != game.turn) {
+                        return OnlineChessLogic.toOnlineApiState(game, playerId, "It's not your turn.");
+                    }
+                    GameRecord record = game.toGameRecord();
+                    MoveOutcome result = ChessLogic.applyHumanMove(record, from, target, Null);
+                    if (!result.ok) {
+                        return OnlineChessLogic.toOnlineApiState(game, playerId, result.message);
+                    }
+                    OnlineGame updated = new OnlineGame(
+                        result.record.board, result.record.turn, result.record.status, result.record.lastMove,
+                        result.record.playerScore, result.record.opponentScore, game.roomCode,
+                        game.whitePlayerId, game.blackPlayerId, game.mode);
+                    schema.onlineGames.put(roomCode, updated);
+                    return OnlineChessLogic.toOnlineApiState(updated, playerId, Null);
+                }
+                return new OnlineApiState(
+                    [], "White", "Ongoing", "Room not found.",
+                    Null, 0, 0, False, roomCode, "", False, False, "Multiplayer", playerId);
+            }
+        }
+
+        /**
+         * POST /api/online/leave/{roomCode}/{playerId}
+         */
+        @Post("leave/{roomCode}/{playerId}")
+        @Produces(Json)
+        OnlineApiState leaveGame(String roomCode, String playerId) {
+            using (schema.createTransaction()) {
+                if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                    schema.onlineGames.remove(roomCode);
+                }
+                return new OnlineApiState(
+                    [], "White", "Ongoing", "You left the game. The room has been closed.",
+                    Null, 0, 0, False, roomCode, "", False, False, "Multiplayer", playerId);
+            }
+        }
+    }
 }

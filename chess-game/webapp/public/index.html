@@ -783,20 +783,19 @@
         const res = await fetch(`/api/online/join/${code.toUpperCase()}`, { method: 'POST' });
         const data = await res.json();
         
-        // Check if message contains JOIN_SUCCESS with player ID
-        if (data.message && data.message.startsWith('JOIN_SUCCESS:')) {
-          const parts = data.message.split(':');
-          roomCode = data.roomCode || code.toUpperCase();
-          playerId = parts[1];
-          playerColor = parts[2] || 'Black';
+        // Extract playerId and playerColor from response
+        if (data.playerId && data.roomCode) {
+          roomCode = data.roomCode;
+          playerId = data.playerId;
+          playerColor = data.playerColor || 'Black';
           isInRoom = true;
           
           saveSession();
           showRoomInfo();
-          setMessage('Joined the game as Black. White moves first.');
+          setMessage(data.message || 'Joined successfully!');
           
           // Load initial state and start polling
-          await loadOnlineState();
+          applyOnlineState(data);
           startMultiplayerPolling();
         } else if (data.message) {
           // Error response

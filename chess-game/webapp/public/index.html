@@ -906,9 +906,9 @@
       const move = state.lastMove ? `Last move: ${state.lastMove}` : '';
       setMessage(`${state.message || 'Synced.'}\n${move}`);
       
-      // Continue polling if waiting for opponent or it's not our turn
-      if (state.status === 'Ongoing' && (state.waitingForOpponent || !state.isYourTurn)) {
-        opponentRefresh = setTimeout(loadOnlineState, 2000);
+      // Continue polling while game is ongoing (to see opponent moves in real-time)
+      if (state.status === 'Ongoing') {
+        opponentRefresh = setTimeout(loadOnlineState, 1000);
       }
     }
 

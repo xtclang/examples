@@ -5,6 +5,8 @@
  * - Room code and player ID generation
  * - Game state conversion and formatting
  * - State description and messaging
+ * - Game update operations
+ * - Error response helpers
  */
 module OnlineChess.examples.org {
     package db import chessDB.examples.org;
@@ -12,6 +14,7 @@ module OnlineChess.examples.org {
 
     import db.GameRecord;
     import db.GameStatus;
+    import db.GameMode;
     import db.Color;
     import db.OnlineGame;
     import logic.*;
@@ -22,22 +25,23 @@ module OnlineChess.examples.org {
      * Provides utility methods for online multiplayer chess operations.
      */
     service OnlineChessLogic {
-        // Characters used for generating room codes
+        // Characters used for generating room codes (excluding ambiguous characters)
         static String ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         static Int ROOM_CODE_LENGTH = 6;
         static Int PLAYER_ID_LENGTH = 16;
 
+        // ----- ID Generation -------------------------------------------------
+
         /**
-         * Generate a 6-character room code using hash-based generation.
+         * Generate a unique room code using random selection.
+         * Uses the provided random generator and checks for collisions.
          */
-        static String generateRoomCode(function Boolean(String) exists) {
-            // Generate based on toString hashcode and retry if exists
+        static String generateRoomCode(Random random, function Boolean(String) exists) {
             Int attempt = 0;
             loop: while (attempt < 100) {
                 StringBuffer code = new StringBuffer(ROOM_CODE_LENGTH);
-                Int hash = ("ROOM" + attempt).hashCode().abs();
                 for (Int i : 0 ..< ROOM_CODE_LENGTH) {
-                    Int idx = ((hash + i * 31) % ROOM_CODE_CHARS.size).abs();
+                    Int idx = random.int(ROOM_CODE_CHARS.size);
                     code.append(ROOM_CODE_CHARS[idx]);
                 }
                 String result = code.toString();
@@ -46,22 +50,70 @@ module OnlineChess.examples.org {
                 }
                 attempt++;
             }
-            // Fallback to a fixed pattern if all attempts fail
-            return "ROOM00";
+            // Fallback with timestamp-based generation
+            return $"RM{attempt.toString()[0..4]}";
         }
 
         /**
-         * Generate a player session ID using hash-based generation.
+         * Generate a unique player session ID using random selection.
          */
-        static String generatePlayerId() {
+        static String generatePlayerId(Random random) {
             StringBuffer id = new StringBuffer(PLAYER_ID_LENGTH);
-            Int hash = ("PLAYER" + id.size).hashCode().abs();
             for (Int i : 0 ..< PLAYER_ID_LENGTH) {
-                Int idx = ((hash + i * 97) % ROOM_CODE_CHARS.size).abs();
+                Int idx = random.int(ROOM_CODE_CHARS.size);
                 id.append(ROOM_CODE_CHARS[idx]);
             }
             return id.toString();
         }
+
+        // ----- Game State Operations -----------------------------------------
+
+        /**
+         * Create a new online game room.
+         */
+        static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists) {
+            String roomCode = generateRoomCode(random, exists);
+            String playerId = generatePlayerId(random);
+            GameRecord baseGame = ChessLogic.resetGame();
+            OnlineGame game = OnlineGame.fromGameRecord(
+                baseGame, roomCode, playerId, Null, GameMode.Multiplayer);
+            return (game, playerId);
+        }
+
+        /**
+         * Add a second player to an existing game.
+         */
+        static (OnlineGame, String) addSecondPlayer(OnlineGame game, Random random) {
+            String playerId = generatePlayerId(random);
+            OnlineGame updated = new OnlineGame(
+                game.board, game.turn, game.status, game.lastMove,
+                game.playerScore, game.opponentScore, game.roomCode,
+                game.whitePlayerId, playerId, game.mode);
+            return (updated, playerId);
+        }
+
+        /**
+         * Reset an online game to initial state while preserving players.
+         */
+        static OnlineGame resetOnlineGame(OnlineGame game) {
+            GameRecord reset = ChessLogic.resetGame();
+            return new OnlineGame(
+                reset.board, reset.turn, reset.status, reset.lastMove,
+                reset.playerScore, reset.opponentScore, game.roomCode,
+                game.whitePlayerId, game.blackPlayerId, game.mode);
+        }
+
+        /**
+         * Apply a move result to an online game.
+         */
+        static OnlineGame applyMoveResult(OnlineGame game, GameRecord result) {
+            return new OnlineGame(
+                result.board, result.turn, result.status, result.lastMove,
+                result.playerScore, result.opponentScore, game.roomCode,
+                game.whitePlayerId, game.blackPlayerId, game.mode);
+        }
+
+        // ----- Response Builders ---------------------------------------------
 
         /**
          * Convert OnlineGame to API response format.
@@ -87,6 +139,57 @@ module OnlineChess.examples.org {
                 game.mode.toString(),
                 playerId);
         }
+
+        /**
+         * Create an error response for room not found.
+         */
+        static OnlineApiState roomNotFoundError(String roomCode, String playerId) {
+            return new OnlineApiState(
+                [],
+                "White",
+                "Ongoing",
+                "Room not found.",
+                Null,
+                0,
+                0,
+                False,
+                roomCode,
+                "",
+                False,
+                False,
+                "Multiplayer",
+                playerId);
+        }
+
+        /**
+         * Create an error response for a full room.
+         */
+        static OnlineApiState roomFullError(OnlineGame game) {
+            return toOnlineApiState(game, "", "Room is full.");
+        }
+
+        /**
+         * Create a left game response.
+         */
+        static OnlineApiState leftGameResponse(String roomCode, String playerId) {
+            return new OnlineApiState(
+                [],
+                "White",
+                "Ongoing",
+                "You left the game. The room has been closed.",
+                Null,
+                0,
+                0,
+                False,
+                roomCode,
+                "",
+                False,
+                False,
+                "Multiplayer",
+                playerId);
+        }
+
+        // ----- State Descriptions --------------------------------------------
 
         /**
          * Generate human-readable description of online game state.
@@ -126,6 +229,33 @@ module OnlineChess.examples.org {
             } else {
                 return "Waiting for opponent's move...";
             }
+        }
+
+        // ----- Validation Helpers --------------------------------------------
+
+        /**
+         * Check if a player can make a move in the given game.
+         * Returns an error message if invalid, or Null if valid.
+         */
+        static String? validateMoveRequest(OnlineGame game, String playerId) {
+            if (!game.isFull()) {
+                return "Waiting for opponent to join.";
+            }
+
+            Color? playerColor = game.getPlayerColor(playerId);
+            if (playerColor == Null) {
+                return "You are not a player in this game.";
+            }
+
+            if (playerColor != game.turn) {
+                return "It's not your turn.";
+            }
+
+            if (game.status != GameStatus.Ongoing) {
+                return "Game has already ended.";
+            }
+
+            return Null;
         }
     }
 

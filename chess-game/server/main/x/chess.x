@@ -178,160 +178,6 @@ module chess.examples.org {
             }
         }
 
-        // ----- Helper Methods ------------------------------------------------------
-
-        /**
-         * The game ID used for storing/retrieving the game.
-         * Currently hardcoded to 1 for single-game support.
-         */
-        @RO Int gameId.get() = 1;
-
-        /**
-         * Ensures a game record exists in the database.
-         * If no game exists, creates a new one with default starting position.
-         * 
-         * @return The existing or newly created GameRecord
-         */
-        GameRecord ensureGame() {
-            // Try to get existing game, or use default if not found
-            GameRecord record = schema.games.getOrDefault(gameId, ChessLogic.defaultGame());
-            // If game wasn't in database, save it now
-            if (!schema.games.contains(gameId)) {
-                schema.games.put(gameId, record);
-            }
-            return record;
-        }
-
-        /**
-         * Persists the game record to the database.
-         * 
-         * @param record The GameRecord to save
-         */
-        void saveGame(GameRecord record) {
-            schema.games.put(gameId, record);
-        }
-
-        /**
-         * Converts internal GameRecord to API response format.
-         * 
-         * @param record  The game record from database
-         * @param message Optional custom message (e.g., error message)
-         * @return ApiState object ready for JSON serialization
-         */
-        ApiState toApiState(GameRecord record, String? message = Null) {
-            // Check if opponent is currently thinking
-            Boolean pending = pendingActive && isOpponentPending(record);
-            // Generate appropriate status message
-            String  detail  = message ?: describeState(record, pending);
-            // Construct API state with all game information
-            return new ApiState(
-                    ChessLogic.boardRows(record.board),  // Board as array of 8 strings
-                    record.turn.toString(),               // "White" or "Black"
-                    record.status.toString(),             // Game status
-                    detail,                               // Descriptive message
-                    record.lastMove,                      // Last move notation (e.g., "e2e4")
-                    record.playerScore,                   // White's capture count
-                    record.opponentScore,                 // Black's capture count
-                    pending);                             // Is opponent thinking?
-        }
-
-        /**
-         * Determines if the opponent (Black) should be making a move.
-         * 
-         * @param record Current game state
-         * @return True if game is ongoing and it's Black's turn
-         */
-        Boolean isOpponentPending(GameRecord record) {
-            return record.status == GameStatus.Ongoing && record.turn == Color.Black;
-        }
-
-        /**
-         * Generates a human-readable description of the current game state.
-         * 
-         * @param record  Current game state
-         * @param pending Whether opponent is currently thinking
-         * @return Descriptive message for display to user
-         */
-        String describeState(GameRecord record, Boolean pending) {
-            // Handle game-over states
-            switch (record.status) {
-            case GameStatus.Checkmate:
-                // Determine winner based on whose turn it is (loser has no pieces)
-                return record.turn == Color.White
-                        ? "Opponent captured all your pieces. Game over."
-                        : "You captured every opponent piece. Victory!";
-
-            case GameStatus.Stalemate:
-                // Only kings remain - draw condition
-                return "Only kings remain. Stalemate.";
-
-            default:
-                break;
-            }
-
-            // Game is ongoing - describe current move state
-            String? move = record.lastMove;
-            if (pending) {
-                // Opponent is thinking about their next move
-                return move == Null
-                        ? "Opponent thinking..."
-                        : $"You moved {move}. Opponent thinking...";
-            }
-
-            if (record.turn == Color.White) {
-                // It's the player's turn
-                return move == Null
-                        ? "Your move."
-                        : $"Opponent moved {move}. Your move.";
-            }
-
-            // Default message when waiting for player
-            return "Your move.";
-        }
-
-        /**
-         * Checks if enough time has passed for the opponent to make an automated move.
-         * 
-         * This method implements the AI opponent's "thinking" delay:
-         * 1. If it's not opponent's turn, do nothing
-         * 2. If opponent just started thinking, record the start time
-         * 3. If enough time has passed (moveDelay), execute the opponent's move
-         * 
-         * @param record Current game state
-         * @return Updated game state (possibly with opponent's move applied)
-         */
-        GameRecord maybeResolveAuto(GameRecord record) {
-            // Reset the auto-applied flag
-            autoApplied = False;
-
-            // Check if it's opponent's turn
-            if (!isOpponentPending(record)) {
-                pendingActive = False;
-                return record;
-            }
-
-            Time now = clock.now;
-            // Start the thinking timer if not already started
-            if (!pendingActive) {
-                pendingActive = True;
-                pendingStart  = now;
-                return record;
-            }
-
-            // Check if enough time has elapsed
-            Duration waited = now - pendingStart;
-            if (waited >= moveDelay) {
-                // Time's up! Make the opponent's move
-                AutoResponse reply = ChessLogic.autoMove(record);
-                pendingActive = False;
-                autoApplied   = True;
-                return reply.record;
-            }
-
-            // Still thinking, return unchanged record
-            return record;
-        }
-    }
 
     /**
      * API Response Data Structure
@@ -517,5 +363,160 @@ module chess.examples.org {
                 return OnlineChessLogic.leftGameResponse(roomCode, playerId);
             }
         }
+            // ----- Helper Methods ------------------------------------------------------
+
+            /**
+             * The game ID used for storing/retrieving the game.
+             * Currently hardcoded to 1 for single-game support.
+             */
+            @RO Int gameId.get() = 1;
+
+            /**
+             * Ensures a game record exists in the database.
+             * If no game exists, creates a new one with default starting position.
+             *
+             * @return The existing or newly created GameRecord
+             */
+            GameRecord ensureGame() {
+                // Try to get existing game, or use default if not found
+                GameRecord record = schema.games.getOrDefault(gameId, ChessLogic.defaultGame());
+                // If game wasn't in database, save it now
+                if (!schema.games.contains(gameId)) {
+                    schema.games.put(gameId, record);
+                }
+                return record;
+            }
+
+            /**
+             * Persists the game record to the database.
+             *
+             * @param record The GameRecord to save
+             */
+            void saveGame(GameRecord record) {
+                schema.games.put(gameId, record);
+            }
+
+            /**
+             * Converts internal GameRecord to API response format.
+             *
+             * @param record  The game record from database
+             * @param message Optional custom message (e.g., error message)
+             * @return ApiState object ready for JSON serialization
+             */
+            ApiState toApiState(GameRecord record, String? message = Null) {
+                // Check if opponent is currently thinking
+                Boolean pending = pendingActive && isOpponentPending(record);
+                // Generate appropriate status message
+                String  detail  = message ?: describeState(record, pending);
+                // Construct API state with all game information
+                return new ApiState(
+                        ChessLogic.boardRows(record.board),  // Board as array of 8 strings
+                        record.turn.toString(),               // "White" or "Black"
+                        record.status.toString(),             // Game status
+                        detail,                               // Descriptive message
+                        record.lastMove,                      // Last move notation (e.g., "e2e4")
+                        record.playerScore,                   // White's capture count
+                        record.opponentScore,                 // Black's capture count
+                        pending);                             // Is opponent thinking?
+            }
+
+            /**
+             * Determines if the opponent (Black) should be making a move.
+             *
+             * @param record Current game state
+             * @return True if game is ongoing and it's Black's turn
+             */
+            Boolean isOpponentPending(GameRecord record) {
+                return record.status == GameStatus.Ongoing && record.turn == Color.Black;
+            }
+
+            /**
+             * Generates a human-readable description of the current game state.
+             *
+             * @param record  Current game state
+             * @param pending Whether opponent is currently thinking
+             * @return Descriptive message for display to user
+             */
+            String describeState(GameRecord record, Boolean pending) {
+                // Handle game-over states
+                switch (record.status) {
+                case GameStatus.Checkmate:
+                    // Determine winner based on whose turn it is (loser has no pieces)
+                    return record.turn == Color.White
+                            ? "Opponent captured all your pieces. Game over."
+                            : "You captured every opponent piece. Victory!";
+
+                case GameStatus.Stalemate:
+                    // Only kings remain - draw condition
+                    return "Only kings remain. Stalemate.";
+
+                default:
+                    break;
+                }
+
+                // Game is ongoing - describe current move state
+                String? move = record.lastMove;
+                if (pending) {
+                    // Opponent is thinking about their next move
+                    return move == Null
+                            ? "Opponent thinking..."
+                            : $"You moved {move}. Opponent thinking...";
+                }
+
+                if (record.turn == Color.White) {
+                    // It's the player's turn
+                    return move == Null
+                            ? "Your move."
+                            : $"Opponent moved {move}. Your move.";
+                }
+
+                // Default message when waiting for player
+                return "Your move.";
+            }
+
+            /**
+             * Checks if enough time has passed for the opponent to make an automated move.
+             *
+             * This method implements the AI opponent's "thinking" delay:
+             * 1. If it's not opponent's turn, do nothing
+             * 2. If opponent just started thinking, record the start time
+             * 3. If enough time has passed (moveDelay), execute the opponent's move
+             *
+             * @param record Current game state
+             * @return Updated game state (possibly with opponent's move applied)
+             */
+            GameRecord maybeResolveAuto(GameRecord record) {
+                // Reset the auto-applied flag
+                autoApplied = False;
+
+                // Check if it's opponent's turn
+                if (!isOpponentPending(record)) {
+                    pendingActive = False;
+                    return record;
+                }
+
+                Time now = clock.now;
+                // Start the thinking timer if not already started
+                if (!pendingActive) {
+                    pendingActive = True;
+                    pendingStart  = now;
+                    return record;
+                }
+
+                // Check if enough time has elapsed
+                Duration waited = now - pendingStart;
+                if (waited >= moveDelay) {
+                    // Time's up! Make the opponent's move
+                    AutoResponse reply = ChessLogic.autoMove(record);
+                    pendingActive = False;
+                    autoApplied   = True;
+                    return reply.record;
+                }
+
+                // Still thinking, return unchanged record
+                return record;
+            }
+        }
+
     }
 }

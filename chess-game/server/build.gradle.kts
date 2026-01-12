@@ -25,65 +25,16 @@ tasks.register("build") {
 
 tasks.register<Exec>("compileAppModule") {
     val libDir      = "${rootProject.projectDir}/lib"
-    val srcModule   = "$projectDir/main/x/$appModuleName.x"
+    val srcModule   = "$projectDir/chess/main/x/$appModuleName.x"
     val resourceDir = "${webApp.projectDir}"
 
-    dependsOn("compileDbModule", "compileLogicModule", "compileOnlineChessModule")
+    dependsOn("compileDbModule")
 
     commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, "-r", resourceDir, srcModule)
 }
 
 tasks.register<Exec>("compileDbModule") {
-    val srcModule = "${projectDir}/main/x/$dbModuleName.x"
+    val srcModule = "${projectDir}/chessDB/main/x/$dbModuleName.x"
 
     commandLine("xcc", "--verbose", "-o", buildDir, srcModule)
-}
-
-// Compile chess sub-modules (ChessBoard, ChessPieces, ChessAI, ChessGame)
-tasks.register<Exec>("compileChessBoardModule") {
-    val srcModule = "${projectDir}/main/x/ChessBoard.x"
-
-    dependsOn("compileDbModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileChessPiecesModule") {
-    val srcModule = "${projectDir}/main/x/ChessPieces.x"
-
-    dependsOn("compileChessBoardModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileChessAIModule") {
-    val srcModule = "${projectDir}/main/x/ChessAI.x"
-
-    dependsOn("compileChessBoardModule", "compileChessPiecesModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileChessGameModule") {
-    val srcModule = "${projectDir}/main/x/ChessGame.x"
-
-    dependsOn("compileChessBoardModule", "compileChessPiecesModule", "compileChessAIModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileLogicModule") {
-    val srcModule = "${projectDir}/main/x/$logicModuleName.x"
-
-    dependsOn("compileChessGameModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileOnlineChessModule") {
-    val srcModule = "${projectDir}/main/x/OnlineChess.x"
-
-    dependsOn("compileLogicModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
 }

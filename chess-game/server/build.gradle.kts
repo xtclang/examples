@@ -4,7 +4,6 @@
 
 val appModuleName   = "chess"
 val dbModuleName    = "chessDB"
-val logicModuleName = "chessLogic"
 
 val webApp   = project(":webapp");
 val buildDir = layout.buildDirectory.get()

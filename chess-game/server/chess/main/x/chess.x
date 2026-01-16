@@ -69,4 +69,19 @@ module chess.examples.org {
     @StaticContent("/", /public/index.html)
     service Home {}
 
+
+    @WebService("/static")
+    service Static incorporates StaticContent.Mixin(Directory:/public/static) {
+        // get any resources like JS files etc
+        @Get("{/path?}")
+        @Override
+        conditional ResponseOut getResource(String path) {
+            if (ResponseOut response := super(path)) {
+                return True, response;
+            }
+            return False;
+        }
+    }
+
+
 }

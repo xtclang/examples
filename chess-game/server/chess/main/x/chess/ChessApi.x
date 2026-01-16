@@ -315,4 +315,28 @@ service ChessApi {
         // Still thinking, return unchanged record
         return record;
     }
+
+    /**
+     * GET /api/validmoves/{square}
+     *
+     * Gets all valid moves for a piece at the specified square.
+     *
+     * @param square The square containing the piece (e.g., "e2")
+     * @return ValidMovesResponse with array of valid destination squares
+     */
+    @Get("validmoves/{square}")
+    @Produces(Json)
+    ValidMovesHelper.ValidMovesResponse getValidMoves(String square) {
+        using (schema.createTransaction()) {
+            GameRecord record = ensureGame();
+            
+            // Only show moves for White (player)
+            if (record.turn != Color.White) {
+                return new ValidMovesHelper.ValidMovesResponse(False, "Not your turn", []);
+            }
+
+            String[] moves = ValidMovesHelper.getValidMoves(record.board, square, Color.White);
+            return new ValidMovesHelper.ValidMovesResponse(True, Null, moves);
+        }
+    }
 }

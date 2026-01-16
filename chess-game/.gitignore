@@ -1,1 +1,7 @@
 .vscode/
+.idea/
+*.log
+.DS_Store
+*.swp
+*.bak
+*.tmp

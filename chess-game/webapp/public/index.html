@@ -4,557 +4,174 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess Playground</title>
-  
-  <!-- Google Fonts: Space Grotesk for modern, clean typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
-  
-  <style>
-    /* ===== CSS Custom Properties (Variables) ===== */
-    :root {
-      /* Color Palette */
-      --bg: #0f1629;              /* Dark background */
-      --panel: #0d2136;           /* Panel background */
-      --accent: #e3b341;          /* Gold accent color */
-      --muted: #7c8aa5;           /* Muted text color */
-      --light: #f5f7fb;           /* Light text color */
-      --dark-square: #20344e;     /* Dark chess squares */
-      --light-square: #2e4467;    /* Light chess squares */
-      --selection: #b0e3ff;       /* Selected square highlight */
-      --shadow: 0 10px 50px rgba(0, 0, 0, 0.35);  /* Drop shadow */
-    }
-
-    /* ===== Base Styles ===== */
-    
-    /* Reset box-sizing for all elements */
-    * { box-sizing: border-box; }
-    
-    /* Body: Full viewport height with gradient background */
-    body {
-      margin: 0;
-      min-height: 100vh;
-      /* Multi-layer radial gradient for visual depth */
-      background: radial-gradient(circle at 20% 20%, rgba(227, 179, 65, 0.12), transparent 30%),
-                  radial-gradient(circle at 80% 0%, rgba(55, 178, 255, 0.18), transparent 30%),
-                  var(--bg);
-      font-family: "Space Grotesk", system-ui, sans-serif;
-      color: var(--light);
-      /* Center content vertically and horizontally */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px;
-    }
-
-    /* ===== Layout Styles ===== */
-    
-    /* Main container: Two-column grid layout (board + controls) */
-    main {
-      width: min(1200px, 100%);  /* Max 1200px, responsive below that */
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;  /* Board slightly larger than controls */
-      gap: 28px;
-      align-items: start;
-    }
-
-    /* Panel sections for containing content */
-    section {
-      background: var(--panel);
-      border: 1px solid rgba(255, 255, 255, 0.05);  /* Subtle border */
-      border-radius: 18px;
-      padding: 22px;
-      box-shadow: var(--shadow);
-    }
-
-    /* Board pane: Transparent to show background gradient */
-    .board-pane {
-      background: transparent;
-      border: none;
-      padding: 0;
-      box-shadow: none;
-    }
-
-    /* ===== Typography ===== */
-    
-    /* Main heading */
-    h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      letter-spacing: -0.5px;  /* Tighter spacing for modern look */
-    }
-
-    /* Subtitle/description text */
-    .subtitle {
-      margin: 0 0 16px;
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    /* ===== Chess Board Styles ===== */
-    
-    /* Board container: 8x8 grid of squares */
-    .board {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);  /* 8 equal columns */
-      width: min(82vmin, 680px);  /* Responsive size, max 680px */
-      aspect-ratio: 1 / 1;        /* Perfect square */
-      border-radius: 18px;
-      overflow: hidden;           /* Clip square corners */
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);  /* Inner glow */
-      margin: 0 auto;
-    }
-
-    /* Individual chess square (button) */
-    .square {
-      border: none;
-      width: 100%;
-      height: 100%;
-      font-size: 32px;            /* Chess piece symbol size */
-      color: var(--light);
-      display: grid;
-      place-items: center;        /* Center piece symbol */
-      cursor: pointer;
-      /* Smooth hover and interaction transitions */
-      transition: background 0.15s ease, transform 0.05s ease;
-    }
-
-    /* Dark squares (like a1, c1, etc.) */
-    .square.dark { background: var(--dark-square); }
-    
-    /* Light squares (like a2, b1, etc.) */
-    .square.light { background: var(--light-square); }
-    
-    /* Selected square highlight */
-    .square.selected { 
-      outline: 2px solid var(--selection); 
-      outline-offset: -4px;  /* Inset outline */
-    }
-    
-    /* Hover effect: slight lift */
-    .square:hover { transform: translateY(-1px); }
-
-    /* ===== Status Display Styles ===== */
-    
-    /* Status bar: Two-column grid for turn and game status */
-    .status {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));  /* Equal columns */
-      gap: 12px;
-      margin: 0 0 16px;
-    }
-
-    /* Scoreboard: Two-column grid for player scores */
-    .scoreboard {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      margin: 0 0 16px;
-    }
-
-    /* Card component: Container for status/score items */
-    .card {
-      background: rgba(255, 255, 255, 0.03);  /* Subtle background */
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      padding: 12px 14px;
-      border-radius: 12px;
-    }
-
-    /* Label text in cards (e.g., "Turn", "Status") */
-    .label { 
-      color: var(--muted); 
-      font-size: 13px; 
-      margin-bottom: 6px; 
-    }
-    
-    /* Value text in cards (e.g., "White", "Ongoing") */
-    .value { 
-      font-size: 18px; 
-      font-weight: 600; 
-    }
-
-    /* ===== Button Styles ===== */
-    
-    /* Action buttons container */
-    .actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;  /* Wrap on small screens */
-      margin-bottom: 12px;
-    }
-
-    /* Primary action button (e.g., Reset Game) */
-    button.action {
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: var(--accent);  /* Gold background */
-      border: none;
-      color: #1c1605;             /* Dark text for contrast */
-      font-weight: 700;
-      letter-spacing: 0.25px;
-      cursor: pointer;
-      /* Smooth hover animation */
-      transition: transform 0.12s ease, box-shadow 0.12s ease;
-      box-shadow: 0 8px 24px rgba(227, 179, 65, 0.35);  /* Gold glow */
-    }
-
-    /* Secondary button style (e.g., Refresh State) */
-    button.action.secondary {
-      background: rgba(255, 255, 255, 0.08);  /* Translucent background */
-      color: var(--light);
-      box-shadow: none;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    /* Button hover: Slight lift effect */
-    button.action:hover { transform: translateY(-1px); }
-
-    /* ===== Log Display ===== */
-    
-    /* Message log area */
-    .log {
-      background: rgba(0, 0, 0, 0.22);  /* Dark background */
-      border-radius: 12px;
-      padding: 12px;
-      min-height: 120px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    /* ===== Pill Badge Component ===== */
-    
-    /* Status pill with indicator dot */
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 999px;  /* Fully rounded ends */
-      padding: 6px 10px;
-      font-size: 13px;
-      color: var(--light);
-    }
-
-    /* Animated dot indicator before pill text */
-    .pill::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;  /* Circle */
-      background: var(--accent);
-      box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.22);  /* Glow effect */
-    }
-
-    /* ===== Responsive Design ===== */
-    
-    /* Mobile/tablet layout: Stack board and controls vertically */
-    @media (max-width: 960px) {
-      body { padding: 16px; }
-      main { 
-        grid-template-columns: 1fr;  /* Single column layout */
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="./static/styles.css" />
 </head>
-<body>
-  <main>
-    <!-- Left Panel: Chess Board -->
-    <section class="board-pane">
-      <h1>Chess Playground</h1>
-      <p class="subtitle">Pick a square to move from, then a square to move to. All logic lives on the server.</p>
-      <!-- 8x8 chess board grid (populated by JavaScript) -->
+<body class="mode-single">
+  <!-- Mode Switch Tabs -->
+  <nav class="mode-tabs">
+    <button class="mode-tab active" id="singlePlayerBtn" data-mode="single">
+      <span class="tab-icon">🤖</span>
+      <span class="tab-label">vs AI</span>
+    </button>
+    <button class="mode-tab" id="multiplayerBtn" data-mode="multi">
+      <span class="tab-icon">👥</span>
+      <span class="tab-label">Online</span>
+    </button>
+  </nav>
+
+  <!-- Main Game Area -->
+  <main class="game-container">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span class="status-item">
+        <span class="status-dot"></span>
+        <span id="turn">White</span>'s turn
+      </span>
+      <span class="status-divider">•</span>
+      <span class="status-item" id="status">Ongoing</span>
+    </div>
+
+    <!-- Chess Board -->
+    <div class="board-wrapper">
       <div id="board" class="board"></div>
-    </section>
+    </div>
 
-    <!-- Right Panel: Game Controls and Status -->
-    <section>
-      <!-- Turn and Status Display -->
-      <div class="status">
-        <div class="card">
-          <div class="label">Turn</div>
-          <div class="value" id="turn">…</div>
+    <!-- Action Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <button class="tool-btn" id="reset" title="Reset Game">
+          <span class="tool-icon">↺</span>
+          <span class="tool-text">Reset</span>
+        </button>
+        <button class="tool-btn" id="refresh" title="Refresh State">
+          <span class="tool-icon">⟳</span>
+          <span class="tool-text">Sync</span>
+        </button>
+      </div>
+
+      <div class="toolbar-group scores">
+        <div class="score-display single-player-only">
+          <span class="score-label">You</span>
+          <span class="score-value" id="playerScoreInline">0</span>
         </div>
-        <div class="card">
-          <div class="label">Status</div>
-          <div class="value" id="status">…</div>
+        <div class="score-display single-player-only">
+          <span class="score-label">AI</span>
+          <span class="score-value" id="opponentScoreInline">0</span>
+        </div>
+        <div class="score-display multiplayer-only">
+          <span class="score-label">♔</span>
+          <span class="score-value" id="playerScoreInlineMulti">0</span>
+        </div>
+        <div class="score-display multiplayer-only">
+          <span class="score-label">♚</span>
+          <span class="score-value" id="opponentScoreInlineMulti">0</span>
         </div>
       </div>
 
-      <!-- Player Scores Display -->
-      <div class="scoreboard">
-        <div class="card">
-          <div class="label">Your Score</div>
-          <div class="value" id="playerScore">0</div>
-        </div>
-        <div class="card">
-          <div class="label">Opponent Score</div>
-          <div class="value" id="opponentScore">0</div>
-        </div>
+      <div class="toolbar-group">
+        <button class="tool-btn" id="infoToggle" title="Game Info">
+          <span class="tool-icon">ℹ</span>
+        </button>
+        <button class="tool-btn multiplayer-only" id="chatToggleBtn" title="Chat">
+          <span class="tool-icon">💬</span>
+          <span class="badge" id="chatBadge">0</span>
+        </button>
       </div>
-
-      <!-- Action Buttons -->
-      <div class="actions">
-        <button class="action" id="reset">Reset Game</button>
-        <button class="action secondary" id="refresh">Refresh State</button>
-      </div>
-
-      <!-- Current Selection Display -->
-      <div class="card" style="margin-bottom: 12px;">
-        <div class="label">Selection</div>
-        <div class="value" id="selection">Pick any square</div>
-      </div>
-
-      <!-- Message Log -->
-      <div class="log" id="log">Waiting for server…</div>
-    </section>
+    </div>
   </main>
 
-  <script>
-    // ===== DOM Element References =====
-    // Cache all DOM elements for efficient access
-    const boardEl = document.getElementById('board');           // Chess board container
-    const turnEl = document.getElementById('turn');             // Current turn display
-    const statusEl = document.getElementById('status');         // Game status display
-    const selectionEl = document.getElementById('selection');   // Selection status display
-    const logEl = document.getElementById('log');               // Message log area
-    const playerScoreEl = document.getElementById('playerScore');     // Player score display
-    const opponentScoreEl = document.getElementById('opponentScore'); // Opponent score display
-    const resetBtn = document.getElementById('reset');          // Reset game button
-    const refreshBtn = document.getElementById('refresh');      // Refresh state button
+  <!-- Online Panel (Slide-in from right) -->
+  <aside class="slide-panel" id="onlinePanel">
+    <div class="panel-header">
+      <h2>Online Play</h2>
+      <button class="close-btn" id="closeOnlinePanel">×</button>
+    </div>
+    <div class="panel-body">
+      <!-- Lobby Options -->
+      <div id="lobbyOptions">
+        <p class="panel-hint">Create a room or join with a code</p>
+        <button class="btn-primary full-width" id="createRoomBtn">Create Room</button>
+        <div class="divider"><span>or</span></div>
+        <div class="input-group">
+          <input type="text" class="text-input" id="roomCodeInput" placeholder="Enter code" maxlength="6" />
+          <button class="btn-secondary" id="joinRoomBtn">Join</button>
+        </div>
+      </div>
 
-    // ===== Chess Piece Mapping =====
-    // Maps piece characters from server to Unicode chess symbols
-    // Lowercase = Black pieces, Uppercase = White pieces
-    const pieceMap = {
-      r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',  // Black pieces
-      R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',  // White pieces
-      '.': ''  // Empty square
-    };
+      <!-- Room Info (shown when in room) -->
+      <div id="roomInfo" class="hidden">
+        <div class="room-code-box">
+          <span class="room-code-label">Room Code</span>
+          <span class="room-code" id="roomCodeDisplay">------</span>
+          <span class="room-code-hint">Share with your opponent</span>
+        </div>
+        <div class="player-info">
+          <span class="player-label">Playing as</span>
+          <span class="player-color-badge" id="playerColorDisplay">
+            <span class="piece">♔</span> White
+          </span>
+        </div>
+        <div class="game-status-box">
+          <span class="status-indicator" id="mpStatusPill">Waiting for opponent...</span>
+        </div>
+        <button class="btn-danger full-width" id="leaveRoom">Leave Room</button>
+      </div>
+    </div>
+  </aside>
 
-    // ===== Application State =====
-    let selection = null;          // Currently selected square (algebraic notation)
-    let cachedBoard = [];          // Cached board state (array of 8 strings)
-    let opponentRefresh = null;    // Timer ID for auto-refresh during opponent's turn
+  <!-- Chat Drawer (Slide-in from right) -->
+  <aside class="slide-panel chat-drawer" id="chatPanel">
+    <div class="panel-header">
+      <h2>💬 Game Chat</h2>
+      <button class="close-btn" id="closeChatPanel">×</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty">No messages yet. Start the conversation!</div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." maxlength="500" />
+        <button class="chat-send" id="chatSendBtn">Send</button>
+      </div>
+    </div>
+  </aside>
 
-    /**
-     * Convert Grid Coordinates to Algebraic Notation
-     * 
-     * Converts board array indices (row, col) to standard chess notation.
-     * Row 0 = Rank 8, Row 7 = Rank 1
-     * Col 0 = File a, Col 7 = File h
-     * 
-     * @param {number} row - Row index (0-7, top to bottom)
-     * @param {number} col - Column index (0-7, left to right)
-     * @returns {string} Algebraic notation (e.g., "e4")
-     */
-    function algebraic(row, col) {
-      const file = String.fromCharCode('a'.charCodeAt(0) + col);  // a-h
-      const rank = 8 - row;  // Invert: row 0 = rank 8
-      return `${file}${rank}`;
-    }
+  <!-- Info Popover -->
+  <div class="popover" id="infoPopover">
+    <div class="popover-arrow"></div>
+    <div class="popover-content">
+      <div class="info-row">
+        <span class="info-label">Selection</span>
+        <span class="info-value" id="selection">Pick a piece</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Log</span>
+      </div>
+      <div class="log-box" id="log">Waiting for server…</div>
+      <div class="info-row scores-detail">
+        <div class="score-card">
+          <span class="card-label single-player-only">Your Score</span>
+          <span class="card-label multiplayer-only">White</span>
+          <span class="card-value" id="playerScore">0</span>
+        </div>
+        <div class="score-card">
+          <span class="card-label single-player-only">Opponent</span>
+          <span class="card-label multiplayer-only">Black</span>
+          <span class="card-value" id="opponentScore">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    /**
-     * Render Chess Board
-     * 
-     * Creates the visual chess board by generating 64 button elements.
-     * Each button represents one square and displays the appropriate piece symbol.
-     * Applies alternating light/dark square colors and highlights selected square.
-     * 
-     * @param {string[]} boardRows - Array of 8 strings, each with 8 piece characters
-     */
-    function renderBoard(boardRows) {
-      cachedBoard = boardRows;  // Cache for re-rendering
-      boardEl.innerHTML = '';   // Clear existing board
-      
-      // Iterate through each rank (row)
-      boardRows.forEach((rowString, rowIdx) => {
-        // Iterate through each file (column) in the rank
-        [...rowString].forEach((ch, colIdx) => {
-          // Create button element for this square
-          const btn = document.createElement('button');
-          
-          // Alternate light/dark squares (checkerboard pattern)
-          btn.className = `square ${(rowIdx + colIdx) % 2 === 0 ? 'dark' : 'light'}`;
-          
-          // Store algebraic notation as data attribute
-          btn.dataset.square = algebraic(rowIdx, colIdx);
-          
-          // Display chess piece symbol (or empty for '.')
-          btn.textContent = pieceMap[ch] ?? '';
-          
-          // Highlight if this is the selected square
-          if (selection === btn.dataset.square) {
-            btn.classList.add('selected');
-          }
-          
-          // Add click handler
-          btn.addEventListener('click', () => handleSquareClick(btn.dataset.square));
-          
-          // Add to board
-          boardEl.appendChild(btn);
-        });
-      });
-    }
+  <!-- Backdrop for panels -->
+  <div class="backdrop" id="backdrop"></div>
 
-    /**
-     * Display Message in Log
-     * 
-     * @param {string} text - Message to display
-     */
-    function setMessage(text) {
-      logEl.textContent = text;
-    }
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
 
-    /**
-     * Handle Square Click
-     * 
-     * Implements two-click move selection:
-     * 1. First click: Select source square (highlight it)
-     * 2. Second click: Select destination square (send move to server)
-     * Clicking the same square twice deselects it.
-     * 
-     * @param {string} square - Algebraic notation of clicked square (e.g., "e4")
-     */
-    function handleSquareClick(square) {
-      // First click: Select source square
-      if (!selection) {
-        selection = square;
-        selectionEl.textContent = `From ${square}`;
-        renderBoard(cachedBoard);  // Re-render to show selection highlight
-        return;
-      }
-
-      // Click same square: Deselect
-      if (selection === square) {
-        selection = null;
-        selectionEl.textContent = 'Pick any square';
-        renderBoard(cachedBoard);
-        return;
-      }
-
-      // Second click: Execute move
-      const from = selection;
-      const to = square;
-      selection = null;  // Clear selection
-      selectionEl.textContent = 'Sending move…';
-      sendMove(from, to);
-    }
-
-    /**
-     * Send Move to Server
-     * 
-     * Makes a POST request to the server to execute a move.
-     * Updates UI with the response.
-     * 
-     * @param {string} from - Source square (e.g., "e2")
-     * @param {string} to - Destination square (e.g., "e4")
-     */
-    async function sendMove(from, to) {
-      try {
-        const res = await fetch(`/api/move/${from}/${to}`, {
-          method: 'POST'
-        });
-        const payload = await res.json();
-        applyState(payload);  // Update UI with new game state
-        selectionEl.textContent = 'Pick any square';
-      } catch (err) {
-        setMessage('Move failed: ' + err.message);
-      }
-    }
-
-    /**
-     * Load Game State from Server
-     * 
-     * Fetches the current game state via GET /api/state.
-     * Called on page load and periodically during opponent's turn.
-     */
-    async function loadState() {
-      setMessage('Syncing with server…');
-      try {
-        const res = await fetch('/api/state');
-        const payload = await res.json();
-        applyState(payload);
-      } catch (err) {
-        setMessage('Could not reach the chess server.');
-      }
-    }
-
-    /**
-     * Reset Game
-     * 
-     * Sends POST request to reset the game to initial state.
-     */
-    async function resetGame() {
-      setMessage('Resetting…');
-      try {
-        const res = await fetch('/api/reset', { method: 'POST' });
-        const payload = await res.json();
-        applyState(payload);
-      } catch (err) {
-        setMessage('Reset failed: ' + err.message);
-      }
-    }
-
-    /**
-     * Apply Server State to UI
-     * 
-     * Updates all UI elements based on game state received from server.
-     * Sets up auto-refresh timer if opponent is thinking.
-     * 
-     * Expected state object:
-     * - board: Array of 8 strings (one per rank)
-     * - turn: "White" or "Black"
-     * - status: "Ongoing", "Checkmate", or "Stalemate"
-     * - message: Human-readable status message
-     * - lastMove: Last move notation (e.g., "e2e4")
-     * - playerScore: Number of pieces captured by player
-     * - opponentScore: Number of pieces captured by opponent
-     * - opponentPending: Boolean indicating if opponent is "thinking"
-     * 
-     * @param {object} state - Game state object from server
-     */
-    function applyState(state) {
-      // Validate response
-      if (!state || !state.board) {
-        setMessage('Unexpected response from server.');
-        return;
-      }
-      
-      // Clear any existing auto-refresh timer
-      if (opponentRefresh !== null) {
-        clearTimeout(opponentRefresh);
-        opponentRefresh = null;
-      }
-      
-      // Update all UI elements
-      renderBoard(state.board);
-      turnEl.textContent = state.turn ?? '—';
-      statusEl.textContent = state.status ?? '—';
-      selectionEl.textContent = 'Pick any square';
-      playerScoreEl.textContent = state.playerScore ?? 0;
-      opponentScoreEl.textContent = state.opponentScore ?? 0;
-      
-      // Format and display message
-      const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready for a move';
-      setMessage(`${state.message || 'Synced.'}\n${move}`);
-      
-      // Set up auto-refresh if opponent is thinking
-      // Polls server every 3.1 seconds to check for opponent's move
-      if (state.opponentPending) {
-        opponentRefresh = setTimeout(loadState, 3100);
-      }
-    }
-
-    // ===== Event Listeners =====
-    // Attach click handlers to action buttons
-    resetBtn.addEventListener('click', resetGame);
-    refreshBtn.addEventListener('click', loadState);
-
-    // ===== Initialize Application =====
-    // Load initial game state when page loads
-    loadState();
-  </script>
+  <script src="./static/app.js" defer></script>
 </body>
 </html>

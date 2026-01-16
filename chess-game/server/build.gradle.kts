@@ -4,7 +4,6 @@
 
 val appModuleName   = "chess"
 val dbModuleName    = "chessDB"
-val logicModuleName = "chessLogic"
 
 val webApp   = project(":webapp");
 val buildDir = layout.buildDirectory.get()
@@ -25,24 +24,16 @@ tasks.register("build") {
 
 tasks.register<Exec>("compileAppModule") {
     val libDir      = "${rootProject.projectDir}/lib"
-    val srcModule   = "$projectDir/main/x/$appModuleName.x"
+    val srcModule   = "$projectDir/chess/main/x/$appModuleName.x"
     val resourceDir = "${webApp.projectDir}"
 
-    dependsOn("compileDbModule", "compileLogicModule")
+    dependsOn("compileDbModule")
 
     commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, "-r", resourceDir, srcModule)
 }
 
 tasks.register<Exec>("compileDbModule") {
-    val srcModule = "${projectDir}/main/x/$dbModuleName.x"
+    val srcModule = "${projectDir}/chessDB/main/x/$dbModuleName.x"
 
     commandLine("xcc", "--verbose", "-o", buildDir, srcModule)
-}
-
-tasks.register<Exec>("compileLogicModule") {
-    val srcModule = "${projectDir}/main/x/$logicModuleName.x"
-
-    dependsOn("compileDbModule")
-
-    commandLine("xcc", "--verbose", "-o", buildDir, "-L", buildDir, srcModule)
 }

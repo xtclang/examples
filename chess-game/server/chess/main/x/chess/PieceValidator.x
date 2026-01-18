@@ -1,3 +1,6 @@
+import db.Color;
+import db.CastlingRights;
+
 /**
  * Piece Movement Validator
  * This module handles move validation for each piece type:
@@ -68,9 +71,9 @@ service PieceValidator {
     // ----- Piece-Specific Validation -------------------------------------------------
 
     /**
-     * Validate pawn move.
+     * Validate pawn move (including en passant).
      */
-    static Boolean isValidPawnMove(Char piece, Int from, Int to, Char[] board) {
+    static Boolean isValidPawnMove(Char piece, Int from, Int to, Char[] board, String? enPassantTarget) {
         Boolean isWhite = piece >= 'A' && piece <= 'Z';
         Int direction = isWhite ? -8 : 8;
         Int startRank = isWhite ? 6 : 1;
@@ -94,8 +97,18 @@ service PieceValidator {
         // Diagonal capture
         Int fileDiff = (fileTo - fileFrom).abs();
         if (diff == direction + 1 || diff == direction - 1) {
-            if (fileDiff == 1 && target != '.') {
-                return True;
+            if (fileDiff == 1) {
+                // Regular capture
+                if (target != '.') {
+                    return True;
+                }
+                // En passant capture
+                if (enPassantTarget != Null) {
+                    String targetSquare = BoardUtils.toAlgebraic(to);
+                    if (targetSquare == enPassantTarget) {
+                        return True;
+                    }
+                }
             }
         }
         return False;
@@ -154,49 +167,128 @@ service PieceValidator {
     }
 
     /**
-     * Validate king move (one square in any direction).
+     * Validate king move (one square in any direction or castling).
      */
     static Boolean isValidKingMove(Int from, Int to) {
         return BoardUtils.getDistance(from, to) == 1;
+    }
+
+    /**
+     * Check if castling move is legal.
+     * @param color The color of the king
+     * @param from Source square (king's position)
+     * @param to Destination square (king's target)
+     * @param board Current board state
+     * @param castlingRights Which castling moves are still allowed
+     */
+    static Boolean isValidCastling(Color color, Int from, Int to, Char[] board, CastlingRights castlingRights) {
+        Int fromFile = BoardUtils.getFile(from);
+        Int toFile = BoardUtils.getFile(to);
+        Int fromRank = BoardUtils.getRank(from);
+        Int toRank = BoardUtils.getRank(to);
+
+        // Must be on same rank
+        if (fromRank != toRank) {
+            return False;
+        }
+
+        // King must move exactly 2 squares horizontally
+        Int fileDiff = toFile - fromFile;
+        if (fileDiff.abs() != 2) {
+            return False;
+        }
+
+        Boolean isKingside = fileDiff > 0;
+        
+        // Check castling rights
+        if (color == White) {
+            if (fromRank != 7 || fromFile != 4) {
+                return False; // White king must be on e1
+            }
+            if (isKingside && !castlingRights.whiteKingside) {
+                return False;
+            }
+            if (!isKingside && !castlingRights.whiteQueenside) {
+                return False;
+            }
+        } else {
+            if (fromRank != 0 || fromFile != 4) {
+                return False; // Black king must be on e8
+            }
+            if (isKingside && !castlingRights.blackKingside) {
+                return False;
+            }
+            if (!isKingside && !castlingRights.blackQueenside) {
+                return False;
+            }
+        }
+
+        // Check path is clear
+        Int step = isKingside ? 1 : -1;
+        Int rookFile = isKingside ? 7 : 0;
+        Int rookSquare = fromRank * 8 + rookFile;
+        
+        // Verify rook is present
+        Char expectedRook = color == White ? 'R' : 'r';
+        if (board[rookSquare] != expectedRook) {
+            return False;
+        }
+
+        // Check squares between king and rook are empty
+        for (Int file = fromFile + step; file != rookFile; file += step) {
+            if (board[fromRank * 8 + file] != '.') {
+                return False;
+            }
+        }
+
+        return True;
     }
 
     // ----- Main Validation Entry Point -------------------------------------------------
 
     /**
      * Check if a move is legal for the given piece.
+     * @param piece The piece to move
+     * @param from Source square
+     * @param to Destination square
+     * @param board Current board state
+     * @param castlingRights Which castling moves are still legal (optional)
+     * @param enPassantTarget En passant target square (optional)
      */
+    static Boolean isLegal(Char piece, Int from, Int to, Char[] board,
+                          CastlingRights? castlingRights = Null, String? enPassantTarget = Null) {
+        switch (piece.lowercase) {
+            case 'p':
+                return isValidPawnMove(piece, from, to, board, enPassantTarget);
 
-     enum Piece (Char abbreviation){
-        Pawn('p'), Knight('k'), Bishop('b'), Rook('r'), Queen('q'), King('ki');
+            case 'n':
+                return isValidKnightMove(from, to);
 
-        conditional Category from(Char abbreviation){
-            switch (abbreviation.lowercase){
-                case 'p': return True, Pawn;
-                case 'k': return True, Knight;
-                case 'b': return True, Bishop;
-                case 'r': return True, Rook;
-                case 'q': return True, Queen;
-                case 'ki': return True, King:
-                default: return False;
-            }
-        }
-     }
-    static Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
-        return switch (piece){
-            case Pawn:
-                isValidPawnMove(piece, from, to, board);
-            case Knight:
-                isValidKnightMove(piece, from, to, board);
-            case Bishop:
-                isValidBishopMove(piece, from, to, board);
-            case Rook:
-                isValidRookMove(piece, from, to, board);
-            case Queen:
-                isValidQueenMove(piece, from, to, board);
-            case King:
-                isValidKingMove(piece, from, to, board);
-            default: return False;
+            case 'b':
+                return isValidBishopMove(from, to, board);
+
+            case 'r':
+                return isValidRookMove(from, to, board);
+
+            case 'q':
+                return isValidQueenMove(from, to, board);
+
+            case 'k':
+                // Check regular king move
+                if (isValidKingMove(from, to)) {
+                    return True;
+                }
+                // Check castling
+                if (castlingRights != Null) {
+                    Color color = BoardUtils.colorOf(piece);
+                    return isValidCastling(color, from, to, board, castlingRights);
+                }
+                return False;
+
+            default:
+                return False;
         }
     }
+
 }
 

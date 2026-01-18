@@ -60,6 +60,63 @@ module chessDB.examples.org {
     enum GameMode { SinglePlayer, Multiplayer }
 
     /**
+     * Castling Rights - Track which castling moves are still available
+     * 
+     * Each player can castle kingside (O-O) and queenside (O-O-O) if:
+     * - Neither the king nor the rook has moved
+     * - There are no pieces between king and rook
+     * - The king is not in check, doesn't pass through check, and doesn't end in check
+     */
+    const CastlingRights(Boolean whiteKingside = True,
+                         Boolean whiteQueenside = True,
+                         Boolean blackKingside = True,
+                         Boolean blackQueenside = True) {}
+
+    /**
+     * Move History Entry - Represents a single move in the game
+     * 
+     * @param moveNumber     Sequential move number (increments each full turn)
+     * @param color          Which player made the move
+     * @param fromSquare     Source square in algebraic notation (e.g., "e2")
+     * @param toSquare       Destination square in algebraic notation (e.g., "e4")
+     * @param piece          The piece that moved (e.g., 'P', 'N', 'B', 'R', 'Q', 'K')
+     * @param capturedPiece  The piece captured, if any
+     * @param promotion      Piece promoted to, if applicable (e.g., 'Q')
+     * @param isCheck        Whether the move puts opponent in check
+     * @param isCheckmate    Whether the move results in checkmate
+     * @param isCastle       Whether the move is castling (kingside or queenside)
+     * @param isEnPassant    Whether the move is an en passant capture
+     * @param notation       Standard algebraic notation (e.g., "Nf3", "e4", "O-O")
+     * @param boardAfter     Board state after this move
+     */
+    const MoveHistoryEntry(Int moveNumber,
+                           Color color,
+                           String fromSquare,
+                           String toSquare,
+                           Char piece,
+                           Char? capturedPiece = Null,
+                           Char? promotion = Null,
+                           Boolean isCheck = False,
+                           Boolean isCheckmate = False,
+                           String? isCastle = Null,
+                           Boolean isEnPassant = False,
+                           String notation = "",
+                           String boardAfter = "") {}
+
+    /**
+     * Time Control - Tracks time remaining for each player
+     * 
+     * @param whiteTimeMs    Time remaining for White in milliseconds
+     * @param blackTimeMs    Time remaining for Black in milliseconds
+     * @param incrementMs    Time increment added per move in milliseconds (e.g., Fisher increment)
+     * @param lastMoveTime   Timestamp of the last move (milliseconds since epoch)
+     */
+    const TimeControl(Int whiteTimeMs = 0,
+                      Int blackTimeMs = 0,
+                      Int incrementMs = 0,
+                      Int lastMoveTime = 0) {}
+
+    /**
      * Game Record - Immutable Game State Snapshot
      * 
      * Represents a complete snapshot of a chess game at a specific point in time.
@@ -87,13 +144,23 @@ module chessDB.examples.org {
      * @param lastMove       Last move made in algebraic notation (e.g., "e2e4"), or null if no moves yet
      * @param playerScore    Number of Black pieces captured by White (player)
      * @param opponentScore  Number of White pieces captured by Black (opponent)
+     * @param castlingRights Tracks which castling moves are still legal
+     * @param enPassantTarget Square where en passant capture is possible (e.g., "e3"), or null
+     * @param moveHistory    Complete history of all moves made in the game
+     * @param timeControl    Time remaining and settings for each player
+     * @param halfMoveClock  Number of half-moves since last capture or pawn move (for 50-move rule)
      */
     const GameRecord(String board,
                      Color  turn,
                      GameStatus status = Ongoing,
                      String? lastMove = Null,
                      Int playerScore = 0,
-                     Int opponentScore = 0) {}
+                     Int opponentScore = 0,
+                     CastlingRights castlingRights = new CastlingRights(),
+                     String? enPassantTarget = Null,
+                     MoveHistoryEntry[] moveHistory = [],
+                     TimeControl? timeControl = Null,
+                     Int halfMoveClock = 0) {}
 
     /**
      * Online Game Record - Extended Game State for Multiplayer
@@ -114,6 +181,11 @@ module chessDB.examples.org {
      * @param whitePlayerId    Session ID of the White player (creator)
      * @param blackPlayerId    Session ID of the Black player (joiner), or null if waiting
      * @param mode             Game mode (SinglePlayer or Multiplayer)
+     * @param castlingRights   Tracks which castling moves are still legal
+     * @param enPassantTarget  Square where en passant capture is possible, or null
+     * @param moveHistory      Complete history of all moves made in the game
+     * @param timeControl      Time remaining and settings for each player
+     * @param halfMoveClock    Number of half-moves since last capture or pawn move
      */
     const OnlineGame(String board,
                      Color  turn,
@@ -124,14 +196,20 @@ module chessDB.examples.org {
                      String roomCode = "",
                      String whitePlayerId = "",
                      String? blackPlayerId = Null,
-                     GameMode mode = SinglePlayer) {
+                     GameMode mode = SinglePlayer,
+                     CastlingRights castlingRights = new CastlingRights(),
+                     String? enPassantTarget = Null,
+                     MoveHistoryEntry[] moveHistory = [],
+                     TimeControl? timeControl = Null,
+                     Int halfMoveClock = 0) {
 
         /**
          * Convert OnlineGame to basic GameRecord.
          * Useful for compatibility with existing game logic.
          */
         GameRecord toGameRecord() {
-            return new GameRecord(board, turn, status, lastMove, playerScore, opponentScore);
+            return new GameRecord(board, turn, status, lastMove, playerScore, opponentScore,
+                                castlingRights, enPassantTarget, moveHistory, timeControl, halfMoveClock);
         }
 
         /**
@@ -151,7 +229,12 @@ module chessDB.examples.org {
                                      roomCode,
                                      whitePlayerId,
                                      blackPlayerId,
-                                     mode);
+                                     mode,
+                                     rec.castlingRights,
+                                     rec.enPassantTarget,
+                                     rec.moveHistory,
+                                     rec.timeControl,
+                                     rec.halfMoveClock);
         }
 
         /**

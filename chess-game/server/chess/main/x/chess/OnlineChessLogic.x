@@ -1,3 +1,5 @@
+import db.TimeControl;
+
 /**
  * OnlineChess Helper Service
  *
@@ -56,12 +58,22 @@ service OnlineChessLogic {
     /**
      * Create a new online game room.
      */
-    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists) {
+    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists,
+                                               TimeControl? timeControl = Null) {
         String roomCode = generateRoomCode(random, exists);
         String playerId = generatePlayerId(random);
         GameRecord baseGame = ChessLogic.resetGame();
+        
+        // Update time control if provided
+        GameRecord gameWithTime = timeControl != Null ?
+            new GameRecord(baseGame.board, baseGame.turn, baseGame.status,
+                         baseGame.lastMove, baseGame.playerScore, baseGame.opponentScore,
+                         baseGame.castlingRights, baseGame.enPassantTarget,
+                         baseGame.moveHistory, timeControl, baseGame.halfMoveClock) :
+            baseGame;
+        
         OnlineGame game = OnlineGame.fromGameRecord(
-            baseGame, roomCode, playerId, Null, GameMode.Multiplayer);
+            gameWithTime, roomCode, playerId, Null, GameMode.Multiplayer);
         return (game, playerId);
     }
 
@@ -73,7 +85,9 @@ service OnlineChessLogic {
         OnlineGame updated = new OnlineGame(
             game.board, game.turn, game.status, game.lastMove,
             game.playerScore, game.opponentScore, game.roomCode,
-            game.whitePlayerId, playerId, game.mode);
+            game.whitePlayerId, playerId, game.mode,
+            game.castlingRights, game.enPassantTarget,
+            game.moveHistory, game.timeControl, game.halfMoveClock);
         return (updated, playerId);
     }
 

@@ -2,6 +2,7 @@ import OnlineChessLogic.OnlineApiState;
 import OnlineChessLogic.RoomCreated;
 import ChessGame.MoveOutcome;
 import ValidMovesHelper.ValidMovesResponse;
+import db.TimeControl;
 
 /**
  * OnlineChessApi Service
@@ -28,18 +29,29 @@ service OnlineChessApi {
      * Creates a new online game room. The creator becomes the White player
      * and receives a room code to share with their opponent.
      *
+     * @param request Optional request body with time control settings
      * @return RoomCreated with room code and player ID
      */
     @Post("create")
     @Produces(Json)
-    RoomCreated createRoom() {
+    RoomCreated createRoom(@BodyParam CreateRoomRequest? request = Null) {
         using (schema.createTransaction()) {
+            TimeControl? timeCtrl = Null;
+            if (request != Null && request.timeControlMs > 0) {
+                timeCtrl = TimeControlService.create(request.timeControlMs, request.incrementMs);
+            }
+            
             (OnlineGame game, String playerId) = OnlineChessLogic.createNewRoom(
-                random, code -> schema.onlineGames.contains(code));
+                random, (String code) -> schema.onlineGames.contains(code), timeCtrl);
             schema.onlineGames.put(game.roomCode, game);
             return new RoomCreated(game.roomCode, playerId, "Room created! Share the code with your opponent.");
         }
     }
+
+    /**
+     * Request body for creating a room with time control.
+     */
+    static const CreateRoomRequest(Int timeControlMs = 0, Int incrementMs = 0);
 
     /**
      * POST /api/online/join/{roomCode}
@@ -196,7 +208,8 @@ service OnlineChessApi {
                 }
 
                 // Get valid moves
-                String[] moves = getValidMoves(game.board, square, playerColor);
+                String[] moves = ValidMovesHelper.getValidMoves(game.board, square, playerColor,
+                                                               game.castlingRights, game.enPassantTarget);
                 return new ValidMovesResponse(True, Null, moves);
             }
             return new ValidMovesResponse(False, "Room not found", []);

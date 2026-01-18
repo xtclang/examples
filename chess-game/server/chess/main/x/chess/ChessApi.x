@@ -2,6 +2,9 @@ import OnlineChessLogic.RoomCreated;
 import OnlineChessLogic.OnlineApiState;
 import ChessGame.MoveOutcome;
 import ChessGame.AutoResponse;
+import db.MoveHistoryEntry;
+import db.CastlingRights;
+import db.GameStatus;
 /**
  * ChessApi Service
  *
@@ -339,4 +342,158 @@ service ChessApi {
             return new ValidMovesHelper.ValidMovesResponse(True, Null, moves);
         }
     }
+
+    /**
+     * POST /api/undo
+     *
+     * Undoes the last move (or last two moves in single-player to undo both player and AI).
+     *
+     * @return ApiState with the game state after undo
+     */
+    @Post("undo")
+    @Produces(Json)
+    ApiState undo() {
+        using (schema.createTransaction()) {
+            GameRecord record = ensureGame();
+            
+            if (record.moveHistory.size == 0) {
+                return toApiState(record, "No moves to undo");
+            }
+
+            // In single-player, undo both player and AI moves
+            Int undoCount = record.moveHistory.size >= 2 ? 2 : 1;
+            
+            // Reconstruct game state from move history
+            GameRecord restored = reconstructGameState(record, record.moveHistory.size - undoCount);
+            saveGame(restored);
+            
+            return toApiState(restored, Null);
+        }
+    }
+
+    /**
+     * GET /api/history
+     *
+     * Retrieves the complete move history of the current game.
+     *
+     * @return HistoryResponse with all moves in standard notation
+     */
+    @Get("history")
+    @Produces(Json)
+    HistoryResponse getHistory() {
+        using (schema.createTransaction()) {
+            GameRecord record = ensureGame();
+            return new HistoryResponse(True, record.moveHistory);
+        }
+    }
+
+    /**
+     * GET /api/replay/{moveNumber}
+     *
+     * Gets the game state at a specific move number for replay.
+     *
+     * @param moveNumber The move number to replay to (0 = start position)
+     * @return ApiState with the game state at that point
+     */
+    @Get("replay/{moveNumber}")
+    @Produces(Json)
+    ApiState replay(Int moveNumber) {
+        using (schema.createTransaction()) {
+            GameRecord record = ensureGame();
+            
+            if (moveNumber < 0 || moveNumber > record.moveHistory.size) {
+                return toApiState(record, "Invalid move number");
+            }
+
+            GameRecord replayed = reconstructGameState(record, moveNumber);
+            return toApiState(replayed, Null);
+        }
+    }
+
+    /**
+     * Reconstruct game state up to a specific move number.
+     */
+    GameRecord reconstructGameState(GameRecord current, Int upToMove) {
+        if (upToMove == 0) {
+            return ChessLogic.defaultGame();
+        }
+
+        if (upToMove >= current.moveHistory.size) {
+            return current;
+        }
+
+        // Use the board state from the move history
+        MoveHistoryEntry lastMove = current.moveHistory[upToMove - 1];
+        
+        // Create a new game record with state up to this move
+        MoveHistoryEntry[] limitedHistory = current.moveHistory[0 ..< upToMove];
+        
+        // Determine whose turn it is next
+        Color nextTurn = lastMove.color == White ? Black : White;
+        
+        return new GameRecord(
+            lastMove.boardAfter,
+            nextTurn,
+            Ongoing,
+            $"{lastMove.fromSquare}{lastMove.toSquare}",
+            calculateScore(limitedHistory, White),
+            calculateScore(limitedHistory, Black),
+            reconstructCastlingRights(limitedHistory),
+            Null, // En passant target would need to be recalculated
+            limitedHistory,
+            current.timeControl,
+            0);
+    }
+
+    /**
+     * Calculate score from move history.
+     */
+    Int calculateScore(MoveHistoryEntry[] history, Color color) {
+        Int score = 0;
+        for (MoveHistoryEntry move : history) {
+            if (move.color == color && move.capturedPiece != Null) {
+                score++;
+            }
+        }
+        return score;
+    }
+
+    /**
+     * Reconstruct castling rights from move history.
+     */
+    CastlingRights reconstructCastlingRights(MoveHistoryEntry[] history) {
+        Boolean whiteKingside = True;
+        Boolean whiteQueenside = True;
+        Boolean blackKingside = True;
+        Boolean blackQueenside = True;
+
+        for (MoveHistoryEntry move : history) {
+            if (move.piece == 'K') {
+                whiteKingside = False;
+                whiteQueenside = False;
+            } else if (move.piece == 'k') {
+                blackKingside = False;
+                blackQueenside = False;
+            } else if (move.piece == 'R') {
+                if (move.fromSquare == "h1") { whiteKingside = False; }
+                if (move.fromSquare == "a1") { whiteQueenside = False; }
+            } else if (move.piece == 'r') {
+                if (move.fromSquare == "h8") { blackKingside = False; }
+                if (move.fromSquare == "a8") { blackQueenside = False; }
+            }
+
+            // Check if rook was captured
+            if (move.toSquare == "h1") { whiteKingside = False; }
+            if (move.toSquare == "a1") { whiteQueenside = False; }
+            if (move.toSquare == "h8") { blackKingside = False; }
+            if (move.toSquare == "a8") { blackQueenside = False; }
+        }
+
+        return new CastlingRights(whiteKingside, whiteQueenside, blackKingside, blackQueenside);
+    }
+
+    /**
+     * Response for history endpoint.
+     */
+    static const HistoryResponse(Boolean ok, MoveHistoryEntry[] moves);
 }

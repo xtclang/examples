@@ -1,6 +1,7 @@
 import OnlineChessLogic.OnlineApiState;
 import OnlineChessLogic.RoomCreated;
 import ChessGame.MoveOutcome;
+import ValidMovesHelper.ValidMovesResponse;
 
 /**
  * OnlineChessApi Service
@@ -160,6 +161,45 @@ service OnlineChessApi {
                 schema.onlineGames.remove(roomCode);
             }
             return OnlineChessLogic.leftGameResponse(roomCode, playerId);
+        }
+    }
+
+    /**
+     * GET /api/online/validmoves/{roomCode}/{playerId}/{square}
+     *
+     * Gets all valid moves for a piece at the specified square.
+     *
+     * @param roomCode The room code identifying the game
+     * @param playerId The player's session ID
+     * @param square   The square containing the piece (e.g., "e2")
+     * @return ValidMovesResponse with array of valid destination squares
+     */
+    @Get("validmoves/{roomCode}/{playerId}/{square}")
+    @Produces(Json)
+    ValidMovesResponse getValidMoves(String roomCode, String playerId, String square) {
+        using (schema.createTransaction()) {
+            if (OnlineGame game := schema.onlineGames.get(roomCode)) {
+                // Check if player is in this game
+                if (!game.hasPlayer(playerId)) {
+                    return new ValidMovesResponse(False, "Not a player in this game", []);
+                }
+
+                // Get player's color
+                Color? playerColor = game.getPlayerColor(playerId);
+                if (playerColor == Null) {
+                    return new ValidMovesResponse(False, "Could not determine player color", []);
+                }
+
+                // Check if it's player's turn
+                if (playerColor != game.turn) {
+                    return new ValidMovesResponse(False, "Not your turn", []);
+                }
+
+                // Get valid moves
+                String[] moves = getValidMoves(game.board, square, playerColor);
+                return new ValidMovesResponse(True, Null, moves);
+            }
+            return new ValidMovesResponse(False, "Room not found", []);
         }
     }
 }

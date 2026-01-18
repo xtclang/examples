@@ -191,6 +191,23 @@ module chessDB.examples.org {
     }
 
     /**
+     * Chat Message Record
+     * 
+     * Represents a single chat message sent during an online game.
+     * 
+     * @param roomCode      The room code this message belongs to
+     * @param playerId      Session ID of the player who sent the message
+     * @param playerColor   Color of the player (White or Black)
+     * @param message       Text content of the message
+     * @param timestamp     When the message was sent (milliseconds since epoch)
+     */
+    const ChatMessage(String roomCode,
+                      String playerId,
+                      Color playerColor,
+                      String message,
+                      Int timestamp) {}
+
+    /**
      * Chess Database Schema Interface
      * 
      * Defines the root schema for the chess game database.
@@ -199,6 +216,7 @@ module chessDB.examples.org {
      * The schema maintains:
      * - A map of game records indexed by integer game IDs (legacy single-player)
      * - A map of online games indexed by room codes (multiplayer)
+     * - A list of chat messages for online games
      * - Authentication data for web access control
      * 
      * All database operations should be performed within transactions
@@ -221,6 +239,14 @@ module chessDB.examples.org {
          * Room codes are unique 6-character alphanumeric strings.
          */
         @RO oodb.DBMap<String, OnlineGame> onlineGames;
+
+        /**
+         * Chat Messages List
+         * 
+         * Database list containing all chat messages sent in online games.
+         * Messages are stored in chronological order.
+         */
+        @RO oodb.DBMap<String, ChatMessage> chatMessages;
 
         /**
          * Authentication Schema

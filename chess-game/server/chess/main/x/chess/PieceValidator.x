@@ -165,30 +165,38 @@ service PieceValidator {
     /**
      * Check if a move is legal for the given piece.
      */
-    static Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
-        if (from == to) {
-            return False;
-        }
 
-        if (isPawn(piece)) {
-            return isValidPawnMove(piece, from, to, board);
+     enum Piece (Char abbreviation){
+        Pawn('p'), Knight('k'), Bishop('b'), Rook('r'), Queen('q'), King('ki');
+
+        conditional Category from(Char abbreviation){
+            switch (abbreviation.lowercase){
+                case 'p': return True, Pawn;
+                case 'k': return True, Knight;
+                case 'b': return True, Bishop;
+                case 'r': return True, Rook;
+                case 'q': return True, Queen;
+                case 'ki': return True, King:
+                default: return False;
+            }
         }
-        if (isKnight(piece)) {
-            return isValidKnightMove(from, to);
+     }
+    static Boolean isLegal(Char piece, Int from, Int to, Char[] board) {
+        return switch (piece){
+            case Pawn:
+                isValidPawnMove(piece, from, to, board);
+            case Knight:
+                isValidKnightMove(piece, from, to, board);
+            case Bishop:
+                isValidBishopMove(piece, from, to, board);
+            case Rook:
+                isValidRookMove(piece, from, to, board);
+            case Queen:
+                isValidQueenMove(piece, from, to, board);
+            case King:
+                isValidKingMove(piece, from, to, board);
+            default: return False;
         }
-        if (isBishop(piece)) {
-            return isValidBishopMove(from, to, board);
-        }
-        if (isRook(piece)) {
-            return isValidRookMove(from, to, board);
-        }
-        if (isQueen(piece)) {
-            return isValidQueenMove(from, to, board);
-        }
-        if (isKing(piece)) {
-            return isValidKingMove(from, to);
-        }
-        return False;
     }
 }
 

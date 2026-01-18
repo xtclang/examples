@@ -57,6 +57,13 @@ const prevMoveBtn = document.getElementById('prevMoveBtn');
 const nextMoveBtn = document.getElementById('nextMoveBtn');
 const lastMoveBtn = document.getElementById('lastMoveBtn');
 
+// Time control elements
+const timeControlBar = document.getElementById('timeControlBar');
+const whiteTimerEl = document.getElementById('whiteTimer');
+const blackTimerEl = document.getElementById('blackTimer');
+const whiteTimeEl = document.getElementById('whiteTime');
+const blackTimeEl = document.getElementById('blackTime');
+
 // Backdrop
 const backdrop = document.getElementById('backdrop');
 
@@ -90,6 +97,11 @@ let unreadChatCount = 0;
 let moveHistory = [];
 let replayPosition = -1; // -1 means viewing current state
 let isViewingHistory = false;
+
+// Time control state
+let timeControl = null;
+let clockInterval = null;
+let currentTurn = 'White';
 
 // ===== Utility Functions =====
 function pushToast(message, variant = 'accent') {
@@ -306,6 +318,81 @@ function syncScores(state) {
   if (opponentScoreInlineMulti) opponentScoreInlineMulti.textContent = opponentScore;
 }
 
+// ===== Time Control Functions =====
+function formatTime(ms) {
+  if (ms == null || ms < 0) return '--:--';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateTimeControl(tc, turn) {
+  if (!tc || (tc.whiteTimeMs === 0 && tc.blackTimeMs === 0)) {
+    hideTimeControl();
+    return;
+  }
+  
+  timeControl = tc;
+  currentTurn = turn;
+  
+  // Show time control bar
+  if (timeControlBar) timeControlBar.classList.add('visible');
+  
+  // Update displayed times
+  if (whiteTimeEl) whiteTimeEl.textContent = formatTime(tc.whiteTimeMs);
+  if (blackTimeEl) blackTimeEl.textContent = formatTime(tc.blackTimeMs);
+  
+  // Update active state
+  if (whiteTimerEl) {
+    whiteTimerEl.classList.toggle('active', turn === 'White');
+    whiteTimerEl.classList.toggle('low-time', tc.whiteTimeMs > 0 && tc.whiteTimeMs < 30000);
+  }
+  if (blackTimerEl) {
+    blackTimerEl.classList.toggle('active', turn === 'Black');
+    blackTimerEl.classList.toggle('low-time', tc.blackTimeMs > 0 && tc.blackTimeMs < 30000);
+  }
+  
+  // Start clock countdown
+  startClock();
+}
+
+function hideTimeControl() {
+  if (timeControlBar) timeControlBar.classList.remove('visible');
+  stopClock();
+  timeControl = null;
+}
+
+function startClock() {
+  stopClock();
+  if (!timeControl) return;
+  
+  clockInterval = setInterval(() => {
+    if (!timeControl) {
+      stopClock();
+      return;
+    }
+    
+    // Decrement current player's time
+    if (currentTurn === 'White') {
+      timeControl.whiteTimeMs = Math.max(0, timeControl.whiteTimeMs - 1000);
+      if (whiteTimeEl) whiteTimeEl.textContent = formatTime(timeControl.whiteTimeMs);
+      if (whiteTimerEl) whiteTimerEl.classList.toggle('low-time', timeControl.whiteTimeMs > 0 && timeControl.whiteTimeMs < 30000);
+    } else {
+      timeControl.blackTimeMs = Math.max(0, timeControl.blackTimeMs - 1000);
+      if (blackTimeEl) blackTimeEl.textContent = formatTime(timeControl.blackTimeMs);
+      if (blackTimerEl) blackTimerEl.classList.toggle('low-time', timeControl.blackTimeMs > 0 && timeControl.blackTimeMs < 30000);
+    }
+  }, 1000);
+}
+
+function stopClock() {
+  if (clockInterval) {
+    clearInterval(clockInterval);
+    clockInterval = null;
+  }
+}
+
 function announceMove(move, previousMove) {
   if (!move || move === previousMove || !hasInitializedState) return;
   pushToast(`Move: ${move}`, 'accent');
@@ -324,12 +411,20 @@ function applyState(state) {
 
   const previousMove = lastMove;
   if (state.lastMove) lastMove = state.lastMove;
+  currentTurn = state.turn || 'White';
 
   renderBoard(state.board, false);
   if (turnEl) turnEl.textContent = state.turn ?? '—';
   if (statusEl) statusEl.textContent = state.status ?? '—';
   if (selectionEl) selectionEl.textContent = 'Pick a piece';
   syncScores(state);
+
+  // Update time control display
+  if (state.timeControl) {
+    updateTimeControl(state.timeControl, state.turn);
+  } else {
+    hideTimeControl();
+  }
 
   const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready';
   setMessage(`${state.message || 'Synced.'}\n${move}`);

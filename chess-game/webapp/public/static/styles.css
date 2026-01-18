@@ -146,6 +146,67 @@ body {
   opacity: 0.3;
 }
 
+/* ===== Time Control ===== */
+.time-control-bar {
+  display: none;
+  justify-content: center;
+  gap: 40px;
+  padding: 12px 20px;
+  margin-bottom: 10px;
+}
+
+.time-control-bar.visible {
+  display: flex;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+  min-width: 120px;
+  justify-content: center;
+}
+
+.timer.active {
+  border-color: var(--accent);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.timer.low-time {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  animation: pulse-warning 1s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.timer-label {
+  font-size: 20px;
+}
+
+.timer-value {
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'Monaco', 'Consolas', monospace;
+  min-width: 70px;
+  text-align: center;
+}
+
+.white-timer .timer-value {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.black-timer .timer-value {
+  color: rgba(180, 180, 180, 0.9);
+}
+
 /* ===== Board ===== */
 .board-wrapper {
   position: relative;

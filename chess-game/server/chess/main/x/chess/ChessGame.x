@@ -32,7 +32,8 @@ service ChessGame {
      * Create a default game with starting position.
      */
     static GameRecord defaultGame() {
-        return new GameRecord(defaultBoard(), Color.White);
+        return new GameRecord(defaultBoard(), Color.White, GameStatus.Ongoing, Null, 0, 0,
+                             new db.CastlingRights(), Null, [], Null, 0);
     }
 
     /**
@@ -294,7 +295,9 @@ service ChessGame {
             GameStatus status = checkGameStatus(record.board, Color.Black);
             GameRecord updated = new GameRecord(
                 record.board, record.turn, status,
-                record.lastMove, record.playerScore, record.opponentScore);
+                record.lastMove, record.playerScore, record.opponentScore,
+                record.castlingRights, record.enPassantTarget, record.moveHistory,
+                record.timeControl, record.halfMoveClock);
             return new AutoResponse(False, updated, "No legal moves");
         }
 

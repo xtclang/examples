@@ -87,7 +87,7 @@ service OnlineChessLogic {
             game.playerScore, game.opponentScore, game.roomCode,
             game.whitePlayerId, playerId, game.mode,
             game.castlingRights, game.enPassantTarget,
-            game.moveHistory, game.timeControl, game.halfMoveClock);
+            game.moveHistory, game.timeControl, game.halfMoveClock, Null);
         return (updated, playerId);
     }
 
@@ -99,7 +99,9 @@ service OnlineChessLogic {
         return new OnlineGame(
             reset.board, reset.turn, reset.status, reset.lastMove,
             reset.playerScore, reset.opponentScore, game.roomCode,
-            game.whitePlayerId, game.blackPlayerId, game.mode);
+            game.whitePlayerId, game.blackPlayerId, game.mode,
+            reset.castlingRights, reset.enPassantTarget, reset.moveHistory,
+            reset.timeControl, reset.halfMoveClock, Null);
     }
 
     /**
@@ -109,7 +111,9 @@ service OnlineChessLogic {
         return new OnlineGame(
             result.board, result.turn, result.status, result.lastMove,
             result.playerScore, result.opponentScore, game.roomCode,
-            game.whitePlayerId, game.blackPlayerId, game.mode);
+            game.whitePlayerId, game.blackPlayerId, game.mode,
+            result.castlingRights, result.enPassantTarget, result.moveHistory,
+            result.timeControl, result.halfMoveClock, game.playerLeftId);
     }
 
     // ----- Response Builders ---------------------------------------------

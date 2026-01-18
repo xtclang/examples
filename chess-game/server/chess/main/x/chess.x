@@ -37,7 +37,7 @@ module chess.examples.org {
      */
     const ChatMessageResponse(String playerId,
                               String playerColor,
-                              String message,
+                              String? message = Null,
                               Int timestamp);
 
     /**
@@ -45,19 +45,19 @@ module chess.examples.org {
      */
     const ChatHistoryResponse(Boolean success,
                               String? error,
-                              ChatMessageResponse[] messages);
+                              ChatMessageResponse[] messages = []);
 
     /**
      * SendMessageResponse - API response after sending a message
      */
     const SendMessageResponse(Boolean success,
                               String? error,
-                              String? message);
+                              String? message = Null);
 
     /**
      * SendMessageRequest - API request body for sending a message
      */
-    const SendMessageRequest(String message);
+    const SendMessageRequest(String? message = Null);
 
     /**
      * Home Service

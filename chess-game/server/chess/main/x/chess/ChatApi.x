@@ -51,7 +51,7 @@ service ChatApi {
                 }
 
                 // Create and store the chat message
-                Int timestamp = (clock.now.epochPicos / 1_000_000_000).toInt64();
+                Int timestamp = clock.now.milliseconds;
                 ChatMessage msg = new ChatMessage(roomCode, playerId, color, trimmed, timestamp);
                 String msgKey = $"{roomCode}_{timestamp}_{playerId}";
                 schema.chatMessages.put(msgKey, msg);

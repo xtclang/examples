@@ -1,6 +1,7 @@
 import OnlineChessLogic.OnlineApiState;
 import OnlineChessLogic.RoomCreated;
 import ChessGame.MoveOutcome;
+import ValidMovesHelper.ValidMovesResponse;
 
 /**
  * OnlineChessApi Service
@@ -175,30 +176,30 @@ service OnlineChessApi {
      */
     @Get("validmoves/{roomCode}/{playerId}/{square}")
     @Produces(Json)
-    ValidMovesHelper.ValidMovesResponse getValidMoves(String roomCode, String playerId, String square) {
+    ValidMovesResponse getValidMoves(String roomCode, String playerId, String square) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
                 // Check if player is in this game
                 if (!game.hasPlayer(playerId)) {
-                    return new ValidMovesHelper.ValidMovesResponse(False, "Not a player in this game", []);
+                    return new ValidMovesResponse(False, "Not a player in this game", []);
                 }
 
                 // Get player's color
                 Color? playerColor = game.getPlayerColor(playerId);
                 if (playerColor == Null) {
-                    return new ValidMovesHelper.ValidMovesResponse(False, "Could not determine player color", []);
+                    return new ValidMovesResponse(False, "Could not determine player color", []);
                 }
 
                 // Check if it's player's turn
                 if (playerColor != game.turn) {
-                    return new ValidMovesHelper.ValidMovesResponse(False, "Not your turn", []);
+                    return new ValidMovesResponse(False, "Not your turn", []);
                 }
 
                 // Get valid moves
-                String[] moves = ValidMovesHelper.getValidMoves(game.board, square, playerColor);
-                return new ValidMovesHelper.ValidMovesResponse(True, Null, moves);
+                String[] moves = getValidMoves(game.board, square, playerColor);
+                return new ValidMovesResponse(True, Null, moves);
             }
-            return new ValidMovesHelper.ValidMovesResponse(False, "Room not found", []);
+            return new ValidMovesResponse(False, "Room not found", []);
         }
     }
 }

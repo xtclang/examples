@@ -46,6 +46,17 @@ const chatToggleBtn = document.getElementById('chatToggleBtn');
 const infoToggle = document.getElementById('infoToggle');
 const infoPopover = document.getElementById('infoPopover');
 
+// History panel elements
+const historyPanel = document.getElementById('historyPanel');
+const closeHistoryPanel = document.getElementById('closeHistoryPanel');
+const historyToggleBtn = document.getElementById('historyToggleBtn');
+const historyList = document.getElementById('historyList');
+const undoBtn = document.getElementById('undoBtn');
+const firstMoveBtn = document.getElementById('firstMoveBtn');
+const prevMoveBtn = document.getElementById('prevMoveBtn');
+const nextMoveBtn = document.getElementById('nextMoveBtn');
+const lastMoveBtn = document.getElementById('lastMoveBtn');
+
 // Backdrop
 const backdrop = document.getElementById('backdrop');
 
@@ -74,6 +85,11 @@ let isInRoom = false;
 let lastChatTimestamp = 0;
 let chatPollInterval = null;
 let unreadChatCount = 0;
+
+// Move history state
+let moveHistory = [];
+let replayPosition = -1; // -1 means viewing current state
+let isViewingHistory = false;
 
 // ===== Utility Functions =====
 function pushToast(message, variant = 'accent') {
@@ -229,6 +245,10 @@ async function loadState() {
     const res = await fetch('/api/state');
     const payload = await res.json();
     applyState(payload);
+    // Also load move history for single player
+    if (gameMode === 'single') {
+      await loadMoveHistory();
+    }
   } catch (err) {
     console.error('Failed to load state:', err);
     setMessage('Could not reach the chess server.');
@@ -245,6 +265,11 @@ async function resetGame() {
       const payload = await res.json();
       lastMove = null;
       applyState(payload);
+      // Clear and reload history after reset
+      moveHistory = [];
+      replayPosition = -1;
+      isViewingHistory = false;
+      updateHistoryDisplay();
     }
   } catch (err) {
     setMessage('Reset failed: ' + err.message);
@@ -447,6 +472,15 @@ function applyOnlineState(state) {
   if (selectionEl) selectionEl.textContent = state.isYourTurn ? 'Your turn' : 'Waiting…';
   syncScores(state);
 
+  // Handle opponent leaving
+  if (state.opponentLeft) {
+    if (mpStatusPill) mpStatusPill.textContent = 'Opponent left';
+    pushToast('Your opponent has left the game', 'secondary');
+    setMessage('Opponent left the room. You win!');
+    // Don't start polling again - game is over
+    return;
+  }
+
   if (mpStatusPill) {
     if (state.waitingForOpponent) {
       mpStatusPill.textContent = 'Waiting for opponent...';
@@ -464,6 +498,13 @@ function applyOnlineState(state) {
 
   if (state.status === 'Ongoing') {
     opponentRefresh = setTimeout(loadOnlineState, 1000);
+  } else if (state.status !== 'Ongoing') {
+    // Game ended, show result
+    if (state.winner) {
+      const isWinner = (state.winner === 'White' && playerColor === 'White') ||
+                       (state.winner === 'Black' && playerColor === 'Black');
+      pushToast(isWinner ? 'You won!' : 'You lost!', isWinner ? 'success' : 'accent');
+    }
   }
 
   announceMove(state.lastMove, previousMove);
@@ -500,6 +541,21 @@ function showLobbyOptions() {
 }
 
 function setGameMode(mode) {
+  // Always clear any pending timers first to prevent cross-mode interference
+  if (opponentRefresh !== null) {
+    clearTimeout(opponentRefresh);
+    opponentRefresh = null;
+  }
+  stopChatPolling();
+  
+  // Clear selection and valid moves to prevent stale state
+  selection = null;
+  activeValidMoves = [];
+  if (validMoveTimer) {
+    clearTimeout(validMoveTimer);
+    validMoveTimer = null;
+  }
+
   gameMode = mode;
   document.body.classList.remove('mode-single', 'mode-multi');
   document.body.classList.add(mode === 'single' ? 'mode-single' : 'mode-multi');
@@ -508,17 +564,31 @@ function setGameMode(mode) {
   multiplayerBtn?.classList.toggle('active', mode === 'multi');
 
   if (mode === 'single') {
-    if (opponentRefresh !== null) {
-      clearTimeout(opponentRefresh);
-      opponentRefresh = null;
+    // Exit any online room when switching to single player
+    if (isInRoom) {
+      exitMultiplayerMode();
     }
     lastMove = null;
     closeChatPanelFn();
     closeOnlinePanelFn();
+    closeHistoryPanelFn();
+    // Reset move history for single player
+    moveHistory = [];
+    replayPosition = -1;
+    isViewingHistory = false;
+    updateHistoryDisplay();
     loadState();
   } else {
+    // When switching to multiplayer, show lobby but don't start any polling yet
+    lastMove = null;
+    moveHistory = [];
+    replayPosition = -1;
+    isViewingHistory = false;
+    updateHistoryDisplay();
     showLobbyOptions();
     openOnlinePanel();
+    // Render empty board while waiting for room
+    renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
   }
 }
 
@@ -538,6 +608,10 @@ function exitMultiplayerMode() {
   stopChatPolling();
   clearChat();
   showLobbyOptions();
+  moveHistory = [];
+  replayPosition = -1;
+  isViewingHistory = false;
+  updateHistoryDisplay();
   renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
 }
 
@@ -549,7 +623,7 @@ function openOnlinePanel() {
 
 function closeOnlinePanelFn() {
   onlinePanel?.classList.remove('open');
-  if (!chatPanel?.classList.contains('open')) {
+  if (!chatPanel?.classList.contains('open') && !historyPanel?.classList.contains('open')) {
     backdrop?.classList.remove('visible');
   }
 }
@@ -564,8 +638,25 @@ function openChatPanel() {
 
 function closeChatPanelFn() {
   chatPanel?.classList.remove('open');
-  if (!onlinePanel?.classList.contains('open')) {
+  if (!onlinePanel?.classList.contains('open') && !historyPanel?.classList.contains('open')) {
     backdrop?.classList.remove('visible');
+  }
+}
+
+function openHistoryPanel() {
+  historyPanel?.classList.add('open');
+  backdrop?.classList.add('visible');
+  loadMoveHistory();
+}
+
+function closeHistoryPanelFn() {
+  historyPanel?.classList.remove('open');
+  if (!onlinePanel?.classList.contains('open') && !chatPanel?.classList.contains('open')) {
+    backdrop?.classList.remove('visible');
+  }
+  // If viewing history, return to current position when closing
+  if (isViewingHistory) {
+    exitHistoryReplay();
   }
 }
 
@@ -576,6 +667,7 @@ function toggleInfoPopover() {
 function closeAllPanels() {
   closeOnlinePanelFn();
   closeChatPanelFn();
+  closeHistoryPanelFn();
   infoPopover?.classList.remove('open');
 }
 
@@ -732,6 +824,197 @@ function stopChatPolling() {
   }
 }
 
+// ===== Move History =====
+async function loadMoveHistory() {
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    if (data.success && data.history) {
+      moveHistory = data.history;
+      updateHistoryDisplay();
+    }
+  } catch (err) {
+    console.error('Error loading history:', err);
+  }
+}
+
+function updateHistoryDisplay() {
+  if (!historyList) return;
+  
+  if (!moveHistory || moveHistory.length === 0) {
+    historyList.innerHTML = '<div class="history-empty">No moves yet. Make your first move!</div>';
+    updateHistoryButtons();
+    return;
+  }
+  
+  historyList.innerHTML = '';
+  
+  // Group moves into pairs (white + black)
+  for (let i = 0; i < moveHistory.length; i += 2) {
+    const moveNum = Math.floor(i / 2) + 1;
+    const row = document.createElement('div');
+    row.className = 'move-row';
+    
+    // Move number
+    const numEl = document.createElement('span');
+    numEl.className = 'move-number';
+    numEl.textContent = `${moveNum}.`;
+    row.appendChild(numEl);
+    
+    // White's move
+    const whiteMove = moveHistory[i];
+    const whiteEl = document.createElement('div');
+    whiteEl.className = 'move-entry white';
+    whiteEl.textContent = whiteMove.notation || `${whiteMove.fromSquare}-${whiteMove.toSquare}`;
+    whiteEl.dataset.moveIndex = i;
+    if (replayPosition === i) whiteEl.classList.add('active');
+    whiteEl.addEventListener('click', () => goToMove(i));
+    row.appendChild(whiteEl);
+    
+    // Black's move (if exists)
+    if (i + 1 < moveHistory.length) {
+      const blackMove = moveHistory[i + 1];
+      const blackEl = document.createElement('div');
+      blackEl.className = 'move-entry black';
+      blackEl.textContent = blackMove.notation || `${blackMove.fromSquare}-${blackMove.toSquare}`;
+      blackEl.dataset.moveIndex = i + 1;
+      if (replayPosition === i + 1) blackEl.classList.add('active');
+      blackEl.addEventListener('click', () => goToMove(i + 1));
+      row.appendChild(blackEl);
+    } else {
+      // Empty placeholder for alignment
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'move-entry';
+      emptyEl.style.visibility = 'hidden';
+      row.appendChild(emptyEl);
+    }
+    
+    historyList.appendChild(row);
+  }
+  
+  // Scroll to bottom if viewing current state
+  if (replayPosition === -1) {
+    historyList.scrollTop = historyList.scrollHeight;
+  }
+  
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  const hasMoves = moveHistory && moveHistory.length > 0;
+  const atStart = replayPosition === 0 || (!isViewingHistory && moveHistory.length === 0);
+  const atEnd = replayPosition === -1 || replayPosition === moveHistory.length - 1;
+  
+  if (undoBtn) undoBtn.disabled = !hasMoves || isViewingHistory;
+  if (firstMoveBtn) firstMoveBtn.disabled = !hasMoves || atStart;
+  if (prevMoveBtn) prevMoveBtn.disabled = !hasMoves || atStart;
+  if (nextMoveBtn) nextMoveBtn.disabled = !hasMoves || atEnd;
+  if (lastMoveBtn) lastMoveBtn.disabled = !hasMoves || replayPosition === -1;
+}
+
+async function goToMove(index) {
+  if (!moveHistory || index < 0 || index >= moveHistory.length) return;
+  
+  try {
+    // Fetch the board state at this move
+    const res = await fetch(`/api/replay/${index + 1}`); // API uses 1-based move numbers
+    const data = await res.json();
+    
+    if (data.board) {
+      isViewingHistory = true;
+      replayPosition = index;
+      renderBoard(data.board, true); // Disable interaction while viewing history
+      
+      // Update active move highlight
+      const moveEntries = historyList.querySelectorAll('.move-entry');
+      moveEntries.forEach(el => el.classList.remove('active'));
+      const activeEl = historyList.querySelector(`[data-move-index="${index}"]`);
+      if (activeEl) activeEl.classList.add('active');
+      
+      updateHistoryButtons();
+      setMessage(`Viewing move ${index + 1} of ${moveHistory.length}`);
+    }
+  } catch (err) {
+    console.error('Error loading replay:', err);
+    setMessage('Failed to load move replay');
+  }
+}
+
+function goToFirstMove() {
+  if (moveHistory && moveHistory.length > 0) {
+    goToMove(0);
+  }
+}
+
+function goToPrevMove() {
+  if (!moveHistory || moveHistory.length === 0) return;
+  
+  if (replayPosition === -1) {
+    // Currently at end, go to last move
+    goToMove(moveHistory.length - 1);
+  } else if (replayPosition > 0) {
+    goToMove(replayPosition - 1);
+  }
+}
+
+function goToNextMove() {
+  if (!moveHistory || moveHistory.length === 0) return;
+  
+  if (replayPosition === -1) return; // Already at current
+  
+  if (replayPosition < moveHistory.length - 1) {
+    goToMove(replayPosition + 1);
+  } else {
+    // At last historical move, exit replay
+    exitHistoryReplay();
+  }
+}
+
+function goToLastMove() {
+  exitHistoryReplay();
+}
+
+function exitHistoryReplay() {
+  if (!isViewingHistory) return;
+  
+  isViewingHistory = false;
+  replayPosition = -1;
+  
+  // Reload current game state
+  if (gameMode === 'multi' && isInRoom) {
+    loadOnlineState();
+  } else {
+    loadState();
+  }
+  
+  // Remove active highlights
+  const moveEntries = historyList?.querySelectorAll('.move-entry');
+  moveEntries?.forEach(el => el.classList.remove('active'));
+  
+  updateHistoryButtons();
+  setMessage('Returned to current game');
+}
+
+async function undoLastMove() {
+  if (isViewingHistory) return;
+  
+  try {
+    const res = await fetch('/api/undo', { method: 'POST' });
+    const data = await res.json();
+    
+    if (data.success) {
+      await loadState();
+      await loadMoveHistory();
+      pushToast('Move undone', 'success');
+    } else {
+      setMessage(data.message || 'Cannot undo');
+    }
+  } catch (err) {
+    console.error('Error undoing move:', err);
+    setMessage('Failed to undo move');
+  }
+}
+
 // ===== Restore Session =====
 function startMultiplayerUI(session) {
   document.body.classList.remove('mode-single');
@@ -793,6 +1076,21 @@ chatInput?.addEventListener('keypress', (e) => {
 });
 
 infoToggle?.addEventListener('click', toggleInfoPopover);
+
+// History panel event listeners
+closeHistoryPanel?.addEventListener('click', closeHistoryPanelFn);
+historyToggleBtn?.addEventListener('click', () => {
+  if (historyPanel?.classList.contains('open')) {
+    closeHistoryPanelFn();
+  } else {
+    openHistoryPanel();
+  }
+});
+undoBtn?.addEventListener('click', undoLastMove);
+firstMoveBtn?.addEventListener('click', goToFirstMove);
+prevMoveBtn?.addEventListener('click', goToPrevMove);
+nextMoveBtn?.addEventListener('click', goToNextMove);
+lastMoveBtn?.addEventListener('click', goToLastMove);
 
 backdrop?.addEventListener('click', closeAllPanels);
 

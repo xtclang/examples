@@ -122,6 +122,7 @@ service OnlineChessLogic {
         String colorStr = playerColor?.toString() : "Spectator";
         Boolean isYourTurn = playerColor != Null && playerColor == game.turn && !game.isWaitingForOpponent();
         String detail = message ?: describeOnlineState(game, playerId);
+        Boolean opponentLeft = game.hasOpponentLeft(playerId);
         return new OnlineApiState(
             ChessLogic.boardRows(game.board),
             game.turn.toString(),
@@ -136,7 +137,8 @@ service OnlineChessLogic {
             isYourTurn,
             game.isWaitingForOpponent(),
             game.mode.toString(),
-            playerId);
+            playerId,
+            opponentLeft);
     }
 
     /**
@@ -275,7 +277,8 @@ service OnlineChessLogic {
                          Boolean isYourTurn,
                          Boolean waitingForOpponent,
                          String gameMode,
-                         String playerId = "");
+                         String playerId = "",
+                         Boolean opponentLeft = False);
 
     /**
      * Room Creation Response

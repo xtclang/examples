@@ -159,7 +159,7 @@ service OnlineChessApi {
     /**
      * POST /api/online/leave/{roomCode}/{playerId}
      *
-     * Leaves an online game and closes the room.
+     * Leaves an online game. Marks the player as left so opponent knows.
      *
      * @param roomCode The room code identifying the game
      * @param playerId The player's session ID
@@ -170,7 +170,26 @@ service OnlineChessApi {
     OnlineApiState leaveGame(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
-                schema.onlineGames.remove(roomCode);
+                // Mark the player as having left
+                OnlineGame updatedGame = new OnlineGame(
+                    game.board,
+                    game.turn,
+                    game.status,
+                    game.lastMove,
+                    game.playerScore,
+                    game.opponentScore,
+                    game.roomCode,
+                    game.whitePlayerId,
+                    game.blackPlayerId,
+                    game.mode,
+                    game.castlingRights,
+                    game.enPassantTarget,
+                    game.moveHistory,
+                    game.timeControl,
+                    game.halfMoveClock,
+                    playerId
+                );
+                schema.onlineGames.put(roomCode, updatedGame);
             }
             return OnlineChessLogic.leftGameResponse(roomCode, playerId);
         }

@@ -186,6 +186,7 @@ module chessDB.examples.org {
      * @param moveHistory      Complete history of all moves made in the game
      * @param timeControl      Time remaining and settings for each player
      * @param halfMoveClock    Number of half-moves since last capture or pawn move
+     * @param playerLeftId     The ID of a player who left the game (if any)
      */
     const OnlineGame(String board,
                      Color  turn,
@@ -201,7 +202,8 @@ module chessDB.examples.org {
                      String? enPassantTarget = Null,
                      MoveHistoryEntry[] moveHistory = [],
                      TimeControl? timeControl = Null,
-                     Int halfMoveClock = 0) {
+                     Int halfMoveClock = 0,
+                     String? playerLeftId = Null) {
 
         /**
          * Convert OnlineGame to basic GameRecord.
@@ -234,7 +236,18 @@ module chessDB.examples.org {
                                      rec.enPassantTarget,
                                      rec.moveHistory,
                                      rec.timeControl,
-                                     rec.halfMoveClock);
+                                     rec.halfMoveClock,
+                                     Null);
+        }
+
+        /**
+         * Check if opponent has left the game.
+         */
+        Boolean hasOpponentLeft(String myPlayerId) {
+            if (playerLeftId == Null) {
+                return False;
+            }
+            return playerLeftId != myPlayerId;
         }
 
         /**

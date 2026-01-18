@@ -66,7 +66,6 @@ module chess.examples.org {
      * All requests to the root path "/" are served with the index.html file
      * from the public directory.
      */
-    @StaticContent("/", /public/index.html)
+    @StaticContent("/static", /public/index.html)
     service Home {}
-
 }

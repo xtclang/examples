@@ -66,22 +66,6 @@ module chess.examples.org {
      * All requests to the root path "/" are served with the index.html file
      * from the public directory.
      */
-    @StaticContent("/", /public/index.html)
+    @StaticContent("/static", /public/index.html)
     service Home {}
-
-
-    @WebService("/static")
-    service Static incorporates StaticContent.Mixin(Directory:/public/static) {
-        // get any resources like JS files etc
-        @Get("{/path?}")
-        @Override
-        conditional ResponseOut getResource(String path) {
-            if (ResponseOut response := super(path)) {
-                return True, response;
-            }
-            return False;
-        }
-    }
-
-
 }

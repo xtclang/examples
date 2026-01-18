@@ -17,11 +17,14 @@
       --bg: #0f1629;              /* Dark background */
       --panel: #0d2136;           /* Panel background */
       --accent: #e3b341;          /* Gold accent color */
+      --accent-secondary: #37b2ff; /* Blue accent for multiplayer */
       --muted: #7c8aa5;           /* Muted text color */
       --light: #f5f7fb;           /* Light text color */
       --dark-square: #20344e;     /* Dark chess squares */
       --light-square: #2e4467;    /* Light chess squares */
       --selection: #b0e3ff;       /* Selected square highlight */
+      --success: #4ade80;         /* Success/green color */
+      --warning: #fbbf24;         /* Warning/yellow color */
       --shadow: 0 10px 50px rgba(0, 0, 0, 0.35);  /* Drop shadow */
     }
 
@@ -135,6 +138,12 @@
     /* Hover effect: slight lift */
     .square:hover { transform: translateY(-1px); }
 
+    /* Disabled board (not your turn) */
+    .board.disabled .square {
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
     /* ===== Status Display Styles ===== */
     
     /* Status bar: Two-column grid for turn and game status */
@@ -207,8 +216,27 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    /* Multiplayer button style */
+    button.action.multiplayer {
+      background: var(--accent-secondary);
+      box-shadow: 0 8px 24px rgba(55, 178, 255, 0.35);
+    }
+
+    /* Leave/danger button style */
+    button.action.danger {
+      background: #ef4444;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+    }
+
     /* Button hover: Slight lift effect */
     button.action:hover { transform: translateY(-1px); }
+
+    /* Disabled button state */
+    button.action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
 
     /* ===== Log Display ===== */
     
@@ -221,6 +249,7 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
       font-size: 14px;
       line-height: 1.5;
+      white-space: pre-wrap;
     }
 
     /* ===== Pill Badge Component ===== */
@@ -247,6 +276,153 @@
       box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.22);  /* Glow effect */
     }
 
+    /* Multiplayer pill */
+    .pill.multiplayer::before {
+      background: var(--accent-secondary);
+      box-shadow: 0 0 0 3px rgba(55, 178, 255, 0.22);
+    }
+
+    /* Waiting pill animation */
+    .pill.waiting::before {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* ===== Mode Selection Styles ===== */
+
+    .mode-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .mode-btn {
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--light);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .mode-btn:hover {
+      border-color: var(--accent);
+      background: rgba(227, 179, 65, 0.1);
+    }
+
+    .mode-btn.active {
+      border-color: var(--accent);
+      background: rgba(227, 179, 65, 0.15);
+    }
+
+    .mode-btn.multiplayer-btn:hover,
+    .mode-btn.multiplayer-btn.active {
+      border-color: var(--accent-secondary);
+      background: rgba(55, 178, 255, 0.15);
+    }
+
+    .mode-btn h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+
+    .mode-btn p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ===== Lobby Styles ===== */
+
+    .lobby-panel {
+      margin-bottom: 16px;
+    }
+
+    .lobby-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .lobby-input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--light);
+      font-size: 16px;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .lobby-input::placeholder {
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--muted);
+    }
+
+    .room-code-display {
+      background: rgba(55, 178, 255, 0.1);
+      border: 2px dashed var(--accent-secondary);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .room-code-display .code {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--accent-secondary);
+    }
+
+    .room-code-display .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* Player color indicator */
+    .player-color {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .player-color.white {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .player-color.black {
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .player-color .piece {
+      font-size: 20px;
+    }
+
+    /* Hide elements based on game mode */
+    .single-player-only { display: none; }
+    .multiplayer-only { display: none; }
+
+    body.mode-single .single-player-only { display: block; }
+    body.mode-single .multiplayer-only { display: none; }
+    body.mode-multi .single-player-only { display: none; }
+    body.mode-multi .multiplayer-only { display: block; }
+
     /* ===== Responsive Design ===== */
     
     /* Mobile/tablet layout: Stack board and controls vertically */
@@ -258,7 +434,7 @@
     }
   </style>
 </head>
-<body>
+<body class="mode-single">
   <main>
     <!-- Left Panel: Chess Board -->
     <section class="board-pane">
@@ -270,6 +446,50 @@
 
     <!-- Right Panel: Game Controls and Status -->
     <section>
+      <!-- Mode Selection -->
+      <div class="mode-selector" id="modeSelector">
+        <button class="mode-btn active" id="singlePlayerBtn">
+          <h3>🤖 vs AI</h3>
+          <p>Play against the computer</p>
+        </button>
+        <button class="mode-btn multiplayer-btn" id="multiplayerBtn">
+          <h3>👥 Online</h3>
+          <p>Play with a friend</p>
+        </button>
+      </div>
+
+      <!-- Multiplayer Lobby (shown when in multiplayer mode) -->
+      <div class="lobby-panel multiplayer-only" id="lobbyPanel">
+        <div id="lobbyContent">
+          <!-- Create or Join options -->
+          <div id="lobbyOptions">
+            <div class="actions" style="margin-bottom: 16px;">
+              <button class="action multiplayer" id="createRoomBtn">Create Room</button>
+            </div>
+            <div class="lobby-input-group">
+              <input type="text" class="lobby-input" id="roomCodeInput" placeholder="Enter room code" maxlength="6" />
+              <button class="action multiplayer" id="joinRoomBtn">Join</button>
+            </div>
+          </div>
+
+          <!-- Room info (shown when in a room) -->
+          <div id="roomInfo" style="display: none;">
+            <div class="room-code-display">
+              <div class="code" id="roomCodeDisplay">------</div>
+              <div class="hint">Share this code with your opponent</div>
+            </div>
+            <div class="card" style="margin-bottom: 12px;">
+              <div class="label">You are playing as</div>
+              <div class="value">
+                <span class="player-color white" id="playerColorDisplay">
+                  <span class="piece">♔</span> White
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Turn and Status Display -->
       <div class="status">
         <div class="card">
@@ -282,14 +502,24 @@
         </div>
       </div>
 
+      <!-- Multiplayer-specific status -->
+      <div class="card multiplayer-only" style="margin-bottom: 16px;" id="multiplayerStatus">
+        <div class="label">Game Status</div>
+        <div class="value">
+          <span class="pill multiplayer waiting" id="mpStatusPill">Waiting for opponent...</span>
+        </div>
+      </div>
+
       <!-- Player Scores Display -->
       <div class="scoreboard">
         <div class="card">
-          <div class="label">Your Score</div>
+          <div class="label single-player-only">Your Score</div>
+          <div class="label multiplayer-only">White Score</div>
           <div class="value" id="playerScore">0</div>
         </div>
         <div class="card">
-          <div class="label">Opponent Score</div>
+          <div class="label single-player-only">Opponent Score</div>
+          <div class="label multiplayer-only">Black Score</div>
           <div class="value" id="opponentScore">0</div>
         </div>
       </div>
@@ -298,6 +528,7 @@
       <div class="actions">
         <button class="action" id="reset">Reset Game</button>
         <button class="action secondary" id="refresh">Refresh State</button>
+        <button class="action danger multiplayer-only" id="leaveRoom" style="display: none;">Leave Room</button>
       </div>
 
       <!-- Current Selection Display -->
@@ -313,163 +544,154 @@
 
   <script>
     // ===== DOM Element References =====
-    // Cache all DOM elements for efficient access
-    const boardEl = document.getElementById('board');           // Chess board container
-    const turnEl = document.getElementById('turn');             // Current turn display
-    const statusEl = document.getElementById('status');         // Game status display
-    const selectionEl = document.getElementById('selection');   // Selection status display
-    const logEl = document.getElementById('log');               // Message log area
-    const playerScoreEl = document.getElementById('playerScore');     // Player score display
-    const opponentScoreEl = document.getElementById('opponentScore'); // Opponent score display
-    const resetBtn = document.getElementById('reset');          // Reset game button
-    const refreshBtn = document.getElementById('refresh');      // Refresh state button
+    const boardEl = document.getElementById('board');
+    const turnEl = document.getElementById('turn');
+    const statusEl = document.getElementById('status');
+    const selectionEl = document.getElementById('selection');
+    const logEl = document.getElementById('log');
+    const playerScoreEl = document.getElementById('playerScore');
+    const opponentScoreEl = document.getElementById('opponentScore');
+    const resetBtn = document.getElementById('reset');
+    const refreshBtn = document.getElementById('refresh');
+    
+    // Mode selection elements
+    const singlePlayerBtn = document.getElementById('singlePlayerBtn');
+    const multiplayerBtn = document.getElementById('multiplayerBtn');
+    const modeSelector = document.getElementById('modeSelector');
+    
+    // Multiplayer elements
+    const lobbyPanel = document.getElementById('lobbyPanel');
+    const lobbyOptions = document.getElementById('lobbyOptions');
+    const roomInfo = document.getElementById('roomInfo');
+    const createRoomBtn = document.getElementById('createRoomBtn');
+    const joinRoomBtn = document.getElementById('joinRoomBtn');
+    const roomCodeInput = document.getElementById('roomCodeInput');
+    const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+    const playerColorDisplay = document.getElementById('playerColorDisplay');
+    const leaveRoomBtn = document.getElementById('leaveRoom');
+    const mpStatusPill = document.getElementById('mpStatusPill');
+    const multiplayerStatus = document.getElementById('multiplayerStatus');
 
     // ===== Chess Piece Mapping =====
-    // Maps piece characters from server to Unicode chess symbols
-    // Lowercase = Black pieces, Uppercase = White pieces
     const pieceMap = {
-      r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',  // Black pieces
-      R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',  // White pieces
-      '.': ''  // Empty square
+      r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',
+      R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',
+      '.': ''
     };
 
     // ===== Application State =====
-    let selection = null;          // Currently selected square (algebraic notation)
-    let cachedBoard = [];          // Cached board state (array of 8 strings)
-    let opponentRefresh = null;    // Timer ID for auto-refresh during opponent's turn
+    let selection = null;
+    let cachedBoard = [];
+    let opponentRefresh = null;
+    
+    // Game mode state
+    let gameMode = 'single'; // 'single' or 'multi'
+    let roomCode = null;
+    let playerId = null;
+    let playerColor = null;
+    let isInRoom = false;
 
-    /**
-     * Convert Grid Coordinates to Algebraic Notation
-     * 
-     * Converts board array indices (row, col) to standard chess notation.
-     * Row 0 = Rank 8, Row 7 = Rank 1
-     * Col 0 = File a, Col 7 = File h
-     * 
-     * @param {number} row - Row index (0-7, top to bottom)
-     * @param {number} col - Column index (0-7, left to right)
-     * @returns {string} Algebraic notation (e.g., "e4")
-     */
+    // ===== Utility Functions =====
+
     function algebraic(row, col) {
-      const file = String.fromCharCode('a'.charCodeAt(0) + col);  // a-h
-      const rank = 8 - row;  // Invert: row 0 = rank 8
+      const file = String.fromCharCode('a'.charCodeAt(0) + col);
+      const rank = 8 - row;
       return `${file}${rank}`;
     }
 
-    /**
-     * Render Chess Board
-     * 
-     * Creates the visual chess board by generating 64 button elements.
-     * Each button represents one square and displays the appropriate piece symbol.
-     * Applies alternating light/dark square colors and highlights selected square.
-     * 
-     * @param {string[]} boardRows - Array of 8 strings, each with 8 piece characters
-     */
-    function renderBoard(boardRows) {
-      cachedBoard = boardRows;  // Cache for re-rendering
-      boardEl.innerHTML = '';   // Clear existing board
+    function setMessage(text) {
+      logEl.textContent = text;
+    }
+
+    function saveSession() {
+      if (gameMode === 'multi' && roomCode && playerId) {
+        localStorage.setItem('chess_session', JSON.stringify({
+          roomCode, playerId, playerColor
+        }));
+      } else {
+        localStorage.removeItem('chess_session');
+      }
+    }
+
+    function loadSession() {
+      try {
+        const session = JSON.parse(localStorage.getItem('chess_session'));
+        if (session && session.roomCode && session.playerId) {
+          return session;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    // ===== Board Rendering =====
+
+    function renderBoard(boardRows, disabled = false) {
+      cachedBoard = boardRows;
+      boardEl.innerHTML = '';
+      boardEl.classList.toggle('disabled', disabled);
       
-      // Iterate through each rank (row)
       boardRows.forEach((rowString, rowIdx) => {
-        // Iterate through each file (column) in the rank
         [...rowString].forEach((ch, colIdx) => {
-          // Create button element for this square
           const btn = document.createElement('button');
-          
-          // Alternate light/dark squares (checkerboard pattern)
           btn.className = `square ${(rowIdx + colIdx) % 2 === 0 ? 'dark' : 'light'}`;
-          
-          // Store algebraic notation as data attribute
           btn.dataset.square = algebraic(rowIdx, colIdx);
-          
-          // Display chess piece symbol (or empty for '.')
           btn.textContent = pieceMap[ch] ?? '';
           
-          // Highlight if this is the selected square
           if (selection === btn.dataset.square) {
             btn.classList.add('selected');
           }
           
-          // Add click handler
-          btn.addEventListener('click', () => handleSquareClick(btn.dataset.square));
+          if (!disabled) {
+            btn.addEventListener('click', () => handleSquareClick(btn.dataset.square));
+          }
           
-          // Add to board
           boardEl.appendChild(btn);
         });
       });
     }
 
-    /**
-     * Display Message in Log
-     * 
-     * @param {string} text - Message to display
-     */
-    function setMessage(text) {
-      logEl.textContent = text;
-    }
+    // ===== Move Handling =====
 
-    /**
-     * Handle Square Click
-     * 
-     * Implements two-click move selection:
-     * 1. First click: Select source square (highlight it)
-     * 2. Second click: Select destination square (send move to server)
-     * Clicking the same square twice deselects it.
-     * 
-     * @param {string} square - Algebraic notation of clicked square (e.g., "e4")
-     */
     function handleSquareClick(square) {
-      // First click: Select source square
       if (!selection) {
         selection = square;
         selectionEl.textContent = `From ${square}`;
-        renderBoard(cachedBoard);  // Re-render to show selection highlight
+        renderBoard(cachedBoard, false);
         return;
       }
 
-      // Click same square: Deselect
       if (selection === square) {
         selection = null;
         selectionEl.textContent = 'Pick any square';
-        renderBoard(cachedBoard);
+        renderBoard(cachedBoard, false);
         return;
       }
 
-      // Second click: Execute move
       const from = selection;
       const to = square;
-      selection = null;  // Clear selection
+      selection = null;
       selectionEl.textContent = 'Sending move…';
-      sendMove(from, to);
+      
+      if (gameMode === 'multi' && isInRoom) {
+        sendOnlineMove(from, to);
+      } else {
+        sendMove(from, to);
+      }
     }
 
-    /**
-     * Send Move to Server
-     * 
-     * Makes a POST request to the server to execute a move.
-     * Updates UI with the response.
-     * 
-     * @param {string} from - Source square (e.g., "e2")
-     * @param {string} to - Destination square (e.g., "e4")
-     */
+    // ===== Single Player API =====
+
     async function sendMove(from, to) {
       try {
-        const res = await fetch(`/api/move/${from}/${to}`, {
-          method: 'POST'
-        });
+        const res = await fetch(`/api/move/${from}/${to}`, { method: 'POST' });
         const payload = await res.json();
-        applyState(payload);  // Update UI with new game state
+        applyState(payload);
         selectionEl.textContent = 'Pick any square';
       } catch (err) {
         setMessage('Move failed: ' + err.message);
       }
     }
 
-    /**
-     * Load Game State from Server
-     * 
-     * Fetches the current game state via GET /api/state.
-     * Called on page load and periodically during opponent's turn.
-     */
     async function loadState() {
       setMessage('Syncing with server…');
       try {
@@ -481,80 +703,326 @@
       }
     }
 
-    /**
-     * Reset Game
-     * 
-     * Sends POST request to reset the game to initial state.
-     */
     async function resetGame() {
       setMessage('Resetting…');
       try {
-        const res = await fetch('/api/reset', { method: 'POST' });
-        const payload = await res.json();
-        applyState(payload);
+        if (gameMode === 'multi' && isInRoom) {
+          await resetOnlineGame();
+        } else {
+          const res = await fetch('/api/reset', { method: 'POST' });
+          const payload = await res.json();
+          applyState(payload);
+        }
       } catch (err) {
         setMessage('Reset failed: ' + err.message);
       }
     }
 
-    /**
-     * Apply Server State to UI
-     * 
-     * Updates all UI elements based on game state received from server.
-     * Sets up auto-refresh timer if opponent is thinking.
-     * 
-     * Expected state object:
-     * - board: Array of 8 strings (one per rank)
-     * - turn: "White" or "Black"
-     * - status: "Ongoing", "Checkmate", or "Stalemate"
-     * - message: Human-readable status message
-     * - lastMove: Last move notation (e.g., "e2e4")
-     * - playerScore: Number of pieces captured by player
-     * - opponentScore: Number of pieces captured by opponent
-     * - opponentPending: Boolean indicating if opponent is "thinking"
-     * 
-     * @param {object} state - Game state object from server
-     */
     function applyState(state) {
-      // Validate response
       if (!state || !state.board) {
         setMessage('Unexpected response from server.');
         return;
       }
       
-      // Clear any existing auto-refresh timer
       if (opponentRefresh !== null) {
         clearTimeout(opponentRefresh);
         opponentRefresh = null;
       }
       
-      // Update all UI elements
-      renderBoard(state.board);
+      renderBoard(state.board, false);
       turnEl.textContent = state.turn ?? '—';
       statusEl.textContent = state.status ?? '—';
       selectionEl.textContent = 'Pick any square';
       playerScoreEl.textContent = state.playerScore ?? 0;
       opponentScoreEl.textContent = state.opponentScore ?? 0;
       
-      // Format and display message
       const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready for a move';
       setMessage(`${state.message || 'Synced.'}\n${move}`);
       
-      // Set up auto-refresh if opponent is thinking
-      // Polls server every 3.1 seconds to check for opponent's move
       if (state.opponentPending) {
         opponentRefresh = setTimeout(loadState, 3100);
       }
     }
 
-    // ===== Event Listeners =====
-    // Attach click handlers to action buttons
-    resetBtn.addEventListener('click', resetGame);
-    refreshBtn.addEventListener('click', loadState);
+    // ===== Multiplayer API =====
 
-    // ===== Initialize Application =====
-    // Load initial game state when page loads
-    loadState();
+    async function createRoom() {
+      setMessage('Creating room…');
+      try {
+        const res = await fetch('/api/online/create', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.roomCode && data.playerId) {
+          roomCode = data.roomCode;
+          playerId = data.playerId;
+          playerColor = 'White';
+          isInRoom = true;
+          
+          saveSession();
+          showRoomInfo();
+          setMessage(data.message || 'Room created!');
+          
+          // Start polling for opponent
+          startMultiplayerPolling();
+        } else {
+          setMessage('Failed to create room.');
+        }
+      } catch (err) {
+        setMessage('Failed to create room: ' + err.message);
+      }
+    }
+
+    async function joinRoom(code) {
+      if (!code || code.length < 4) {
+        setMessage('Please enter a valid room code.');
+        return;
+      }
+      
+      setMessage('Joining room…');
+      try {
+        const res = await fetch(`/api/online/join/${code.toUpperCase()}`, { method: 'POST' });
+        const data = await res.json();
+        
+        // Extract playerId and playerColor from response
+        if (data.playerId && data.roomCode) {
+          roomCode = data.roomCode;
+          playerId = data.playerId;
+          playerColor = data.playerColor || 'Black';
+          isInRoom = true;
+          
+          saveSession();
+          showRoomInfo();
+          setMessage(data.message || 'Joined successfully!');
+          
+          // Load initial state and start polling
+          applyOnlineState(data);
+          startMultiplayerPolling();
+        } else if (data.message) {
+          // Error response
+          setMessage(data.message);
+        } else {
+          setMessage('Failed to join room.');
+        }
+      } catch (err) {
+        setMessage('Failed to join room: ' + err.message);
+      }
+    }
+
+    async function loadOnlineState() {
+      if (!roomCode || !playerId) return;
+      
+      try {
+        const res = await fetch(`/api/online/state/${roomCode}/${playerId}`);
+        const state = await res.json();
+        applyOnlineState(state);
+      } catch (err) {
+        setMessage('Failed to load game state: ' + err.message);
+      }
+    }
+
+    async function sendOnlineMove(from, to) {
+      if (!roomCode || !playerId) return;
+      
+      try {
+        const res = await fetch(`/api/online/move/${roomCode}/${playerId}/${from}/${to}`, {
+          method: 'POST'
+        });
+        const state = await res.json();
+        applyOnlineState(state);
+        selectionEl.textContent = 'Pick any square';
+      } catch (err) {
+        setMessage('Move failed: ' + err.message);
+      }
+    }
+
+    async function resetOnlineGame() {
+      if (!roomCode || !playerId) return;
+      
+      try {
+        const res = await fetch(`/api/online/reset/${roomCode}/${playerId}`, {
+          method: 'POST'
+        });
+        const state = await res.json();
+        applyOnlineState(state);
+      } catch (err) {
+        setMessage('Reset failed: ' + err.message);
+      }
+    }
+
+    async function leaveRoom() {
+      if (!roomCode || !playerId) {
+        exitMultiplayerMode();
+        return;
+      }
+      
+      try {
+        await fetch(`/api/online/leave/${roomCode}/${playerId}`, { method: 'POST' });
+      } catch (err) {
+        // Ignore errors, we're leaving anyway
+      }
+      
+      exitMultiplayerMode();
+      setMessage('You left the room.');
+    }
+
+    function applyOnlineState(state) {
+      if (!state) {
+        setMessage('Unexpected response from server.');
+        return;
+      }
+      
+      if (opponentRefresh !== null) {
+        clearTimeout(opponentRefresh);
+        opponentRefresh = null;
+      }
+      
+      // Update board (disabled if not your turn)
+      const disabled = !state.isYourTurn && state.status === 'Ongoing';
+      if (state.board && state.board.length > 0) {
+        renderBoard(state.board, disabled);
+      }
+      
+      turnEl.textContent = state.turn ?? '—';
+      statusEl.textContent = state.status ?? '—';
+      selectionEl.textContent = state.isYourTurn ? 'Your turn - pick a square' : 'Waiting for opponent';
+      playerScoreEl.textContent = state.playerScore ?? 0;
+      opponentScoreEl.textContent = state.opponentScore ?? 0;
+      
+      // Update multiplayer status pill
+      if (state.waitingForOpponent) {
+        mpStatusPill.textContent = 'Waiting for opponent to join...';
+        mpStatusPill.classList.add('waiting');
+      } else if (state.isYourTurn) {
+        mpStatusPill.textContent = 'Your turn!';
+        mpStatusPill.classList.remove('waiting');
+      } else if (state.status === 'Ongoing') {
+        mpStatusPill.textContent = "Opponent's turn...";
+        mpStatusPill.classList.add('waiting');
+      } else {
+        mpStatusPill.textContent = state.status;
+        mpStatusPill.classList.remove('waiting');
+      }
+      
+      const move = state.lastMove ? `Last move: ${state.lastMove}` : '';
+      setMessage(`${state.message || 'Synced.'}\n${move}`);
+      
+      // Continue polling while game is ongoing (to see opponent moves in real-time)
+      if (state.status === 'Ongoing') {
+        opponentRefresh = setTimeout(loadOnlineState, 1000);
+      }
+    }
+
+    function startMultiplayerPolling() {
+      if (opponentRefresh !== null) {
+        clearTimeout(opponentRefresh);
+      }
+      loadOnlineState();
+    }
+
+    // ===== UI State Management =====
+
+    function showRoomInfo() {
+      lobbyOptions.style.display = 'none';
+      roomInfo.style.display = 'block';
+      modeSelector.style.display = 'none';
+      leaveRoomBtn.style.display = 'inline-block';
+      
+      roomCodeDisplay.textContent = roomCode || '------';
+      
+      if (playerColor === 'White') {
+        playerColorDisplay.innerHTML = '<span class="piece">♔</span> White';
+        playerColorDisplay.className = 'player-color white';
+      } else {
+        playerColorDisplay.innerHTML = '<span class="piece">♚</span> Black';
+        playerColorDisplay.className = 'player-color black';
+      }
+    }
+
+    function showLobbyOptions() {
+      lobbyOptions.style.display = 'block';
+      roomInfo.style.display = 'none';
+      modeSelector.style.display = 'grid';
+      leaveRoomBtn.style.display = 'none';
+    }
+
+    function setGameMode(mode) {
+      gameMode = mode;
+      document.body.classList.remove('mode-single', 'mode-multi');
+      document.body.classList.add(mode === 'single' ? 'mode-single' : 'mode-multi');
+      
+      singlePlayerBtn.classList.toggle('active', mode === 'single');
+      multiplayerBtn.classList.toggle('active', mode === 'multi');
+      
+      if (mode === 'single') {
+        if (opponentRefresh !== null) {
+          clearTimeout(opponentRefresh);
+          opponentRefresh = null;
+        }
+        loadState();
+      } else {
+        showLobbyOptions();
+      }
+    }
+
+    function exitMultiplayerMode() {
+      roomCode = null;
+      playerId = null;
+      playerColor = null;
+      isInRoom = false;
+      localStorage.removeItem('chess_session');
+      
+      if (opponentRefresh !== null) {
+        clearTimeout(opponentRefresh);
+        opponentRefresh = null;
+      }
+      
+      showLobbyOptions();
+      renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
+    }
+
+    // ===== Event Listeners =====
+
+    resetBtn.addEventListener('click', resetGame);
+    refreshBtn.addEventListener('click', () => {
+      if (gameMode === 'multi' && isInRoom) {
+        loadOnlineState();
+      } else {
+        loadState();
+      }
+    });
+
+    singlePlayerBtn.addEventListener('click', () => setGameMode('single'));
+    multiplayerBtn.addEventListener('click', () => setGameMode('multi'));
+
+    createRoomBtn.addEventListener('click', createRoom);
+    joinRoomBtn.addEventListener('click', () => joinRoom(roomCodeInput.value));
+    roomCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') joinRoom(roomCodeInput.value);
+    });
+    leaveRoomBtn.addEventListener('click', leaveRoom);
+
+    // ===== Initialization =====
+
+    // Check for existing session
+    const savedSession = loadSession();
+    if (savedSession) {
+      gameMode = 'multi';
+      roomCode = savedSession.roomCode;
+      playerId = savedSession.playerId;
+      playerColor = savedSession.playerColor;
+      isInRoom = true;
+      
+      document.body.classList.remove('mode-single');
+      document.body.classList.add('mode-multi');
+      multiplayerBtn.classList.add('active');
+      singlePlayerBtn.classList.remove('active');
+      
+      showRoomInfo();
+      startMultiplayerPolling();
+    } else {
+      // Default to single player mode
+      loadState();
+    }
   </script>
 </body>
 </html>

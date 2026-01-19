@@ -241,6 +241,23 @@ service PieceValidator {
             }
         }
 
+        // Additional castling legality checks:
+        // 1) The king must not start in check.
+        // 2) The king must not pass through or land on an attacked square.
+        Color opponentColor = color == White ? Black : White;
+
+        // The king moves horizontally from fromFile to toFile in steps of `step`.
+        // Check every square the king occupies during castling: start, intermediate, and destination.
+        for (Int file = fromFile; ; file += step) {
+            Int square = fromRank * 8 + file;
+            if (CheckDetection.isSquareAttacked(square, board, opponentColor)) {
+                return False;
+            }
+            if (file == toFile) {
+                break;
+            }
+        }
+
         return True;
     }
 

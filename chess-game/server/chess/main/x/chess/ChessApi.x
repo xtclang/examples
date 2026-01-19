@@ -3,6 +3,7 @@ import OnlineChessLogic.OnlineApiState;
 import ChessGame.MoveOutcome;
 import ChessGame.AutoResponse;
 import db.GameStatus;
+import db.TimeControl;
 /**
  * ChessApi Service
  *
@@ -132,6 +133,7 @@ service ChessApi {
      * @param playerScore      Number of opponent pieces captured by White
      * @param opponentScore    Number of player pieces captured by Black
      * @param opponentPending  True if the opponent is currently "thinking"
+     * @param timeControl      Optional time control information for chess clocks
      */
     static const ApiState(String[] board,
                    String turn,
@@ -140,7 +142,8 @@ service ChessApi {
                    String? lastMove,
                    Int playerScore,
                    Int opponentScore,
-                   Boolean opponentPending);
+                   Boolean opponentPending,
+                   TimeControl? timeControl = Null);
 
 
     // ----- Helper Methods ------------------------------------------------------
@@ -195,7 +198,8 @@ service ChessApi {
                 record.lastMove,                      // Last move notation (e.g., "e2e4")
                 record.playerScore,                   // White's capture count
                 record.opponentScore,                 // Black's capture count
-                pending);                             // Is opponent thinking?
+                pending,                              // Is opponent thinking?
+                record.timeControl);                  // Time control for chess clocks
     }
 
     /**

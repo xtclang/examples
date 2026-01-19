@@ -51,8 +51,8 @@ service ChatApi {
                 }
 
                 // Create and store the chat message
-                // Use current time in milliseconds since epoch for timestamp
-                Int timestamp = clock.now.milliseconds;
+                // Use message count for ordering
+                Int timestamp = schema.chatMessages.size;
                 ChatMessage msg = new ChatMessage(roomCode, playerId, color, trimmed, timestamp);
                 String msgKey = $"{roomCode}_{timestamp}_{playerId}";
                 schema.chatMessages.put(msgKey, msg);

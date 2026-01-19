@@ -84,9 +84,6 @@
       </div>
 
       <div class="toolbar-group">
-        <button class="tool-btn" id="historyToggleBtn" title="Move History">
-          <span class="tool-icon">📜</span>
-        </button>
         <button class="tool-btn" id="infoToggle" title="Game Info">
           <span class="tool-icon">ℹ</span>
         </button>
@@ -150,36 +147,6 @@
       <div class="chat-input-row">
         <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." maxlength="500" />
         <button class="chat-send" id="chatSendBtn">Send</button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Move History Panel (Slide-in from right) -->
-  <aside class="slide-panel history-panel" id="historyPanel">
-    <div class="panel-header">
-      <h2>📜 Move History</h2>
-      <button class="close-btn" id="closeHistoryPanel">×</button>
-    </div>
-    <div class="history-body">
-      <div class="history-controls">
-        <button class="history-btn" id="undoBtn" title="Undo last move">
-          <span>↶</span> Undo
-        </button>
-        <button class="history-btn" id="firstMoveBtn" title="Go to start">
-          <span>⏮</span>
-        </button>
-        <button class="history-btn" id="prevMoveBtn" title="Previous move">
-          <span>◀</span>
-        </button>
-        <button class="history-btn" id="nextMoveBtn" title="Next move">
-          <span>▶</span>
-        </button>
-        <button class="history-btn" id="lastMoveBtn" title="Go to current">
-          <span>⏭</span>
-        </button>
-      </div>
-      <div class="history-list" id="historyList">
-        <div class="history-empty">No moves yet. Make your first move!</div>
       </div>
     </div>
   </aside>

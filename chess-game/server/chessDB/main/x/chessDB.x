@@ -329,6 +329,14 @@ module chessDB.examples.org {
         @RO oodb.DBMap<Int, GameRecord> games;
 
         /**
+         * Single Player Games Map
+         * 
+         * Database map containing single-player games, indexed by browser session ID.
+         * Each browser tab/window gets its own unique game instance.
+         */
+        @RO oodb.DBMap<String, GameRecord> singlePlayerGames;
+
+        /**
          * Online Games Map
          * 
          * Database map containing online multiplayer games, indexed by room code.

@@ -46,17 +46,6 @@ const chatToggleBtn = document.getElementById('chatToggleBtn');
 const infoToggle = document.getElementById('infoToggle');
 const infoPopover = document.getElementById('infoPopover');
 
-// History panel elements
-const historyPanel = document.getElementById('historyPanel');
-const closeHistoryPanel = document.getElementById('closeHistoryPanel');
-const historyToggleBtn = document.getElementById('historyToggleBtn');
-const historyList = document.getElementById('historyList');
-const undoBtn = document.getElementById('undoBtn');
-const firstMoveBtn = document.getElementById('firstMoveBtn');
-const prevMoveBtn = document.getElementById('prevMoveBtn');
-const nextMoveBtn = document.getElementById('nextMoveBtn');
-const lastMoveBtn = document.getElementById('lastMoveBtn');
-
 // Time control elements
 const timeControlBar = document.getElementById('timeControlBar');
 const whiteTimerEl = document.getElementById('whiteTimer');
@@ -93,10 +82,8 @@ let lastChatTimestamp = 0;
 let chatPollInterval = null;
 let unreadChatCount = 0;
 
-// Move history state
-let moveHistory = [];
-let replayPosition = -1; // -1 means viewing current state
-let isViewingHistory = false;
+// Single player session ID (for browser isolation)
+let singlePlayerSessionId = null;
 
 // Time control state
 let timeControl = null;
@@ -133,6 +120,22 @@ function saveSession() {
   } else {
     localStorage.removeItem('chess_session');
   }
+}
+
+function generateSessionId() {
+  return 'sp_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function getSinglePlayerSessionId() {
+  if (!singlePlayerSessionId) {
+    // Try to get from sessionStorage (browser tab specific)
+    singlePlayerSessionId = sessionStorage.getItem('chess_single_player_id');
+    if (!singlePlayerSessionId) {
+      singlePlayerSessionId = generateSessionId();
+      sessionStorage.setItem('chess_single_player_id', singlePlayerSessionId);
+    }
+  }
+  return singlePlayerSessionId;
 }
 
 function loadSession() {
@@ -242,7 +245,8 @@ async function handleSquareClick(square) {
 // ===== API Calls =====
 async function sendMove(from, to) {
   try {
-    const res = await fetch(`/api/move/${from}/${to}`, { method: 'POST' });
+    const sessionId = getSinglePlayerSessionId();
+    const res = await fetch(`/api/move/${sessionId}/${from}/${to}`, { method: 'POST' });
     const payload = await res.json();
     applyState(payload);
     if (selectionEl) selectionEl.textContent = 'Pick a piece';
@@ -254,13 +258,10 @@ async function sendMove(from, to) {
 async function loadState() {
   setMessage('Syncing with server…');
   try {
-    const res = await fetch('/api/state');
+    const sessionId = getSinglePlayerSessionId();
+    const res = await fetch(`/api/state/${sessionId}`);
     const payload = await res.json();
     applyState(payload);
-    // Also load move history for single player
-    if (gameMode === 'single') {
-      await loadMoveHistory();
-    }
   } catch (err) {
     console.error('Failed to load state:', err);
     setMessage('Could not reach the chess server.');
@@ -273,15 +274,11 @@ async function resetGame() {
     if (gameMode === 'multi' && isInRoom) {
       await resetOnlineGame();
     } else {
-      const res = await fetch('/api/reset', { method: 'POST' });
+      const sessionId = getSinglePlayerSessionId();
+      const res = await fetch(`/api/reset/${sessionId}`, { method: 'POST' });
       const payload = await res.json();
       lastMove = null;
       applyState(payload);
-      // Clear and reload history after reset
-      moveHistory = [];
-      replayPosition = -1;
-      isViewingHistory = false;
-      updateHistoryDisplay();
     }
   } catch (err) {
     setMessage('Reset failed: ' + err.message);
@@ -290,9 +287,13 @@ async function resetGame() {
 
 async function loadValidMoves(square) {
   try {
-    const url = (gameMode === 'multi' && isInRoom && roomCode && playerId)
-      ? `/api/online/validmoves/${roomCode}/${playerId}/${square}`
-      : `/api/validmoves/${square}`;
+    let url;
+    if (gameMode === 'multi' && isInRoom && roomCode && playerId) {
+      url = `/api/online/validmoves/${roomCode}/${playerId}/${square}`;
+    } else {
+      const sessionId = getSinglePlayerSessionId();
+      url = `/api/validmoves/${sessionId}/${square}`;
+    }
     const res = await fetch(url);
     const data = await res.json();
     if (data.success && data.validMoves) {
@@ -666,20 +667,10 @@ function setGameMode(mode) {
     lastMove = null;
     closeChatPanelFn();
     closeOnlinePanelFn();
-    closeHistoryPanelFn();
-    // Reset move history for single player
-    moveHistory = [];
-    replayPosition = -1;
-    isViewingHistory = false;
-    updateHistoryDisplay();
     loadState();
   } else {
     // When switching to multiplayer, show lobby but don't start any polling yet
     lastMove = null;
-    moveHistory = [];
-    replayPosition = -1;
-    isViewingHistory = false;
-    updateHistoryDisplay();
     showLobbyOptions();
     openOnlinePanel();
     // Render empty board while waiting for room
@@ -703,10 +694,6 @@ function exitMultiplayerMode() {
   stopChatPolling();
   clearChat();
   showLobbyOptions();
-  moveHistory = [];
-  replayPosition = -1;
-  isViewingHistory = false;
-  updateHistoryDisplay();
   renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
 }
 
@@ -718,7 +705,7 @@ function openOnlinePanel() {
 
 function closeOnlinePanelFn() {
   onlinePanel?.classList.remove('open');
-  if (!chatPanel?.classList.contains('open') && !historyPanel?.classList.contains('open')) {
+  if (!chatPanel?.classList.contains('open')) {
     backdrop?.classList.remove('visible');
   }
 }
@@ -733,25 +720,8 @@ function openChatPanel() {
 
 function closeChatPanelFn() {
   chatPanel?.classList.remove('open');
-  if (!onlinePanel?.classList.contains('open') && !historyPanel?.classList.contains('open')) {
+  if (!onlinePanel?.classList.contains('open')) {
     backdrop?.classList.remove('visible');
-  }
-}
-
-function openHistoryPanel() {
-  historyPanel?.classList.add('open');
-  backdrop?.classList.add('visible');
-  loadMoveHistory();
-}
-
-function closeHistoryPanelFn() {
-  historyPanel?.classList.remove('open');
-  if (!onlinePanel?.classList.contains('open') && !chatPanel?.classList.contains('open')) {
-    backdrop?.classList.remove('visible');
-  }
-  // If viewing history, return to current position when closing
-  if (isViewingHistory) {
-    exitHistoryReplay();
   }
 }
 
@@ -762,7 +732,6 @@ function toggleInfoPopover() {
 function closeAllPanels() {
   closeOnlinePanelFn();
   closeChatPanelFn();
-  closeHistoryPanelFn();
   infoPopover?.classList.remove('open');
 }
 
@@ -919,197 +888,6 @@ function stopChatPolling() {
   }
 }
 
-// ===== Move History =====
-async function loadMoveHistory() {
-  try {
-    const res = await fetch('/api/history');
-    const data = await res.json();
-    if (data.success && data.history) {
-      moveHistory = data.history;
-      updateHistoryDisplay();
-    }
-  } catch (err) {
-    console.error('Error loading history:', err);
-  }
-}
-
-function updateHistoryDisplay() {
-  if (!historyList) return;
-  
-  if (!moveHistory || moveHistory.length === 0) {
-    historyList.innerHTML = '<div class="history-empty">No moves yet. Make your first move!</div>';
-    updateHistoryButtons();
-    return;
-  }
-  
-  historyList.innerHTML = '';
-  
-  // Group moves into pairs (white + black)
-  for (let i = 0; i < moveHistory.length; i += 2) {
-    const moveNum = Math.floor(i / 2) + 1;
-    const row = document.createElement('div');
-    row.className = 'move-row';
-    
-    // Move number
-    const numEl = document.createElement('span');
-    numEl.className = 'move-number';
-    numEl.textContent = `${moveNum}.`;
-    row.appendChild(numEl);
-    
-    // White's move
-    const whiteMove = moveHistory[i];
-    const whiteEl = document.createElement('div');
-    whiteEl.className = 'move-entry white';
-    whiteEl.textContent = whiteMove.notation || `${whiteMove.fromSquare}-${whiteMove.toSquare}`;
-    whiteEl.dataset.moveIndex = i;
-    if (replayPosition === i) whiteEl.classList.add('active');
-    whiteEl.addEventListener('click', () => goToMove(i));
-    row.appendChild(whiteEl);
-    
-    // Black's move (if exists)
-    if (i + 1 < moveHistory.length) {
-      const blackMove = moveHistory[i + 1];
-      const blackEl = document.createElement('div');
-      blackEl.className = 'move-entry black';
-      blackEl.textContent = blackMove.notation || `${blackMove.fromSquare}-${blackMove.toSquare}`;
-      blackEl.dataset.moveIndex = i + 1;
-      if (replayPosition === i + 1) blackEl.classList.add('active');
-      blackEl.addEventListener('click', () => goToMove(i + 1));
-      row.appendChild(blackEl);
-    } else {
-      // Empty placeholder for alignment
-      const emptyEl = document.createElement('div');
-      emptyEl.className = 'move-entry';
-      emptyEl.style.visibility = 'hidden';
-      row.appendChild(emptyEl);
-    }
-    
-    historyList.appendChild(row);
-  }
-  
-  // Scroll to bottom if viewing current state
-  if (replayPosition === -1) {
-    historyList.scrollTop = historyList.scrollHeight;
-  }
-  
-  updateHistoryButtons();
-}
-
-function updateHistoryButtons() {
-  const hasMoves = moveHistory && moveHistory.length > 0;
-  const atStart = replayPosition === 0 || (!isViewingHistory && moveHistory.length === 0);
-  const atEnd = replayPosition === -1 || replayPosition === moveHistory.length - 1;
-  
-  if (undoBtn) undoBtn.disabled = !hasMoves || isViewingHistory;
-  if (firstMoveBtn) firstMoveBtn.disabled = !hasMoves || atStart;
-  if (prevMoveBtn) prevMoveBtn.disabled = !hasMoves || atStart;
-  if (nextMoveBtn) nextMoveBtn.disabled = !hasMoves || atEnd;
-  if (lastMoveBtn) lastMoveBtn.disabled = !hasMoves || replayPosition === -1;
-}
-
-async function goToMove(index) {
-  if (!moveHistory || index < 0 || index >= moveHistory.length) return;
-  
-  try {
-    // Fetch the board state at this move
-    const res = await fetch(`/api/replay/${index + 1}`); // API uses 1-based move numbers
-    const data = await res.json();
-    
-    if (data.board) {
-      isViewingHistory = true;
-      replayPosition = index;
-      renderBoard(data.board, true); // Disable interaction while viewing history
-      
-      // Update active move highlight
-      const moveEntries = historyList.querySelectorAll('.move-entry');
-      moveEntries.forEach(el => el.classList.remove('active'));
-      const activeEl = historyList.querySelector(`[data-move-index="${index}"]`);
-      if (activeEl) activeEl.classList.add('active');
-      
-      updateHistoryButtons();
-      setMessage(`Viewing move ${index + 1} of ${moveHistory.length}`);
-    }
-  } catch (err) {
-    console.error('Error loading replay:', err);
-    setMessage('Failed to load move replay');
-  }
-}
-
-function goToFirstMove() {
-  if (moveHistory && moveHistory.length > 0) {
-    goToMove(0);
-  }
-}
-
-function goToPrevMove() {
-  if (!moveHistory || moveHistory.length === 0) return;
-  
-  if (replayPosition === -1) {
-    // Currently at end, go to last move
-    goToMove(moveHistory.length - 1);
-  } else if (replayPosition > 0) {
-    goToMove(replayPosition - 1);
-  }
-}
-
-function goToNextMove() {
-  if (!moveHistory || moveHistory.length === 0) return;
-  
-  if (replayPosition === -1) return; // Already at current
-  
-  if (replayPosition < moveHistory.length - 1) {
-    goToMove(replayPosition + 1);
-  } else {
-    // At last historical move, exit replay
-    exitHistoryReplay();
-  }
-}
-
-function goToLastMove() {
-  exitHistoryReplay();
-}
-
-function exitHistoryReplay() {
-  if (!isViewingHistory) return;
-  
-  isViewingHistory = false;
-  replayPosition = -1;
-  
-  // Reload current game state
-  if (gameMode === 'multi' && isInRoom) {
-    loadOnlineState();
-  } else {
-    loadState();
-  }
-  
-  // Remove active highlights
-  const moveEntries = historyList?.querySelectorAll('.move-entry');
-  moveEntries?.forEach(el => el.classList.remove('active'));
-  
-  updateHistoryButtons();
-  setMessage('Returned to current game');
-}
-
-async function undoLastMove() {
-  if (isViewingHistory) return;
-  
-  try {
-    const res = await fetch('/api/undo', { method: 'POST' });
-    const data = await res.json();
-    
-    if (data.success) {
-      await loadState();
-      await loadMoveHistory();
-      pushToast('Move undone', 'success');
-    } else {
-      setMessage(data.message || 'Cannot undo');
-    }
-  } catch (err) {
-    console.error('Error undoing move:', err);
-    setMessage('Failed to undo move');
-  }
-}
-
 // ===== Restore Session =====
 function startMultiplayerUI(session) {
   document.body.classList.remove('mode-single');
@@ -1171,21 +949,6 @@ chatInput?.addEventListener('keypress', (e) => {
 });
 
 infoToggle?.addEventListener('click', toggleInfoPopover);
-
-// History panel event listeners
-closeHistoryPanel?.addEventListener('click', closeHistoryPanelFn);
-historyToggleBtn?.addEventListener('click', () => {
-  if (historyPanel?.classList.contains('open')) {
-    closeHistoryPanelFn();
-  } else {
-    openHistoryPanel();
-  }
-});
-undoBtn?.addEventListener('click', undoLastMove);
-firstMoveBtn?.addEventListener('click', goToFirstMove);
-prevMoveBtn?.addEventListener('click', goToPrevMove);
-nextMoveBtn?.addEventListener('click', goToNextMove);
-lastMoveBtn?.addEventListener('click', goToLastMove);
 
 backdrop?.addEventListener('click', closeAllPanels);
 

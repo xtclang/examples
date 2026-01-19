@@ -287,17 +287,160 @@ service ChessAI {
         return score;
     }
 
+    // ----- Random Number Generation -------------------------------------------------
+
+    /**
+     * Simple deterministic hash-based pseudo-random function.
+     * Uses game state (move count, board hash) to generate variety.
+     * Each call with same inputs produces same output for reproducibility,
+     * but different game states produce different results.
+     */
+    static Int hashRandom(Int seed, Int counter) {
+        // Simple hash combination for pseudo-randomness
+        Int hash = seed ^ (counter * 2654435761);  // Golden ratio prime
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+        hash = (hash >> 16) ^ hash;
+        return hash.abs();
+    }
+
+    /**
+     * Get a random integer between 0 (inclusive) and max (exclusive).
+     * Uses move count and a counter for variety.
+     */
+    static Int randomInt(Int max, Int moveCount, Int counter) {
+        if (max <= 0) {
+            return 0;
+        }
+        Int rand = hashRandom(moveCount * 1009 + counter * 7919, counter);
+        return rand % max;
+    }
+
+    // ----- Opening Book -------------------------------------------------
+
+    /**
+     * Collection of strong opening moves for Black.
+     * Format: Array of algebraic move strings like "e7e5".
+     */
+    static String[][] OPENING_RESPONSES = [
+        // After 1.e4 (e2-e4) - various responses
+        ["e7e5", "c7c5", "e7e6", "c7c6", "d7d6", "g8f6", "d7d5"],
+        // After 1.d4 (d2-d4) - various responses
+        ["d7d5", "g8f6", "e7e6", "c7c5", "f7f5"],
+        // General good opening moves for Black
+        ["g8f6", "d7d5", "e7e6", "c7c6", "b8c6", "e7e5", "c7c5", "g7g6"]
+    ];
+
     // ----- Best Move Selection -------------------------------------------------
+
+    /**
+     * Check if the game is in opening phase (first 6 moves).
+     */
+    static Boolean isOpeningPhase(GameRecord record) {
+        return record.moveHistory.size < 12; // 6 moves per side = 12 half-moves
+    }
+
+    /**
+     * Try to get a book opening move.
+     * Returns a random strong opening move if in opening phase.
+     * Returns (-1, -1) if no opening move available.
+     */
+    static (Int, Int) getOpeningMove(GameRecord record) {
+        if (!isOpeningPhase(record)) {
+            return (-1, -1);
+        }
+
+        Int moveCount = record.moveHistory.size;
+        Char[] board = BoardUtils.cloneBoard(record.board);
+        
+        // Collect valid opening moves from the book using parallel arrays
+        Int[] validFroms = new Int[];
+        Int[] validTos = new Int[];
+        
+        for (String[] responses : OPENING_RESPONSES) {
+            for (String move : responses) {
+                if (move.size != 4) {
+                    continue;
+                }
+                Int fromFile = move[0] - 'a';
+                Int fromRank = 8 - (move[1] - '0');
+                Int toFile = move[2] - 'a';
+                Int toRank = 8 - (move[3] - '0');
+                
+                Int from = fromRank * 8 + fromFile;
+                Int to = toRank * 8 + toFile;
+                
+                if (from < 0 || from >= 64 || to < 0 || to >= 64) {
+                    continue;
+                }
+                
+                Char piece = board[from];
+                if (piece == '.' || BoardUtils.colorOf(piece) != Color.Black) {
+                    continue;
+                }
+                
+                Char target = board[to];
+                if (target != '.' && BoardUtils.colorOf(target) == Color.Black) {
+                    continue;
+                }
+                
+                if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
+                    continue;
+                }
+                
+                // Verify move doesn't leave king in check
+                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                testBoard[to] = piece;
+                testBoard[from] = '.';
+                String testBoardStr = new String(testBoard);
+                if (CheckDetection.isInCheck(testBoardStr, Color.Black)) {
+                    continue;
+                }
+                
+                validFroms = validFroms + from;
+                validTos = validTos + to;
+            }
+        }
+        
+        if (validFroms.empty) {
+            return (-1, -1);
+        }
+        
+        // Pick a random opening move
+        Int index = randomInt(validFroms.size, moveCount, validFroms.size);
+        return (validFroms[index], validTos[index]);
+    }
 
     /**
      * Find the best move for Black (AI opponent).
      * Returns (from, to, score) tuple.
+     * 
+     * Uses randomization to add variety:
+     * 1. In opening phase, may select from opening book
+     * 2. Otherwise, collects all moves within a score threshold of the best
+     * 3. Randomly selects from the top moves for unpredictability
      */
     static (Int, Int, Int) findBestMove(GameRecord record) {
+        Int moveCount = record.moveHistory.size;
+        
+        // Try opening book first
+        (Int openFrom, Int openTo) = getOpeningMove(record);
+        if (openFrom >= 0 && openTo >= 0) {
+            // 70% chance to use opening book in early game
+            if (randomInt(100, moveCount, 1) < 70) {
+                Char[] board = BoardUtils.cloneBoard(record.board);
+                Int score = scoreMove(board[openFrom], openFrom, openTo, board, record);
+                return (openFrom, openTo, score);
+            }
+        }
+
         Char[] board = BoardUtils.cloneBoard(record.board);
         Int bestScore = MIN_SCORE;
-        Int bestFrom = -1;
-        Int bestTo = -1;
+        
+        // Collect all legal moves with their scores using parallel arrays
+        Int[] allFroms = new Int[];
+        Int[] allTos = new Int[];
+        Int[] allScores = new Int[];
 
         for (Int from : 0 ..< 64) {
             Char piece = board[from];
@@ -327,14 +470,72 @@ service ChessAI {
                 }
 
                 Int score = scoreMove(piece, from, to, board, record);
+                allFroms = allFroms + from;
+                allTos = allTos + to;
+                allScores = allScores + score;
+                
                 if (score > bestScore) {
                     bestScore = score;
-                    bestFrom = from;
-                    bestTo = to;
                 }
             }
         }
 
-        return (bestFrom, bestTo, bestScore);
+        if (allFroms.empty) {
+            return (-1, -1, MIN_SCORE);
+        }
+
+        // Determine score threshold for "good enough" moves
+        // Allow moves within 15% of best score (or 50 points minimum variance)
+        Int threshold = (bestScore.abs() * 15) / 100;
+        if (threshold < 50) {
+            threshold = 50;
+        }
+        Int minAcceptableScore = bestScore - threshold;
+
+        // Collect all moves that are "good enough" using parallel arrays
+        Int[] topFroms = new Int[];
+        Int[] topTos = new Int[];
+        Int[] topScores = new Int[];
+        
+        for (Int i : 0 ..< allFroms.size) {
+            if (allScores[i] >= minAcceptableScore) {
+                topFroms = topFroms + allFroms[i];
+                topTos = topTos + allTos[i];
+                topScores = topScores + allScores[i];
+            }
+        }
+
+        // Limit to top 5 moves maximum for reasonable diversity
+        if (topFroms.size > 5) {
+            // Simple selection sort to get top 5 by score
+            for (Int i : 0 ..< 5) {
+                Int maxIdx = i;
+                for (Int j : i + 1 ..< topFroms.size) {
+                    if (topScores[j] > topScores[maxIdx]) {
+                        maxIdx = j;
+                    }
+                }
+                if (maxIdx != i) {
+                    // Swap
+                    Int tmpFrom = topFroms[i];
+                    Int tmpTo = topTos[i];
+                    Int tmpScore = topScores[i];
+                    topFroms = topFroms.replace(i, topFroms[maxIdx]);
+                    topFroms = topFroms.replace(maxIdx, tmpFrom);
+                    topTos = topTos.replace(i, topTos[maxIdx]);
+                    topTos = topTos.replace(maxIdx, tmpTo);
+                    topScores = topScores.replace(i, topScores[maxIdx]);
+                    topScores = topScores.replace(maxIdx, tmpScore);
+                }
+            }
+            // Keep only top 5
+            topFroms = topFroms[0 ..< 5];
+            topTos = topTos[0 ..< 5];
+            topScores = topScores[0 ..< 5];
+        }
+
+        // Randomly select from top moves
+        Int index = randomInt(topFroms.size, moveCount, topFroms.size + allFroms.size);
+        return (topFroms[index], topTos[index], topScores[index]);
     }
 }

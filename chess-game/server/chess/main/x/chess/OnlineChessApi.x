@@ -22,6 +22,7 @@ service OnlineChessApi {
     // Injected dependencies
     @Inject ChessSchema schema;
     @Inject Random      random;
+    @Inject TimeControlService timeControlService;
 
     /**
      * POST /api/online/create
@@ -38,7 +39,7 @@ service OnlineChessApi {
         using (schema.createTransaction()) {
             TimeControl? timeCtrl = Null;
             if (request != Null && request.timeControlMs > 0) {
-                timeCtrl = TimeControlService.create(request.timeControlMs, request.incrementMs);
+                timeCtrl = timeControlService.create(request.timeControlMs, request.incrementMs);
             }
             
             (OnlineGame game, String playerId) = OnlineChessLogic.createNewRoom(

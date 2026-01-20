@@ -19,8 +19,9 @@ service TimeControlService {
      * Note: This is simplified for demonstration.
      * In production, this would integrate with system time.
      */
-    private static Int currentTimeMs() {
-        return 0; // Placeholder - would use actual time in production
+    @Inject Clock clock;
+    private Int currentTimeMs() {
+        return clock.now.timeOfDay.milliseconds;
     }
 
     /**
@@ -28,7 +29,7 @@ service TimeControlService {
      * @param initialTimeMs Starting time for each player in milliseconds
      * @param incrementMs Time increment added after each move (Fischer time)
      */
-    static TimeControl create(Int initialTimeMs, Int incrementMs) {
+    TimeControl create(Int initialTimeMs, Int incrementMs) {
         Int now = currentTimeMs();
         return new TimeControl(initialTimeMs, initialTimeMs, incrementMs, now);
     }
@@ -39,7 +40,7 @@ service TimeControlService {
      * @param movedColor Which player made the move
      * @return Updated time control with adjusted times
      */
-    static TimeControl updateAfterMove(TimeControl tc, Color movedColor) {
+    TimeControl updateAfterMove(TimeControl tc, Color movedColor) {
         Int now = currentTimeMs();
         Int elapsed = now - tc.lastMoveTime;
 
@@ -65,7 +66,7 @@ service TimeControlService {
      * @param currentTurn Whose turn it currently is
      * @return True if the current player has timed out
      */
-    static Boolean hasTimedOut(TimeControl tc, Color currentTurn) {
+    Boolean hasTimedOut(TimeControl tc, Color currentTurn) {
         Int now = currentTimeMs();
         Int elapsed = now - tc.lastMoveTime;
 
@@ -82,7 +83,7 @@ service TimeControlService {
      * @param color Which player to check
      * @return Time remaining in milliseconds
      */
-    static Int getRemainingTime(TimeControl tc, Color color) {
+    Int getRemainingTime(TimeControl tc, Color color) {
         Int now = currentTimeMs();
         Int elapsed = now - tc.lastMoveTime;
 
@@ -96,9 +97,9 @@ service TimeControlService {
     /**
      * Common time control presets (in milliseconds).
      */
-    static TimeControl bullet() = create(60_000, 0);           // 1 minute, no increment
-    static TimeControl blitz() = create(300_000, 0);          // 5 minutes, no increment
-    static TimeControl rapid() = create(600_000, 0);          // 10 minutes, no increment
-    static TimeControl classic() = create(1_800_000, 0);      // 30 minutes, no increment
-    static TimeControl fischerBlitz() = create(180_000, 2_000); // 3 minutes + 2 seconds
+    TimeControl bullet() = create(60_000, 0);           // 1 minute, no increment
+    TimeControl blitz() = create(300_000, 0);          // 5 minutes, no increment
+    TimeControl rapid() = create(600_000, 0);          // 10 minutes, no increment
+    TimeControl classic() = create(1_800_000, 0);      // 30 minutes, no increment
+    TimeControl fischerBlitz() = create(180_000, 2_000); // 3 minutes + 2 seconds
 }

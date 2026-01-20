@@ -11,7 +11,8 @@ import db.MoveHistoryEntry;
   * - AI opponent moves
   * - Win/loss detection
  */
-service ChessGame {
+@Abstract
+class ChessGame {
     // ----- Game Initialization -------------------------------------------------
 
     /**

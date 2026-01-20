@@ -1,15 +1,16 @@
 import db.CastlingRights;
 
 /**
- * Check Detection Service
+ * Check Detection
  * 
- * This module provides functionality for detecting check, checkmate, and stalemate:
+ * This provides functionality for detecting check, checkmate, and stalemate:
  * - Determine if a king is under attack (in check)
  * - Find all legal moves for a player (considering check)
  * - Detect checkmate (no legal moves and in check)
  * - Detect stalemate (no legal moves and not in check)
  */
-service CheckDetection {
+@Abstract
+class CheckDetection {
     /**
      * Check if a square is under attack by the opponent.
      * @param square The square to check

@@ -301,7 +301,7 @@ module chessDB.examples.org {
                       String playerId,
                       Color playerColor,
                       String message,
-                      Int timestamp) {}
+                      Time timestamp) {}
 
     /**
      * Chess Database Schema Interface

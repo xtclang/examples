@@ -11,7 +11,9 @@ import db.TimeControl;
  * - Game update operations
  * - Error response helpers
  */
-service OnlineChessLogic {
+
+@Abstract
+class OnlineChessLogic {
     // Characters used for generating room codes (excluding ambiguous characters)
     static String ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     static Int ROOM_CODE_LENGTH = 6;
@@ -58,8 +60,7 @@ service OnlineChessLogic {
     /**
      * Create a new online game room.
      */
-    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists,
-                                               TimeControl? timeControl = Null) {
+    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists, TimeControl? timeControl = Null) {
         String roomCode = generateRoomCode(random, exists);
         String playerId = generatePlayerId(random);
         GameRecord baseGame = ChessLogic.resetGame();

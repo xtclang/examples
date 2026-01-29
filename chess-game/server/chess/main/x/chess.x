@@ -33,7 +33,7 @@ module chess.examples.org {
     // Import specific web framework components
     import web.*;
     // Import database schema and models
-    import db.models.ChessSchema;
+    import db.ChessSchema;
     import db.models.GameRecord;
     import db.models.GameMode;
     import db.models.GameStatus;

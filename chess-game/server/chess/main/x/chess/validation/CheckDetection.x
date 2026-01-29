@@ -1,4 +1,4 @@
-import db.CastlingRights;
+import db.models.CastlingRights;
 
 /**
  * Check Detection
@@ -60,15 +60,11 @@ class CheckDetection {
 
     /**
      * Find the king's position on the board.
+     * Delegates to BoardOperations for implementation.
      */
     static Int findKing(Char[] board, Color color) {
         Char kingChar = color == White ? 'K' : 'k';
-        for (Int i = 0; i < 64; i++) {
-            if (board[i] == kingChar) {
-                return i;
-            }
-        }
-        return -1; // Should never happen in valid game
+        return BoardOperations.findPiece(board, kingChar);
     }
 
     /**
@@ -90,11 +86,9 @@ class CheckDetection {
      */
     static Boolean isMoveLegalWithCheck(Char[] board, Int from, Int to, Color playerColor) {
         // Make a copy and simulate the move
-        Char[] testBoard = new Char[64](i -> board[i]);
-        testBoard[to] = testBoard[from];
-        testBoard[from] = '.';
+        Char[] testBoard = BoardOperations.boardWithMove(board, from, to);
         
-        String testBoardStr = new String(testBoard);
+        String testBoardStr = BoardOperations.boardToString(testBoard);
         return !isInCheck(testBoardStr, playerColor);
     }
 

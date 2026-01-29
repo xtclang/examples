@@ -1,6 +1,6 @@
 // Import chess game services
-import ChessGame.MoveOutcome;
-import ChessGame.AutoResponse;
+import core.ChessGame.MoveOutcome;
+import core.ChessGame.AutoResponse;
 
 
 

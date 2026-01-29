@@ -1,4 +1,4 @@
-import db.Color;
+import db.models.Color;
 
 /**
  * Board Utilities Service

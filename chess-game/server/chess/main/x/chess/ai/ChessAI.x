@@ -17,133 +17,23 @@ service ChessAI {
     static Int MAX_SCORE = 1000000;
     static Int CHECKMATE_SCORE = 100000;
 
-    // Piece values (centipawns)
-    static Int PAWN_VALUE = 100;
-    static Int KNIGHT_VALUE = 320;
-    static Int BISHOP_VALUE = 330;
-    static Int ROOK_VALUE = 500;
-    static Int QUEEN_VALUE = 900;
-    static Int KING_VALUE = 20000;
-
-    // Bonuses
-    static Int CHECK_BONUS = 50;
-    static Int CASTLING_BONUS = 60;
-    static Int DEVELOPMENT_BONUS = 30;
-    static Int CENTER_CONTROL_BONUS = 25;
-    static Int DOUBLED_PAWN_PENALTY = -20;
-    static Int ISOLATED_PAWN_PENALTY = -25;
-    static Int PASSED_PAWN_BONUS = 50;
-
-    // Piece-square tables for Black pieces (from Black's perspective, so reversed)
-    // Higher values = better squares for that piece
-    
-    // Pawns want to advance and control center
-    static Int[] PAWN_TABLE = [
-         0,  0,  0,  0,  0,  0,  0,  0,
-        50, 50, 50, 50, 50, 50, 50, 50,
-        10, 10, 20, 30, 30, 20, 10, 10,
-         5,  5, 10, 25, 25, 10,  5,  5,
-         0,  0,  0, 20, 20,  0,  0,  0,
-         5, -5,-10,  0,  0,-10, -5,  5,
-         5, 10, 10,-20,-20, 10, 10,  5,
-         0,  0,  0,  0,  0,  0,  0,  0
-    ];
-
-    // Knights prefer center squares
-    static Int[] KNIGHT_TABLE = [
-        -50,-40,-30,-30,-30,-30,-40,-50,
-        -40,-20,  0,  0,  0,  0,-20,-40,
-        -30,  0, 10, 15, 15, 10,  0,-30,
-        -30,  5, 15, 20, 20, 15,  5,-30,
-        -30,  0, 15, 20, 20, 15,  0,-30,
-        -30,  5, 10, 15, 15, 10,  5,-30,
-        -40,-20,  0,  5,  5,  0,-20,-40,
-        -50,-40,-30,-30,-30,-30,-40,-50
-    ];
-
-    // Bishops prefer long diagonals
-    static Int[] BISHOP_TABLE = [
-        -20,-10,-10,-10,-10,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0,  5, 10, 10,  5,  0,-10,
-        -10,  5,  5, 10, 10,  5,  5,-10,
-        -10,  0, 10, 10, 10, 10,  0,-10,
-        -10, 10, 10, 10, 10, 10, 10,-10,
-        -10,  5,  0,  0,  0,  0,  5,-10,
-        -20,-10,-10,-10,-10,-10,-10,-20
-    ];
-
-    // Rooks prefer open files and 7th rank
-    static Int[] ROOK_TABLE = [
-         0,  0,  0,  0,  0,  0,  0,  0,
-         5, 10, 10, 10, 10, 10, 10,  5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-        -5,  0,  0,  0,  0,  0,  0, -5,
-         0,  0,  0,  5,  5,  0,  0,  0
-    ];
-
-    // Queen combines rook and bishop
-    static Int[] QUEEN_TABLE = [
-        -20,-10,-10, -5, -5,-10,-10,-20,
-        -10,  0,  0,  0,  0,  0,  0,-10,
-        -10,  0,  5,  5,  5,  5,  0,-10,
-         -5,  0,  5,  5,  5,  5,  0, -5,
-          0,  0,  5,  5,  5,  5,  0, -5,
-        -10,  5,  5,  5,  5,  5,  0,-10,
-        -10,  0,  5,  0,  0,  0,  0,-10,
-        -20,-10,-10, -5, -5,-10,-10,-20
-    ];
-
-    // King should stay safe in early/mid game
-    static Int[] KING_TABLE_MIDGAME = [
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -30,-40,-40,-50,-50,-40,-40,-30,
-        -20,-30,-30,-40,-40,-30,-30,-20,
-        -10,-20,-20,-20,-20,-20,-20,-10,
-         20, 20,  0,  0,  0,  0, 20, 20,
-         20, 30, 10,  0,  0, 10, 30, 20
-    ];
+    // Use centralized configuration for all evaluation parameters
+    static EvaluationConfig DEFAULT_CONFIG = new EvaluationConfig();
 
     // ----- Piece Value Calculation -------------------------------------------------
 
     /**
-     * Get the value of a piece.
+     * Get the value of a piece (delegates to config).
      */
     static Int getPieceValue(Char piece) {
-        Char lower = piece.lowercase;
-        switch (lower) {
-            case 'p': return PAWN_VALUE;
-            case 'n': return KNIGHT_VALUE;
-            case 'b': return BISHOP_VALUE;
-            case 'r': return ROOK_VALUE;
-            case 'q': return QUEEN_VALUE;
-            case 'k': return KING_VALUE;
-            default: return 0;
-        }
+        return DEFAULT_CONFIG.getPieceValue(piece);
     }
 
     /**
-     * Get piece-square table value for a piece at a position.
+     * Get piece-square table value for a piece at a position (delegates to config).
      */
     static Int getPieceSquareValue(Char piece, Int square, Boolean isBlack) {
-        // For Black, we need to flip the square vertically
-        Int index = isBlack ? square : (63 - square);
-        
-        Char lower = piece.lowercase;
-        switch (lower) {
-            case 'p': return PAWN_TABLE[index];
-            case 'n': return KNIGHT_TABLE[index];
-            case 'b': return BISHOP_TABLE[index];
-            case 'r': return ROOK_TABLE[index];
-            case 'q': return QUEEN_TABLE[index];
-            case 'k': return KING_TABLE_MIDGAME[index];
-            default: return 0;
-        }
+        return DEFAULT_CONFIG.getPieceSquareValue(piece, square, isBlack);
     }
 
     // ----- Board Evaluation -------------------------------------------------
@@ -183,16 +73,16 @@ service ChessAI {
         }
 
         // Mobility bonus (count available moves)
-        score += countMobility(board, Color.Black, record) * 5;
-        score -= countMobility(board, Color.White, record) * 5;
+        score += countMobility(board, Color.Black, record) * DEFAULT_CONFIG.mobilityBonus;
+        score -= countMobility(board, Color.White, record) * DEFAULT_CONFIG.mobilityBonus;
 
         // Check bonus
         String boardStr = new String(board);
         if (CheckDetection.isInCheck(boardStr, Color.White)) {
-            score += CHECK_BONUS;
+            score += DEFAULT_CONFIG.checkBonus;
         }
         if (CheckDetection.isInCheck(boardStr, Color.Black)) {
-            score -= CHECK_BONUS;
+            score -= DEFAULT_CONFIG.checkBonus;
         }
 
         return score;
@@ -245,7 +135,7 @@ service ChessAI {
         // Handle pawn promotion
         if (piece == 'p' && BoardUtils.getRank(to) == 7) {
             testBoard[to] = 'q'; // Promote to queen
-            score += QUEEN_VALUE - PAWN_VALUE;
+            score += DEFAULT_CONFIG.queenValue - DEFAULT_CONFIG.pawnValue;
         }
 
         // Evaluate resulting position
@@ -254,7 +144,7 @@ service ChessAI {
         // Bonus for giving check
         String testBoardStr = new String(testBoard);
         if (CheckDetection.isInCheck(testBoardStr, Color.White)) {
-            score += CHECK_BONUS;
+            score += DEFAULT_CONFIG.checkBonus;
         }
 
         // Bonus for controlling center with pawns
@@ -262,7 +152,7 @@ service ChessAI {
             Int file = BoardUtils.getFile(to);
             Int rank = BoardUtils.getRank(to);
             if ((file == 3 || file == 4) && (rank >= 3 && rank <= 5)) {
-                score += CENTER_CONTROL_BONUS;
+                score += DEFAULT_CONFIG.centerControlBonus;
             }
         }
 
@@ -271,7 +161,7 @@ service ChessAI {
             if (piece == 'n' || piece == 'b') {
                 Int fromRank = BoardUtils.getRank(from);
                 if (fromRank == 0) { // Piece was on back rank
-                    score += DEVELOPMENT_BONUS;
+                    score += DEFAULT_CONFIG.developmentBonus;
                 }
             }
         }
@@ -280,7 +170,7 @@ service ChessAI {
         if (piece == 'k') {
             Int fileDiff = (BoardUtils.getFile(to) - BoardUtils.getFile(from)).abs();
             if (fileDiff == 2) {
-                score += CASTLING_BONUS;
+                score += DEFAULT_CONFIG.castlingBonus;
             }
         }
 

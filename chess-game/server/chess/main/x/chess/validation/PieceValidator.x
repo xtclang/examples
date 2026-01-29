@@ -1,5 +1,5 @@
-import db.Color;
-import db.CastlingRights;
+import db.models.Color;
+import db.models.CastlingRights;
 
 /**
  * Piece Movement Validator
@@ -21,51 +21,10 @@ service PieceValidator {
 
     /**
      * Check if path is clear for sliding pieces (rook, bishop, queen).
+     * Delegates to DirectionUtils for implementation.
      */
     static Boolean isPathClear(Int from, Int to, Char[] board) {
-        Int step = calculateStep(from, to);
-        if (step == 0) {
-            return False;
-        }
-        Int current = from + step;
-        while (current != to) {
-            if (board[current] != '.') {
-                return False;
-            }
-            current += step;
-        }
-        return True;
-    }
-
-    /**
-     * Calculate step increment for moving from 'from' to 'to'.
-     */
-    static Int calculateStep(Int from, Int to) {
-        Int diff = to - from;
-        Int fileFrom = BoardUtils.getFile(from);
-        Int fileTo = BoardUtils.getFile(to);
-        Int rankFrom = BoardUtils.getRank(from);
-        Int rankTo = BoardUtils.getRank(to);
-
-        // Horizontal movement
-        if (rankFrom == rankTo) {
-            return diff > 0 ? 1 : -1;
-        }
-        // Vertical movement
-        if (fileFrom == fileTo) {
-            return diff > 0 ? 8 : -8;
-        }
-        // Diagonal movement
-        Int fileDiff = (fileTo - fileFrom).abs();
-        Int rankDiff = (rankTo - rankFrom).abs();
-        if (fileDiff == rankDiff) {
-            if (diff > 0) {
-                return fileTo > fileFrom ? 9 : 7;
-            } else {
-                return fileTo > fileFrom ? -7 : -9;
-            }
-        }
-        return 0;
+        return DirectionUtils.isPathClear(from, to, board);
     }
 
     // ----- Piece-Specific Validation -------------------------------------------------
@@ -133,30 +92,14 @@ service PieceValidator {
      * Validate bishop move (diagonal).
      */
     static Boolean isValidBishopMove(Int from, Int to, Char[] board) {
-        Int fileFrom = BoardUtils.getFile(from);
-        Int fileTo = BoardUtils.getFile(to);
-        Int rankFrom = BoardUtils.getRank(from);
-        Int rankTo = BoardUtils.getRank(to);
-
-        Int fileDiff = (fileTo - fileFrom).abs();
-        Int rankDiff = (rankTo - rankFrom).abs();
-
-        return fileDiff == rankDiff && fileDiff > 0 && isPathClear(from, to, board);
+        return DirectionUtils.isSameDiagonal(from, to) && isPathClear(from, to, board);
     }
 
     /**
      * Validate rook move (horizontal or vertical).
      */
     static Boolean isValidRookMove(Int from, Int to, Char[] board) {
-        Int fileFrom = BoardUtils.getFile(from);
-        Int fileTo = BoardUtils.getFile(to);
-        Int rankFrom = BoardUtils.getRank(from);
-        Int rankTo = BoardUtils.getRank(to);
-
-        Boolean sameFile = fileFrom == fileTo;
-        Boolean sameRank = rankFrom == rankTo;
-
-        return (sameFile || sameRank) && from != to && isPathClear(from, to, board);
+        return DirectionUtils.isStraightLine(from, to) && isPathClear(from, to, board);
     }
 
     /**

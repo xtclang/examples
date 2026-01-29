@@ -1,4 +1,4 @@
-import db.CastlingRights;
+import db.models.CastlingRights;
 
 /**
  * ValidMoves Helper Service

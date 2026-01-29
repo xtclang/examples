@@ -1,6 +1,6 @@
-import ChessAI.*;
-import db.CastlingRights;
-import db.MoveHistoryEntry;
+import ai.ChessAI.*;
+import db.models.CastlingRights;
+import db.models.MoveHistoryEntry;
 
 
 /**
@@ -34,7 +34,7 @@ class ChessGame {
      */
     static GameRecord defaultGame() {
         return new GameRecord(defaultBoard(), Color.White, GameStatus.Ongoing, Null, 0, 0,
-                             new db.CastlingRights(), Null, [], Null, 0);
+                             new CastlingRights(), Null, [], Null, 0);
     }
 
     /**
@@ -62,28 +62,14 @@ class ChessGame {
             return new MoveOutcome(False, record, "Invalid square format");
         }
 
-        // Validate move
+        // Validate move using abstraction
         Char[] board = BoardUtils.cloneBoard(record.board);
-        Char piece = board[from];
-
-        if (piece == '.') {
-            return new MoveOutcome(False, record, "No piece on source square");
-        }
-        if (BoardUtils.colorOf(piece) != record.turn) {
-            return new MoveOutcome(False, record, "Not your turn");
-        }
-
-        Char target = board[to];
-        if (target != '.' && BoardUtils.colorOf(target) == record.turn) {
-            return new MoveOutcome(False, record, "Cannot capture your own piece");
-        }
-        if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
-            return new MoveOutcome(False, record, "Illegal move for that piece");
-        }
-
-        // Check if move leaves king in check
-        if (!CheckDetection.isMoveLegalWithCheck(board, from, to, record.turn)) {
-            return new MoveOutcome(False, record, "Move leaves king in check");
+        MoveValidator.ValidationResult validation = MoveValidator.validateMove(
+            board, from, to, record.turn, record.castlingRights, record.enPassantTarget
+        );
+        
+        if (!validation.isValid) {
+            return new MoveOutcome(False, record, validation.errorMessage ?: "Invalid move");
         }
 
         // Apply the move
@@ -178,8 +164,8 @@ class ChessGame {
             }
         }
 
-        // Update castling rights
-        CastlingRights newCastlingRights = updateCastlingRights(record.castlingRights, piece, from, to);
+        // Update castling rights using abstraction
+        CastlingRights newCastlingRights = CastlingManager.updateRights(record.castlingRights, piece, from, to);
 
         // Create move notation
         String moveStr = $"{BoardUtils.toAlgebraic(from)}{BoardUtils.toAlgebraic(to)}";
@@ -226,39 +212,6 @@ class ChessGame {
     /**
      * Update castling rights based on a move.
      */
-    static CastlingRights updateCastlingRights(CastlingRights rights, Char piece, Int from, Int to) {
-        Boolean whiteKingside = rights.whiteKingside;
-        Boolean whiteQueenside = rights.whiteQueenside;
-        Boolean blackKingside = rights.blackKingside;
-        Boolean blackQueenside = rights.blackQueenside;
-
-        // If king moves, lose all castling rights for that color
-        if (piece == 'K') {
-            whiteKingside = False;
-            whiteQueenside = False;
-        } else if (piece == 'k') {
-            blackKingside = False;
-            blackQueenside = False;
-        }
-
-        // If rook moves from starting position, lose that side's castling
-        if (piece == 'R') {
-            if (from == 63) { whiteKingside = False; }  // h1
-            if (from == 56) { whiteQueenside = False; } // a1
-        } else if (piece == 'r') {
-            if (from == 7) { blackKingside = False; }   // h8
-            if (from == 0) { blackQueenside = False; }  // a8
-        }
-
-        // If rook is captured, lose that side's castling
-        if (to == 63) { whiteKingside = False; }  // h1
-        if (to == 56) { whiteQueenside = False; } // a1
-        if (to == 7) { blackKingside = False; }   // h8
-        if (to == 0) { blackQueenside = False; }  // a8
-
-        return new CastlingRights(whiteKingside, whiteQueenside, blackKingside, blackQueenside);
-    }
-
     /**
      * Create standard algebraic notation for a move.
      */

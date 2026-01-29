@@ -1,9 +1,11 @@
-import OnlineChessLogic.RoomCreated;
-import OnlineChessLogic.OnlineApiState;
-import ChessGame.MoveOutcome;
-import ChessGame.AutoResponse;
-import db.GameStatus;
-import db.TimeControl;
+import core.OnlineChessLogic.RoomCreated;
+import core.OnlineChessLogic.OnlineApiState;
+import core.ChessGame.MoveOutcome;
+import core.ChessGame.AutoResponse;
+import db.models.GameStatus;
+import db.models.TimeControl;
+import validation.ValidMovesHelper;
+import core.ChessLogic;
 /**
  * ChessApi Service
  *

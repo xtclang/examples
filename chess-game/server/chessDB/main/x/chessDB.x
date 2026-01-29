@@ -4,13 +4,12 @@
  * This module defines the database schema and data models for the chess game.
  * It uses the Object-Oriented Database (OODB) framework to persist game state.
  * 
- * Key components:
- * - Color: Enumeration for player sides (White/Black)
- * - GameStatus: Enumeration for game lifecycle states
- * - GameMode: Enumeration for single-player vs multiplayer modes
- * - GameRecord: Immutable snapshot of a complete game state
- * - OnlineGame: Extended game record for online multiplayer games
- * - ChessSchema: Database schema interface defining stored data structures
+ * All models have been organized into separate files for better maintainability:
+ * - models/: Core data models (Color, GameStatus, GameMode, GameRecord, etc.)
+ * - base/: Base piece class
+ * - pieces/: Individual piece implementations (Pawn, Knight, Bishop, etc.)
+ * - types/: Type definitions and enumerations (PieceType)
+ * - factory/: Factory classes for creating pieces
  * 
  * The database stores game records indexed by integer IDs, along with
  * authentication information for web access control.
@@ -22,342 +21,32 @@ module chessDB.examples.org {
     // Import Object-Oriented Database framework
     package oodb import oodb.xtclang.org;
 
-    /**
-     * Player Color Enumeration
-     * 
-     * Represents which side a player controls in the chess game.
-     * - White: The player (human), moves first according to chess rules
-     * - Black: The opponent (AI in single-player, or second player in multiplayer)
-     * 
-     * This enum is also used to determine piece ownership on the board.
-     */
-    enum Color { White, Black }
+    // ===== Import Models =====
+    import models.Color;
+    import models.GameStatus;
+    import models.GameMode;
+    import models.CastlingRights;
+    import models.MoveHistoryEntry;
+    import models.TimeControl;
+    import models.GameRecord;
+    import models.OnlineGame;
+    import models.ChatMessage;
+    import models.ChessSchema;
 
-    /**
-     * Game Status Enumeration
-     * 
-     * Tracks the lifecycle and outcome of a chess game.
-     * 
-     * - Ongoing:    Game is still in progress, moves can be made
-     * - Checkmate:  Game has ended because one player has no pieces left
-     *               (simplified from traditional checkmate rules)
-     * - Stalemate:  Game has ended in a draw because only kings remain
-     *               on the board
-     * 
-     * Note: This implementation uses simplified win/loss conditions rather
-     * than traditional chess checkmate and stalemate rules.
-     */
-    enum GameStatus { Ongoing, Checkmate, Stalemate }
+    // ===== Import Base Classes =====
+    import base.Piece;
 
-    /**
-     * Game Mode Enumeration
-     * 
-     * Distinguishes between different gameplay modes.
-     * 
-     * - SinglePlayer: Player vs AI (Black is controlled by the server)
-     * - Multiplayer:  Player vs Player online (two human players)
-     */
-    enum GameMode { SinglePlayer, Multiplayer }
+    // ===== Import Piece Implementations =====
+    import pieces.Pawn;
+    import pieces.Knight;
+    import pieces.Bishop;
+    import pieces.Rook;
+    import pieces.Queen;
+    import pieces.King;
 
-    /**
-     * Castling Rights - Track which castling moves are still available
-     * 
-     * Each player can castle kingside (O-O) and queenside (O-O-O) if:
-     * - Neither the king nor the rook has moved
-     * - There are no pieces between king and rook
-     * - The king is not in check, doesn't pass through check, and doesn't end in check
-     */
-    const CastlingRights(Boolean whiteKingside = True,
-                         Boolean whiteQueenside = True,
-                         Boolean blackKingside = True,
-                         Boolean blackQueenside = True) {}
+    // ===== Import Types =====
+    import types.PieceType;
 
-    /**
-     * Move History Entry - Represents a single move in the game
-     * 
-     * @param moveNumber     Sequential move number (increments each full turn)
-     * @param color          Which player made the move
-     * @param fromSquare     Source square in algebraic notation (e.g., "e2")
-     * @param toSquare       Destination square in algebraic notation (e.g., "e4")
-     * @param piece          The piece that moved (e.g., 'P', 'N', 'B', 'R', 'Q', 'K')
-     * @param capturedPiece  The piece captured, if any
-     * @param promotion      Piece promoted to, if applicable (e.g., 'Q')
-     * @param isCheck        Whether the move puts opponent in check
-     * @param isCheckmate    Whether the move results in checkmate
-     * @param isCastle       Whether the move is castling (kingside or queenside)
-     * @param isEnPassant    Whether the move is an en passant capture
-     * @param notation       Standard algebraic notation (e.g., "Nf3", "e4", "O-O")
-     * @param boardAfter     Board state after this move
-     */
-    const MoveHistoryEntry(Int moveNumber,
-                           Color color,
-                           String fromSquare,
-                           String toSquare,
-                           Char piece,
-                           Char? capturedPiece = Null,
-                           Char? promotion = Null,
-                           Boolean isCheck = False,
-                           Boolean isCheckmate = False,
-                           String? isCastle = Null,
-                           Boolean isEnPassant = False,
-                           String notation = "",
-                           String boardAfter = "") {}
-
-    /**
-     * Time Control - Tracks time remaining for each player
-     * 
-     * @param whiteTimeMs    Time remaining for White in milliseconds
-     * @param blackTimeMs    Time remaining for Black in milliseconds
-     * @param incrementMs    Time increment added per move in milliseconds (e.g., Fisher increment)
-     * @param lastMoveTime   Timestamp of the last move (milliseconds since epoch)
-     */
-    const TimeControl(Int whiteTimeMs = 0,
-                      Int blackTimeMs = 0,
-                      Int incrementMs = 0,
-                      Int lastMoveTime = 0) {}
-
-    /**
-     * Game Record - Immutable Game State Snapshot
-     * 
-     * Represents a complete snapshot of a chess game at a specific point in time.
-     * All game state is persisted in the database as GameRecord instances.
-     * 
-     * Board Representation:
-     * The board is stored as a 64-character string in row-major order from a8 to h1:
-     * - Characters 0-7:   Rank 8 (a8-h8) - Black's back rank
-     * - Characters 8-15:  Rank 7 (a7-h7) - Black's pawn rank
-     * - Characters 16-23: Rank 6 (a6-h6)
-     * - Characters 24-31: Rank 5 (a5-h5)
-     * - Characters 32-39: Rank 4 (a4-h4)
-     * - Characters 40-47: Rank 3 (a3-h3)
-     * - Characters 48-55: Rank 2 (a2-h2) - White's pawn rank
-     * - Characters 56-63: Rank 1 (a1-h1) - White's back rank
-     * 
-     * Piece notation:
-     * - Uppercase letters (R,N,B,Q,K,P) = White pieces
-     * - Lowercase letters (r,n,b,q,k,p) = Black pieces
-     * - Period (.) = Empty square
-     * 
-     * @param board          64-character string representing the board state
-     * @param turn           Which color's turn it is to move
-     * @param status         Current game status (Ongoing, Checkmate, or Stalemate)
-     * @param lastMove       Last move made in algebraic notation (e.g., "e2e4"), or null if no moves yet
-     * @param playerScore    Number of Black pieces captured by White (player)
-     * @param opponentScore  Number of White pieces captured by Black (opponent)
-     * @param castlingRights Tracks which castling moves are still legal
-     * @param enPassantTarget Square where en passant capture is possible (e.g., "e3"), or null
-     * @param moveHistory    Complete history of all moves made in the game
-     * @param timeControl    Time remaining and settings for each player
-     * @param halfMoveClock  Number of half-moves since last capture or pawn move (for 50-move rule)
-     */
-    const GameRecord(String board,
-                     Color  turn,
-                     GameStatus status = Ongoing,
-                     String? lastMove = Null,
-                     Int playerScore = 0,
-                     Int opponentScore = 0,
-                     CastlingRights castlingRights = new CastlingRights(),
-                     String? enPassantTarget = Null,
-                     MoveHistoryEntry[] moveHistory = [],
-                     TimeControl? timeControl = Null,
-                     Int halfMoveClock = 0) {}
-
-    /**
-     * Online Game Record - Extended Game State for Multiplayer
-     * 
-     * Extends GameRecord with additional fields required for online multiplayer:
-     * - Room code for game identification and joining
-     * - Player session IDs for authentication
-     * - Game mode to distinguish single-player vs multiplayer
-     * - Timestamps for activity tracking and cleanup
-     * 
-     * @param board            64-character string representing the board state
-     * @param turn             Which color's turn it is to move
-     * @param status           Current game status (Ongoing, Checkmate, or Stalemate)
-     * @param lastMove         Last move made in algebraic notation
-     * @param playerScore      Number of pieces captured by White player
-     * @param opponentScore    Number of pieces captured by Black player
-     * @param roomCode         Unique 6-character room code for joining (e.g., "ABC123")
-     * @param whitePlayerId    Session ID of the White player (creator)
-     * @param blackPlayerId    Session ID of the Black player (joiner), or null if waiting
-     * @param mode             Game mode (SinglePlayer or Multiplayer)
-     * @param castlingRights   Tracks which castling moves are still legal
-     * @param enPassantTarget  Square where en passant capture is possible, or null
-     * @param moveHistory      Complete history of all moves made in the game
-     * @param timeControl      Time remaining and settings for each player
-     * @param halfMoveClock    Number of half-moves since last capture or pawn move
-     * @param playerLeftId     The ID of a player who left the game (if any)
-     */
-    const OnlineGame(String board,
-                     Color  turn,
-                     GameStatus status = Ongoing,
-                     String? lastMove = Null,
-                     Int playerScore = 0,
-                     Int opponentScore = 0,
-                     String roomCode = "",
-                     String whitePlayerId = "",
-                     String? blackPlayerId = Null,
-                     GameMode mode = SinglePlayer,
-                     CastlingRights castlingRights = new CastlingRights(),
-                     String? enPassantTarget = Null,
-                     MoveHistoryEntry[] moveHistory = [],
-                     TimeControl? timeControl = Null,
-                     Int halfMoveClock = 0,
-                     String? playerLeftId = Null) {
-
-        /**
-         * Convert OnlineGame to basic GameRecord.
-         * Useful for compatibility with existing game logic.
-         */
-        GameRecord toGameRecord() {
-            return new GameRecord(board, turn, status, lastMove, playerScore, opponentScore,
-                                castlingRights, enPassantTarget, moveHistory, timeControl, halfMoveClock);
-        }
-
-        /**
-         * Create an OnlineGame from a GameRecord with additional online fields.
-         */
-        static OnlineGame fromGameRecord(GameRecord rec,
-                                          String roomCode,
-                                          String whitePlayerId,
-                                          String? blackPlayerId,
-                                          GameMode mode) {
-            return new OnlineGame(rec.board,
-                                     rec.turn,
-                                     rec.status,
-                                     rec.lastMove,
-                                     rec.playerScore,
-                                     rec.opponentScore,
-                                     roomCode,
-                                     whitePlayerId,
-                                     blackPlayerId,
-                                     mode,
-                                     rec.castlingRights,
-                                     rec.enPassantTarget,
-                                     rec.moveHistory,
-                                     rec.timeControl,
-                                     rec.halfMoveClock,
-                                     Null);
-        }
-
-        /**
-         * Check if opponent has left the game.
-         */
-        Boolean hasOpponentLeft(String myPlayerId) {
-            if (playerLeftId == Null) {
-                return False;
-            }
-            return playerLeftId != myPlayerId;
-        }
-
-        /**
-         * Check if a player with the given session ID is in this game.
-         */
-        Boolean hasPlayer(String playerId) {
-            return whitePlayerId == playerId || blackPlayerId == playerId;
-        }
-
-        /**
-         * Get the color assigned to a player by their session ID.
-         * Returns Null if the player is not in this game.
-         */
-        Color? getPlayerColor(String playerId) {
-            if (whitePlayerId == playerId) {
-                return White;
-            }
-            if (blackPlayerId == playerId) {
-                return Black;
-            }
-            return Null;
-        }
-
-        /**
-         * Check if the game is waiting for a second player.
-         */
-        Boolean isWaitingForOpponent() {
-            return mode == Multiplayer && blackPlayerId == Null;
-        }
-
-        /**
-         * Check if both players have joined (for multiplayer games).
-         */
-        Boolean isFull() {
-            return mode == SinglePlayer || blackPlayerId != Null;
-        }
-    }
-
-    /**
-     * Chat Message Record
-     * 
-     * Represents a single chat message sent during an online game.
-     * 
-     * @param roomCode      The room code this message belongs to
-     * @param playerId      Session ID of the player who sent the message
-     * @param playerColor   Color of the player (White or Black)
-     * @param message       Text content of the message
-     * @param timestamp     When the message was sent (milliseconds since epoch)
-     */
-    const ChatMessage(String roomCode,
-                      String playerId,
-                      Color playerColor,
-                      String message,
-                      Time timestamp) {}
-
-    /**
-     * Chess Database Schema Interface
-     * 
-     * Defines the root schema for the chess game database.
-     * Extends the OODB RootSchema to provide typed access to stored data.
-     * 
-     * The schema maintains:
-     * - A map of game records indexed by integer game IDs (legacy single-player)
-     * - A map of online games indexed by room codes (multiplayer)
-     * - A list of chat messages for online games
-     * - Authentication data for web access control
-     * 
-     * All database operations should be performed within transactions
-     * to ensure data consistency.
-     */
-    interface ChessSchema
-            extends oodb.RootSchema {
-        /**
-         * Stored Games Map (Legacy)
-         * 
-         * Database map containing all chess games, indexed by integer game ID.
-         * Used for backward compatibility with single-player mode.
-         */
-        @RO oodb.DBMap<Int, GameRecord> games;
-
-        /**
-         * Single Player Games Map
-         * 
-         * Database map containing single-player games, indexed by browser session ID.
-         * Each browser tab/window gets its own unique game instance.
-         */
-        @RO oodb.DBMap<String, GameRecord> singlePlayerGames;
-
-        /**
-         * Online Games Map
-         * 
-         * Database map containing online multiplayer games, indexed by room code.
-         * Room codes are unique 6-character alphanumeric strings.
-         */
-        @RO oodb.DBMap<String, OnlineGame> onlineGames;
-
-        /**
-         * Chat Messages List
-         * 
-         * Database list containing all chat messages sent in online games.
-         * Messages are stored in chronological order.
-         */
-        @RO oodb.DBMap<String, ChatMessage> chatMessages;
-
-        /**
-         * Authentication Schema
-         * 
-         * Provides user authentication and authorization for web access.
-         * Manages user accounts, sessions, and permissions.
-         */
-        @RO auth.AuthSchema authSchema;
-    }
+    // ===== Import Factory =====
+    import factory.PieceFactory;
 }

@@ -1,5 +1,5 @@
-import db.TimeControl;
-import db.Color;
+import db.models.TimeControl;
+import db.models.Color;
 
 /**
  * Time Control Service

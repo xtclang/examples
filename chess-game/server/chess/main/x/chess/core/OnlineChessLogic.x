@@ -1,4 +1,4 @@
-import db.TimeControl;
+import db.models.TimeControl;
 
 /**
  * OnlineChess Helper Service

@@ -1,3 +1,14 @@
+import utils.BoardUtils;
+import utils.BoardOperations;
+import utils.DirectionUtils;
+import validation.PieceValidator;
+import validation.CheckDetection;
+import validation.MoveValidator;
+import validation.ValidMovesHelper;
+import config.CastlingManager;
+import core.ChessLogic;
+import core.OnlineChessLogic;
+import ai.ChessAI;
 /**
  * Chess Game Server Module
  * 
@@ -22,13 +33,13 @@ module chess.examples.org {
     // Import specific web framework components
     import web.*;
     // Import database schema and models
-    import db.ChessSchema;
-    import db.GameRecord;
-    import db.GameMode;
-    import db.GameStatus;
-    import db.Color;
-    import db.OnlineGame;
-    import db.ChatMessage;
+    import db.models.ChessSchema;
+    import db.models.GameRecord;
+    import db.models.GameMode;
+    import db.models.GameStatus;
+    import db.models.Color;
+    import db.models.OnlineGame;
+    import db.models.ChatMessage;
 
     // ===== Chat API Response Types =====
     

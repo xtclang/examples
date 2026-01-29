@@ -78,12 +78,15 @@ const OnlineGame(String board,
 
     /**
      * Check if opponent has left the game.
+     * Returns true only if someone left AND it wasn't me.
      */
     Boolean hasOpponentLeft(String myPlayerId) {
-        if (playerLeftId == Null) {
+        String? leftId = playerLeftId;
+        if (leftId == Null) {
             return False;
         }
-        return playerLeftId != myPlayerId;
+        // Opponent left if playerLeftId is set and it's NOT my ID
+        return leftId != myPlayerId && hasPlayer(leftId);
     }
 
     /**

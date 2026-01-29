@@ -986,11 +986,13 @@ body {
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
   z-index: 150;
+  /* Disabled in online mode to allow board and panels to coexist */
+  pointer-events: none;
 }
 
 .backdrop.visible {
-  opacity: 1;
-  visibility: visible;
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* ===== Toast ===== */

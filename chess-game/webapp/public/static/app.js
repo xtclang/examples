@@ -452,6 +452,9 @@ async function createRoom() {
       isInRoom = true;
       lastMove = null;
 
+      // Clear previous room's chat messages to ensure proper isolation
+      clearChat();
+
       saveSession();
       showRoomInfo();
       openChatPanel();
@@ -482,6 +485,9 @@ async function joinRoom(code) {
       playerColor = data.playerColor || 'Black';
       isInRoom = true;
       lastMove = null;
+
+      // Clear previous room's chat messages to ensure proper isolation
+      clearChat();
 
       saveSession();
       showRoomInfo();
@@ -637,6 +643,11 @@ function showLobbyOptions() {
 }
 
 function setGameMode(mode) {
+  // If already in the requested mode, do nothing
+  if (gameMode === mode) {
+    return;
+  }
+
   // Always clear any pending timers first to prevent cross-mode interference
   if (opponentRefresh !== null) {
     clearTimeout(opponentRefresh);
@@ -660,21 +671,28 @@ function setGameMode(mode) {
   multiplayerBtn?.classList.toggle('active', mode === 'multi');
 
   if (mode === 'single') {
-    // Exit any online room when switching to single player
-    if (isInRoom) {
-      exitMultiplayerMode();
-    }
+    // Switch to single player mode but keep the online session active
+    // Only the "Leave Room" button will actually exit the room
     lastMove = null;
     closeChatPanelFn();
     closeOnlinePanelFn();
     loadState();
   } else {
-    // When switching to multiplayer, show lobby but don't start any polling yet
+    // When switching to multiplayer mode
     lastMove = null;
-    showLobbyOptions();
-    openOnlinePanel();
-    // Render empty board while waiting for room
-    renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
+    if (isInRoom) {
+      // If already in a room, show room info and resume
+      showRoomInfo();
+      openOnlinePanel();
+      startMultiplayerPolling();
+      loadOnlineState();
+    } else {
+      // Not in a room, show lobby options
+      showLobbyOptions();
+      openOnlinePanel();
+      // Render empty board while waiting for room
+      renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
+    }
   }
 }
 
@@ -700,19 +718,16 @@ function exitMultiplayerMode() {
 // ===== Panel Controls =====
 function openOnlinePanel() {
   onlinePanel?.classList.add('open');
-  backdrop?.classList.add('visible');
+  // Don't show backdrop in online mode - let panels coexist with board
 }
 
 function closeOnlinePanelFn() {
   onlinePanel?.classList.remove('open');
-  if (!chatPanel?.classList.contains('open')) {
-    backdrop?.classList.remove('visible');
-  }
 }
 
 function openChatPanel() {
   chatPanel?.classList.add('open');
-  backdrop?.classList.add('visible');
+  // Don't show backdrop in online mode - let panels coexist with board
   resetChatBadge();
   loadChatMessages();
   startChatPolling();
@@ -720,9 +735,6 @@ function openChatPanel() {
 
 function closeChatPanelFn() {
   chatPanel?.classList.remove('open');
-  if (!onlinePanel?.classList.contains('open')) {
-    backdrop?.classList.remove('visible');
-  }
 }
 
 function toggleInfoPopover() {

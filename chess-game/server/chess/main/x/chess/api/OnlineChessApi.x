@@ -26,7 +26,7 @@ service OnlineChessApi {
     // Injected dependencies
     @Inject ChessSchema schema;
     @Inject Random      random;
-    @Inject TimeControlService timeControlService;
+    TimeControlService timeControlService = new TimeControlService();
 
     /**
      * POST /api/online/create

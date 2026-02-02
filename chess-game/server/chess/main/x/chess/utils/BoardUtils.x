@@ -1,4 +1,4 @@
-import db.Color;
+import db.models.Color;
 
 /**
  * Board Utilities Service
@@ -71,30 +71,24 @@ service BoardUtils {
      * Get the color of a piece character.
      * Lowercase = Black, Uppercase = White
      */
-    static Color colorOf(Char piece) {
-        return piece >= 'a' && piece <= 'z' ? Color.Black : Color.White;
-    }
+    static Color colorOf(Char piece) = 'a' <= piece <= 'z' ? Black : White;
 
     /**
      * Check if a square index is valid.
      */
-    static Boolean isValidSquare(Int index) {
-        return index >= 0 && index < 64;
-    }
+    static Boolean isValidSquare(Int index) = 0 <= index < 64;
 
     /**
      * Get file (column) index from square index.
      */
-    static Int getFile(Int index) {
-        return index % BOARD_SIZE;
-    }
+    static Int getFile(Int index) = index % BOARD_SIZE;
+
 
     /**
      * Get rank (row) index from square index.
      */
-    static Int getRank(Int index) {
-        return index / BOARD_SIZE;
-    }
+    static Int getRank(Int index) = index / BOARD_SIZE;
+
 
     /**
      * Calculate distance between two squares (max of file/rank distance).

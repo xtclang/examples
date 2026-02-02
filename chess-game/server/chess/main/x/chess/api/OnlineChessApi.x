@@ -1,7 +1,12 @@
-import OnlineChessLogic.OnlineApiState;
-import OnlineChessLogic.RoomCreated;
-import ChessGame.MoveOutcome;
-import ValidMovesHelper.ValidMovesResponse;
+import core.OnlineChessLogic.OnlineApiState;
+import core.OnlineChessLogic.RoomCreated;
+import core.OnlineChessLogic;
+import core.ChessGame.MoveOutcome;
+import validation.ValidMovesHelper.ValidMovesResponse;
+import validation.ValidMovesHelper;
+import db.models.TimeControl;
+import services.TimeControlService;
+import core.ChessLogic;
 
 /**
  * OnlineChessApi Service
@@ -21,6 +26,7 @@ service OnlineChessApi {
     // Injected dependencies
     @Inject ChessSchema schema;
     @Inject Random      random;
+    TimeControlService timeControlService = new TimeControlService();
 
     /**
      * POST /api/online/create
@@ -28,18 +34,29 @@ service OnlineChessApi {
      * Creates a new online game room. The creator becomes the White player
      * and receives a room code to share with their opponent.
      *
+     * @param request Optional request body with time control settings
      * @return RoomCreated with room code and player ID
      */
     @Post("create")
     @Produces(Json)
-    RoomCreated createRoom() {
+    RoomCreated createRoom(@BodyParam CreateRoomRequest? request = Null) {
         using (schema.createTransaction()) {
+            TimeControl? timeCtrl = Null;
+            if (request != Null && request.timeControlMs > 0) {
+                timeCtrl = timeControlService.create(request.timeControlMs, request.incrementMs);
+            }
+            
             (OnlineGame game, String playerId) = OnlineChessLogic.createNewRoom(
-                random, code -> schema.onlineGames.contains(code));
+                random, (String code) -> schema.onlineGames.contains(code), timeCtrl);
             schema.onlineGames.put(game.roomCode, game);
             return new RoomCreated(game.roomCode, playerId, "Room created! Share the code with your opponent.");
         }
     }
+
+    /**
+     * Request body for creating a room with time control.
+     */
+    static const CreateRoomRequest(Int timeControlMs = 0, Int incrementMs = 0);
 
     /**
      * POST /api/online/join/{roomCode}
@@ -147,7 +164,7 @@ service OnlineChessApi {
     /**
      * POST /api/online/leave/{roomCode}/{playerId}
      *
-     * Leaves an online game and closes the room.
+     * Leaves an online game. Marks the player as left so opponent knows.
      *
      * @param roomCode The room code identifying the game
      * @param playerId The player's session ID
@@ -158,7 +175,26 @@ service OnlineChessApi {
     OnlineApiState leaveGame(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
-                schema.onlineGames.remove(roomCode);
+                // Mark the player as having left
+                OnlineGame updatedGame = new OnlineGame(
+                    game.board,
+                    game.turn,
+                    game.status,
+                    game.lastMove,
+                    game.playerScore,
+                    game.opponentScore,
+                    game.roomCode,
+                    game.whitePlayerId,
+                    game.blackPlayerId,
+                    game.mode,
+                    game.castlingRights,
+                    game.enPassantTarget,
+                    game.moveHistory,
+                    game.timeControl,
+                    game.halfMoveClock,
+                    playerId
+                );
+                schema.onlineGames.put(roomCode, updatedGame);
             }
             return OnlineChessLogic.leftGameResponse(roomCode, playerId);
         }
@@ -196,7 +232,8 @@ service OnlineChessApi {
                 }
 
                 // Get valid moves
-                String[] moves = getValidMoves(game.board, square, playerColor);
+                String[] moves = ValidMovesHelper.getValidMoves(game.board, square, playerColor,
+                                                               game.castlingRights, game.enPassantTarget);
                 return new ValidMovesResponse(True, Null, moves);
             }
             return new ValidMovesResponse(False, "Room not found", []);

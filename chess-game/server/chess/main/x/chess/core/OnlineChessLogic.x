@@ -1,3 +1,5 @@
+import db.models.TimeControl;
+
 /**
  * OnlineChess Helper Service
  *
@@ -9,7 +11,9 @@
  * - Game update operations
  * - Error response helpers
  */
-service OnlineChessLogic {
+
+@Abstract
+class OnlineChessLogic {
     // Characters used for generating room codes (excluding ambiguous characters)
     static String ROOM_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     static Int ROOM_CODE_LENGTH = 6;
@@ -56,12 +60,21 @@ service OnlineChessLogic {
     /**
      * Create a new online game room.
      */
-    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists) {
+    static (OnlineGame, String) createNewRoom(Random random, function Boolean(String) exists, TimeControl? timeControl = Null) {
         String roomCode = generateRoomCode(random, exists);
         String playerId = generatePlayerId(random);
         GameRecord baseGame = ChessLogic.resetGame();
+        
+        // Update time control if provided
+        GameRecord gameWithTime = timeControl != Null ?
+            new GameRecord(baseGame.board, baseGame.turn, baseGame.status,
+                         baseGame.lastMove, baseGame.playerScore, baseGame.opponentScore,
+                         baseGame.castlingRights, baseGame.enPassantTarget,
+                         baseGame.moveHistory, timeControl, baseGame.halfMoveClock) :
+            baseGame;
+        
         OnlineGame game = OnlineGame.fromGameRecord(
-            baseGame, roomCode, playerId, Null, GameMode.Multiplayer);
+            gameWithTime, roomCode, playerId, Null, GameMode.Multiplayer);
         return (game, playerId);
     }
 
@@ -73,7 +86,9 @@ service OnlineChessLogic {
         OnlineGame updated = new OnlineGame(
             game.board, game.turn, game.status, game.lastMove,
             game.playerScore, game.opponentScore, game.roomCode,
-            game.whitePlayerId, playerId, game.mode);
+            game.whitePlayerId, playerId, game.mode,
+            game.castlingRights, game.enPassantTarget,
+            game.moveHistory, game.timeControl, game.halfMoveClock, Null);
         return (updated, playerId);
     }
 
@@ -85,7 +100,9 @@ service OnlineChessLogic {
         return new OnlineGame(
             reset.board, reset.turn, reset.status, reset.lastMove,
             reset.playerScore, reset.opponentScore, game.roomCode,
-            game.whitePlayerId, game.blackPlayerId, game.mode);
+            game.whitePlayerId, game.blackPlayerId, game.mode,
+            reset.castlingRights, reset.enPassantTarget, reset.moveHistory,
+            reset.timeControl, reset.halfMoveClock, Null);
     }
 
     /**
@@ -95,7 +112,9 @@ service OnlineChessLogic {
         return new OnlineGame(
             result.board, result.turn, result.status, result.lastMove,
             result.playerScore, result.opponentScore, game.roomCode,
-            game.whitePlayerId, game.blackPlayerId, game.mode);
+            game.whitePlayerId, game.blackPlayerId, game.mode,
+            result.castlingRights, result.enPassantTarget, result.moveHistory,
+            result.timeControl, result.halfMoveClock, game.playerLeftId);
     }
 
     // ----- Response Builders ---------------------------------------------
@@ -108,6 +127,7 @@ service OnlineChessLogic {
         String colorStr = playerColor?.toString() : "Spectator";
         Boolean isYourTurn = playerColor != Null && playerColor == game.turn && !game.isWaitingForOpponent();
         String detail = message ?: describeOnlineState(game, playerId);
+        Boolean opponentLeft = game.hasOpponentLeft(playerId);
         return new OnlineApiState(
             ChessLogic.boardRows(game.board),
             game.turn.toString(),
@@ -122,7 +142,8 @@ service OnlineChessLogic {
             isYourTurn,
             game.isWaitingForOpponent(),
             game.mode.toString(),
-            playerId);
+            playerId,
+            opponentLeft);
     }
 
     /**
@@ -261,7 +282,8 @@ service OnlineChessLogic {
                          Boolean isYourTurn,
                          Boolean waitingForOpponent,
                          String gameMode,
-                         String playerId = "");
+                         String playerId = "",
+                         Boolean opponentLeft = False);
 
     /**
      * Room Creation Response

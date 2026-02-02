@@ -46,6 +46,13 @@ const chatToggleBtn = document.getElementById('chatToggleBtn');
 const infoToggle = document.getElementById('infoToggle');
 const infoPopover = document.getElementById('infoPopover');
 
+// Time control elements
+const timeControlBar = document.getElementById('timeControlBar');
+const whiteTimerEl = document.getElementById('whiteTimer');
+const blackTimerEl = document.getElementById('blackTimer');
+const whiteTimeEl = document.getElementById('whiteTime');
+const blackTimeEl = document.getElementById('blackTime');
+
 // Backdrop
 const backdrop = document.getElementById('backdrop');
 
@@ -74,6 +81,14 @@ let isInRoom = false;
 let lastChatTimestamp = 0;
 let chatPollInterval = null;
 let unreadChatCount = 0;
+
+// Single player session ID (for browser isolation)
+let singlePlayerSessionId = null;
+
+// Time control state
+let timeControl = null;
+let clockInterval = null;
+let currentTurn = 'White';
 
 // ===== Utility Functions =====
 function pushToast(message, variant = 'accent') {
@@ -105,6 +120,22 @@ function saveSession() {
   } else {
     localStorage.removeItem('chess_session');
   }
+}
+
+function generateSessionId() {
+  return 'sp_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function getSinglePlayerSessionId() {
+  if (!singlePlayerSessionId) {
+    // Try to get from sessionStorage (browser tab specific)
+    singlePlayerSessionId = sessionStorage.getItem('chess_single_player_id');
+    if (!singlePlayerSessionId) {
+      singlePlayerSessionId = generateSessionId();
+      sessionStorage.setItem('chess_single_player_id', singlePlayerSessionId);
+    }
+  }
+  return singlePlayerSessionId;
 }
 
 function loadSession() {
@@ -214,7 +245,8 @@ async function handleSquareClick(square) {
 // ===== API Calls =====
 async function sendMove(from, to) {
   try {
-    const res = await fetch(`/api/move/${from}/${to}`, { method: 'POST' });
+    const sessionId = getSinglePlayerSessionId();
+    const res = await fetch(`/api/move/${sessionId}/${from}/${to}`, { method: 'POST' });
     const payload = await res.json();
     applyState(payload);
     if (selectionEl) selectionEl.textContent = 'Pick a piece';
@@ -226,7 +258,8 @@ async function sendMove(from, to) {
 async function loadState() {
   setMessage('Syncing with server…');
   try {
-    const res = await fetch('/api/state');
+    const sessionId = getSinglePlayerSessionId();
+    const res = await fetch(`/api/state/${sessionId}`);
     const payload = await res.json();
     applyState(payload);
   } catch (err) {
@@ -241,7 +274,8 @@ async function resetGame() {
     if (gameMode === 'multi' && isInRoom) {
       await resetOnlineGame();
     } else {
-      const res = await fetch('/api/reset', { method: 'POST' });
+      const sessionId = getSinglePlayerSessionId();
+      const res = await fetch(`/api/reset/${sessionId}`, { method: 'POST' });
       const payload = await res.json();
       lastMove = null;
       applyState(payload);
@@ -253,9 +287,13 @@ async function resetGame() {
 
 async function loadValidMoves(square) {
   try {
-    const url = (gameMode === 'multi' && isInRoom && roomCode && playerId)
-      ? `/api/online/validmoves/${roomCode}/${playerId}/${square}`
-      : `/api/validmoves/${square}`;
+    let url;
+    if (gameMode === 'multi' && isInRoom && roomCode && playerId) {
+      url = `/api/online/validmoves/${roomCode}/${playerId}/${square}`;
+    } else {
+      const sessionId = getSinglePlayerSessionId();
+      url = `/api/validmoves/${sessionId}/${square}`;
+    }
     const res = await fetch(url);
     const data = await res.json();
     if (data.success && data.validMoves) {
@@ -281,6 +319,81 @@ function syncScores(state) {
   if (opponentScoreInlineMulti) opponentScoreInlineMulti.textContent = opponentScore;
 }
 
+// ===== Time Control Functions =====
+function formatTime(ms) {
+  if (ms == null || ms < 0) return '--:--';
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateTimeControl(tc, turn) {
+  if (!tc || (tc.whiteTimeMs === 0 && tc.blackTimeMs === 0)) {
+    hideTimeControl();
+    return;
+  }
+  
+  timeControl = tc;
+  currentTurn = turn;
+  
+  // Show time control bar
+  if (timeControlBar) timeControlBar.classList.add('visible');
+  
+  // Update displayed times
+  if (whiteTimeEl) whiteTimeEl.textContent = formatTime(tc.whiteTimeMs);
+  if (blackTimeEl) blackTimeEl.textContent = formatTime(tc.blackTimeMs);
+  
+  // Update active state
+  if (whiteTimerEl) {
+    whiteTimerEl.classList.toggle('active', turn === 'White');
+    whiteTimerEl.classList.toggle('low-time', tc.whiteTimeMs > 0 && tc.whiteTimeMs < 30000);
+  }
+  if (blackTimerEl) {
+    blackTimerEl.classList.toggle('active', turn === 'Black');
+    blackTimerEl.classList.toggle('low-time', tc.blackTimeMs > 0 && tc.blackTimeMs < 30000);
+  }
+  
+  // Start clock countdown
+  startClock();
+}
+
+function hideTimeControl() {
+  if (timeControlBar) timeControlBar.classList.remove('visible');
+  stopClock();
+  timeControl = null;
+}
+
+function startClock() {
+  stopClock();
+  if (!timeControl) return;
+  
+  clockInterval = setInterval(() => {
+    if (!timeControl) {
+      stopClock();
+      return;
+    }
+    
+    // Decrement current player's time
+    if (currentTurn === 'White') {
+      timeControl.whiteTimeMs = Math.max(0, timeControl.whiteTimeMs - 1000);
+      if (whiteTimeEl) whiteTimeEl.textContent = formatTime(timeControl.whiteTimeMs);
+      if (whiteTimerEl) whiteTimerEl.classList.toggle('low-time', timeControl.whiteTimeMs > 0 && timeControl.whiteTimeMs < 30000);
+    } else {
+      timeControl.blackTimeMs = Math.max(0, timeControl.blackTimeMs - 1000);
+      if (blackTimeEl) blackTimeEl.textContent = formatTime(timeControl.blackTimeMs);
+      if (blackTimerEl) blackTimerEl.classList.toggle('low-time', timeControl.blackTimeMs > 0 && timeControl.blackTimeMs < 30000);
+    }
+  }, 1000);
+}
+
+function stopClock() {
+  if (clockInterval) {
+    clearInterval(clockInterval);
+    clockInterval = null;
+  }
+}
+
 function announceMove(move, previousMove) {
   if (!move || move === previousMove || !hasInitializedState) return;
   pushToast(`Move: ${move}`, 'accent');
@@ -299,12 +412,20 @@ function applyState(state) {
 
   const previousMove = lastMove;
   if (state.lastMove) lastMove = state.lastMove;
+  currentTurn = state.turn || 'White';
 
   renderBoard(state.board, false);
   if (turnEl) turnEl.textContent = state.turn ?? '—';
   if (statusEl) statusEl.textContent = state.status ?? '—';
   if (selectionEl) selectionEl.textContent = 'Pick a piece';
   syncScores(state);
+
+  // Update time control display
+  if (state.timeControl) {
+    updateTimeControl(state.timeControl, state.turn);
+  } else {
+    hideTimeControl();
+  }
 
   const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready';
   setMessage(`${state.message || 'Synced.'}\n${move}`);
@@ -330,6 +451,9 @@ async function createRoom() {
       playerColor = 'White';
       isInRoom = true;
       lastMove = null;
+
+      // Clear previous room's chat messages to ensure proper isolation
+      clearChat();
 
       saveSession();
       showRoomInfo();
@@ -361,6 +485,9 @@ async function joinRoom(code) {
       playerColor = data.playerColor || 'Black';
       isInRoom = true;
       lastMove = null;
+
+      // Clear previous room's chat messages to ensure proper isolation
+      clearChat();
 
       saveSession();
       showRoomInfo();
@@ -447,6 +574,15 @@ function applyOnlineState(state) {
   if (selectionEl) selectionEl.textContent = state.isYourTurn ? 'Your turn' : 'Waiting…';
   syncScores(state);
 
+  // Handle opponent leaving
+  if (state.opponentLeft) {
+    if (mpStatusPill) mpStatusPill.textContent = 'Opponent left';
+    pushToast('Your opponent has left the game', 'secondary');
+    setMessage('Opponent left the room. You win!');
+    // Don't start polling again - game is over
+    return;
+  }
+
   if (mpStatusPill) {
     if (state.waitingForOpponent) {
       mpStatusPill.textContent = 'Waiting for opponent...';
@@ -464,6 +600,13 @@ function applyOnlineState(state) {
 
   if (state.status === 'Ongoing') {
     opponentRefresh = setTimeout(loadOnlineState, 1000);
+  } else if (state.status !== 'Ongoing') {
+    // Game ended, show result
+    if (state.winner) {
+      const isWinner = (state.winner === 'White' && playerColor === 'White') ||
+                       (state.winner === 'Black' && playerColor === 'Black');
+      pushToast(isWinner ? 'You won!' : 'You lost!', isWinner ? 'success' : 'accent');
+    }
   }
 
   announceMove(state.lastMove, previousMove);
@@ -500,6 +643,26 @@ function showLobbyOptions() {
 }
 
 function setGameMode(mode) {
+  // If already in the requested mode, do nothing
+  if (gameMode === mode) {
+    return;
+  }
+
+  // Always clear any pending timers first to prevent cross-mode interference
+  if (opponentRefresh !== null) {
+    clearTimeout(opponentRefresh);
+    opponentRefresh = null;
+  }
+  stopChatPolling();
+  
+  // Clear selection and valid moves to prevent stale state
+  selection = null;
+  activeValidMoves = [];
+  if (validMoveTimer) {
+    clearTimeout(validMoveTimer);
+    validMoveTimer = null;
+  }
+
   gameMode = mode;
   document.body.classList.remove('mode-single', 'mode-multi');
   document.body.classList.add(mode === 'single' ? 'mode-single' : 'mode-multi');
@@ -508,17 +671,28 @@ function setGameMode(mode) {
   multiplayerBtn?.classList.toggle('active', mode === 'multi');
 
   if (mode === 'single') {
-    if (opponentRefresh !== null) {
-      clearTimeout(opponentRefresh);
-      opponentRefresh = null;
-    }
+    // Switch to single player mode but keep the online session active
+    // Only the "Leave Room" button will actually exit the room
     lastMove = null;
     closeChatPanelFn();
     closeOnlinePanelFn();
     loadState();
   } else {
-    showLobbyOptions();
-    openOnlinePanel();
+    // When switching to multiplayer mode
+    lastMove = null;
+    if (isInRoom) {
+      // If already in a room, show room info and resume
+      showRoomInfo();
+      openOnlinePanel();
+      startMultiplayerPolling();
+      loadOnlineState();
+    } else {
+      // Not in a room, show lobby options
+      showLobbyOptions();
+      openOnlinePanel();
+      // Render empty board while waiting for room
+      renderBoard(['rnbqkbnr', 'pppppppp', '........', '........', '........', '........', 'PPPPPPPP', 'RNBQKBNR'], true);
+    }
   }
 }
 
@@ -544,19 +718,16 @@ function exitMultiplayerMode() {
 // ===== Panel Controls =====
 function openOnlinePanel() {
   onlinePanel?.classList.add('open');
-  backdrop?.classList.add('visible');
+  // Don't show backdrop in online mode - let panels coexist with board
 }
 
 function closeOnlinePanelFn() {
   onlinePanel?.classList.remove('open');
-  if (!chatPanel?.classList.contains('open')) {
-    backdrop?.classList.remove('visible');
-  }
 }
 
 function openChatPanel() {
   chatPanel?.classList.add('open');
-  backdrop?.classList.add('visible');
+  // Don't show backdrop in online mode - let panels coexist with board
   resetChatBadge();
   loadChatMessages();
   startChatPolling();
@@ -564,9 +735,6 @@ function openChatPanel() {
 
 function closeChatPanelFn() {
   chatPanel?.classList.remove('open');
-  if (!onlinePanel?.classList.contains('open')) {
-    backdrop?.classList.remove('visible');
-  }
 }
 
 function toggleInfoPopover() {

@@ -1,6 +1,6 @@
 // Import chess game services
-import ChessGame.MoveOutcome;
-import ChessGame.AutoResponse;
+import core.ChessGame.MoveOutcome;
+import core.ChessGame.AutoResponse;
 
 
 
@@ -28,36 +28,30 @@ service ChessLogic {
     /**
      * Generate AI opponent move.
      */
-    static AutoResponse autoMove(GameRecord record) {
-        return ChessGame.autoMove(record);
-    }
+    static AutoResponse autoMove(GameRecord record) = ChessGame.autoMove(record);
 
     /**
      * Get default starting board.
      */
-    static String defaultBoard() {
-        return ChessGame.defaultBoard();
-    }
+    static String defaultBoard() = ChessGame.defaultBoard();
 
     /**
      * Create default game.
      */
-    static GameRecord defaultGame() {
-        return ChessGame.defaultGame();
-    }
+    static GameRecord defaultGame() = ChessGame.defaultGame();
+
 
     /**
      * Reset game to initial state.
      */
-    static GameRecord resetGame() {
-        return ChessGame.resetGame();
-    }
+    static GameRecord resetGame() = ChessGame.resetGame();
+
 
     /**
      * Convert board to array of row strings.
      */
-    static String[] boardRows(String board) {
-        return ChessGame.boardRows(board);
-    }
+    static String[] boardRows(String board) = ChessGame.boardRows(board);
+
+
 }
 

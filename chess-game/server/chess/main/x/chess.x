@@ -1,3 +1,14 @@
+import utils.BoardUtils;
+import utils.BoardOperations;
+import utils.DirectionUtils;
+import validation.PieceValidator;
+import validation.CheckDetection;
+import validation.MoveValidator;
+import validation.ValidMovesHelper;
+import config.CastlingManager;
+import core.ChessLogic;
+import core.OnlineChessLogic;
+import ai.ChessAI;
 /**
  * Chess Game Server Module
  * 
@@ -23,41 +34,12 @@ module chess.examples.org {
     import web.*;
     // Import database schema and models
     import db.ChessSchema;
-    import db.GameRecord;
-    import db.GameMode;
-    import db.GameStatus;
-    import db.Color;
-    import db.OnlineGame;
-    import db.ChatMessage;
-
-    // ===== Chat API Response Types =====
-    
-    /**
-     * ChatMessageResponse - API response format for a single chat message
-     */
-    const ChatMessageResponse(String playerId,
-                              String playerColor,
-                              String? message = Null,
-                              Int timestamp);
-
-    /**
-     * ChatHistoryResponse - API response containing chat messages
-     */
-    const ChatHistoryResponse(Boolean success,
-                              String? error,
-                              ChatMessageResponse[] messages = []);
-
-    /**
-     * SendMessageResponse - API response after sending a message
-     */
-    const SendMessageResponse(Boolean success,
-                              String? error,
-                              String? message = Null);
-
-    /**
-     * SendMessageRequest - API request body for sending a message
-     */
-    const SendMessageRequest(String? message = Null);
+    import db.models.GameRecord;
+    import db.models.GameMode;
+    import db.models.GameStatus;
+    import db.models.Color;
+    import db.models.OnlineGame;
+    import db.models.ChatMessage;
 
     /**
      * Home Service
@@ -66,6 +48,14 @@ module chess.examples.org {
      * All requests to the root path "/" are served with the index.html file
      * from the public directory.
      */
-    @StaticContent("/static", /public/index.html)
+    @StaticContent("/", /public/index.html)
     service Home {}
+
+    /**
+     * Static Content Service
+     * 
+     * Serves static files (CSS, JS) from the /static path
+     */
+    @StaticContent("/static", /public/static/)
+    service StaticFiles {}
 }

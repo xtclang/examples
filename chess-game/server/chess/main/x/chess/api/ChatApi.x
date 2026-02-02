@@ -1,3 +1,15 @@
+import utils.BoardUtils;
+import utils.BoardOperations;
+import utils.DirectionUtils;
+import utils.ChatAPIResponseTypes.*;
+import validation.PieceValidator;
+import validation.CheckDetection;
+import validation.MoveValidator;
+import validation.ValidMovesHelper;
+import config.CastlingManager;
+import core.ChessLogic;
+import core.OnlineChessLogic;
+import ai.ChessAI;
 /**
  * ChatApi Service
  *
@@ -51,7 +63,8 @@ service ChatApi {
                 }
 
                 // Create and store the chat message
-                Int timestamp = clock.now.milliseconds;
+                // Use message count for ordering
+                Time timestamp = clock.now;
                 ChatMessage msg = new ChatMessage(roomCode, playerId, color, trimmed, timestamp);
                 String msgKey = $"{roomCode}_{timestamp}_{playerId}";
                 schema.chatMessages.put(msgKey, msg);
@@ -96,7 +109,7 @@ service ChatApi {
                             msg.playerId,
                             colorName,
                             msg.message,
-                            msg.timestamp
+                            msg.timestamp.timeOfDay.milliseconds
                         ));
                         count++;
                         if (count >= limit) {
@@ -137,13 +150,13 @@ service ChatApi {
                 ChatMessageResponse[] messages = new Array<ChatMessageResponse>();
                 
                 for (ChatMessage msg : schema.chatMessages.values) {
-                    if (msg.roomCode == roomCode && msg.timestamp > since) {
+                    if (msg.roomCode == roomCode && msg.timestamp.timeOfDay.milliseconds > since) {
                         String colorName = msg.playerColor == White ? "White" : "Black";
                         messages.add(new ChatMessageResponse(
                             msg.playerId,
                             colorName,
                             msg.message,
-                            msg.timestamp
+                            msg.timestamp.timeOfDay.milliseconds
                         ));
                     }
                 }

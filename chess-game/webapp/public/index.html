@@ -28,10 +28,22 @@
     <div class="status-bar">
       <span class="status-item">
         <span class="status-dot"></span>
-        <span id="turn">White</span>'s turn
+        <span id="turn">White</span> turn
       </span>
       <span class="status-divider">•</span>
       <span class="status-item" id="status">Ongoing</span>
+    </div>
+
+    <!-- Time Control Display -->
+    <div class="time-control-bar" id="timeControlBar">
+      <div class="timer white-timer" id="whiteTimer">
+        <span class="timer-label">♔</span>
+        <span class="timer-value" id="whiteTime">--:--</span>
+      </div>
+      <div class="timer black-timer" id="blackTimer">
+        <span class="timer-label">♚</span>
+        <span class="timer-value" id="blackTime">--:--</span>
+      </div>
     </div>
 
     <!-- Chess Board -->
@@ -122,8 +134,8 @@
     </div>
   </aside>
 
-  <!-- Chat Drawer (Slide-in from right) -->
-  <aside class="slide-panel chat-drawer" id="chatPanel">
+  <!-- Chat Drawer (Slide-in from LEFT) -->
+  <aside class="slide-panel left chat-drawer" id="chatPanel">
     <div class="panel-header">
       <h2>💬 Game Chat</h2>
       <button class="close-btn" id="closeChatPanel">×</button>

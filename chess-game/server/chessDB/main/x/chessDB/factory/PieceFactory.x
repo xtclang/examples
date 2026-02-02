@@ -34,7 +34,7 @@ service PieceFactory {
         }
         
         Char lower = pieceChar.lowercase;
-        Color color = pieceChar >= 'a' && pieceChar <= 'z' ? Color.Black : Color.White;
+        Color color = pieceChar >= 'a' && pieceChar <= 'z' ? Black : White;
         
         // Get centipawn value
         Int value = switch (lower) {

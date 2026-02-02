@@ -33,7 +33,7 @@ service PieceValidator {
      * Validate pawn move (including en passant).
      */
     static Boolean isValidPawnMove(Char piece, Int from, Int to, Char[] board, String? enPassantTarget) {
-        Boolean isWhite = piece >= 'A' && piece <= 'Z';
+        Boolean isWhite = 'A' <= piece <= 'Z';
         Int direction = isWhite ? -8 : 8;
         Int startRank = isWhite ? 6 : 1;
         Int diff = to - from;

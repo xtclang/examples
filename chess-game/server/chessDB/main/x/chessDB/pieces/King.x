@@ -1,7 +1,1 @@
-const King extends Piece{
-    @Override @Lazy public Boolean isKing.calc() = True;
-
-        construct (Color color) {
-            construct Piece(color, 'k', 20000);
-       }
-}
+const King(Color color) extends Piece(color, 'k', 20000);

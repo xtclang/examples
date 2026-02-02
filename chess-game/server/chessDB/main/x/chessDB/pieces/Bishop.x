@@ -1,7 +1,1 @@
-const Bishop extends Piece{
-    @Override @Lazy public Boolean isQueen.calc() = True;
-
-        construct (Color color) {
-            construct Piece(color, 'b', 330);
-       }
-}
+const Bishop(Color color) extends Piece(color, 'b', 330);

@@ -122,7 +122,7 @@ service BoardOperations {
                 continue;
             }
             Int value = config.getPieceValue(piece);
-            if (piece >= 'A' && piece <= 'Z') {
+            if ('A' <= piece <= 'Z') {
                 whiteValue += value;
             } else {
                 blackValue += value;

@@ -4,12 +4,6 @@ const Piece{
     Color color;
     protected Char char;
     protected Int centipawns;
-    @Lazy public Boolean isQueen.calc() = False;
-    @Lazy public Boolean isBishop.calc() = False;
-    @Lazy public Boolean isRook.calc() = False;
-    @Lazy public Boolean isKnight.calc() = False;
-    @Lazy public Boolean isKing.calc() = False;
-    @Lazy public Boolean isPawn.calc() = False;
 
     public Char getChar() { return this.char; }
 

@@ -103,21 +103,30 @@ service DirectionUtils {
         Int[] squares = new Int[];
         Int current = from + direction;
         Int distance = 0;
-        
+
+        Loop:
         while (BoardUtils.isValidSquare(current) && distance < maxDistance) {
-            // Check for wrapping (file overflow)
-            Int fromFile = BoardUtils.getFile(from);
-            Int currentFile = BoardUtils.getFile(current);
-            if ((direction == EAST || direction == NORTHEAST || direction == SOUTHEAST) && currentFile < fromFile) {
-                break;
-            }
-            if ((direction == WEST || direction == NORTHWEST || direction == SOUTHWEST) && currentFile > fromFile) {
-                break;
-            }
-            
-            squares = squares.add(current);
-            current += direction;
-            distance++;
+        // Check for wrapping (file overflow)
+                Int fromFile = BoardUtils.getFile(from);
+                Int currentFile = BoardUtils.getFile(current);
+
+                switch (direction) {
+                case EAST, NORTHEAST, SOUTHEAST:
+                    if (currentFile < fromFile) {
+                        break Loop;
+                    }
+                    break;
+
+                case WEST, NORTHWEST, SOUTHWEST:
+                    if (currentFile > fromFile) {
+                        break Loop;
+                    }
+                    break;
+                }
+
+                squares = squares.add(current);
+                current += direction;
+                distance++;
         }
         return squares;
     }

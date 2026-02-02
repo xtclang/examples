@@ -122,7 +122,7 @@ class ChessGame {
                 // Remove the captured pawn
                 Int capturedPawnSquare = record.turn == White ? to + 8 : to - 8;
                 board[capturedPawnSquare] = '.';
-                if (record.turn == Color.White) {
+                if (record.turn == White) {
                     newPlayerScore++;
                 } else {
                     newOpponentScore++;
@@ -158,7 +158,7 @@ class ChessGame {
         if (PieceValidator.isPawn(piece)) {
             Int toRank = BoardUtils.getRank(to);
             if ((piece == 'P' && toRank == 0) || (piece == 'p' && toRank == 7)) {
-                Char promoPiece = (piece >= 'A' && piece <= 'Z') ? 'Q' : 'q';
+                Char promoPiece = ('A' <= piece <= 'Z') ? 'Q' : 'q';
                 board[to] = promoPiece;
                 promotedTo = promoPiece;
             }
@@ -181,9 +181,9 @@ class ChessGame {
         (Boolean isCheckmate, Boolean isStalemate) = CheckDetection.checkGameEnd(
             boardStr, nextTurn, newCastlingRights, newEnPassantTarget);
 
-        GameStatus status = isCheckmate ? GameStatus.Checkmate :
-                           isStalemate ? GameStatus.Stalemate :
-                           GameStatus.Ongoing;
+        GameStatus status = isCheckmate ? Checkmate :
+                            isStalemate ? Stalemate :
+                                          Ongoing;
 
         // Create move history entry
         Int moveNumber = record.moveHistory.size + 1;
@@ -279,7 +279,7 @@ class ChessGame {
             if (piece == '.') {
                 continue;
             }
-            if (piece >= 'A' && piece <= 'Z') {
+            if ('A' <= piece <= 'Z') {
                 whitePieces++;
                 if (piece == 'K') {
                     whiteKing = True;

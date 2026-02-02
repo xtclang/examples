@@ -57,9 +57,9 @@ service ChessAI {
             }
 
             Int pieceValue = getPieceValue(piece);
-            Int posValue = getPieceSquareValue(piece, i, piece >= 'a' && piece <= 'z');
+            Int posValue = getPieceSquareValue(piece, i, 'A' <= piece <= 'Z');
 
-            if (piece >= 'A' && piece <= 'Z') {
+            if ('A' <= piece <= 'Z') {
                 // White piece
                 whiteMaterial += pieceValue;
                 whitePieceCount++;
@@ -151,7 +151,7 @@ service ChessAI {
         if (piece == 'p') {
             Int file = BoardUtils.getFile(to);
             Int rank = BoardUtils.getRank(to);
-            if ((file == 3 || file == 4) && (rank >= 3 && rank <= 5)) {
+            if ((file == 3 || file == 4) && (3 <= rank <= 5)) {
                 score += DEFAULT_CONFIG.centerControlBonus;
             }
         }

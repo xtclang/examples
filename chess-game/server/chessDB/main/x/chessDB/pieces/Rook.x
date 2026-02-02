@@ -1,8 +1,1 @@
-const Rook extends Piece{
-
-    @Override @Lazy public Boolean isRook.calc() = True;
-
-        construct (Color color) {
-            construct Piece(color, 'r', 500);
-       }
-}
+const Rook(Color color) extends Piece(color, 'r', 500);

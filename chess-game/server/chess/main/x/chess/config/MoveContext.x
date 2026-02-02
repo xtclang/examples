@@ -20,10 +20,8 @@ const MoveContext(
         if (rights == Null) {
             return False;
         }
-        if (color == Color.White) {
-            return kingside ? rights.whiteKingside : rights.whiteQueenside;
-        } else {
-            return kingside ? rights.blackKingside : rights.blackQueenside;
-        }
+        return color == White
+                ? (kingside ? rights.whiteKingside : rights.whiteQueenside)
+                : (kingside ? rights.blackKingside : rights.blackQueenside);
     }
 }

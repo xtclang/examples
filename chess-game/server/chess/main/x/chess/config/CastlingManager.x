@@ -26,30 +26,31 @@ service CastlingManager {
         Boolean blackQueenside = rights.blackQueenside;
 
         // White king moves - lose all white castling rights
-        if (piece == 'K') {
-            whiteKingside = False;
-            whiteQueenside = False;
-        }
-        // Black king moves - lose all black castling rights
-        else if (piece == 'k') {
-            blackKingside = False;
-            blackQueenside = False;
-        }
-        // White rook moves from starting position
-        else if (piece == 'R') {
-            if (from == 63) { // h1
+         switch(piece){
+            case 'K':
                 whiteKingside = False;
-            } else if (from == 56) { // a1
                 whiteQueenside = False;
-            }
-        }
-        // Black rook moves from starting position
-        else if (piece == 'r') {
-            if (from == 7) { // h8
+                break;
+            case 'k':
                 blackKingside = False;
-            } else if (from == 0) { // a8
                 blackQueenside = False;
-            }
+                break;
+            case 'R':
+                if (from == 63) { // h1
+                    whiteKingside = False;
+                } else if (from == 56) { // a1
+                    whiteQueenside = False;
+                }
+                break;
+            case 'r':
+                if (from == 7) { // h8
+                    blackKingside = False;
+                } else if (from == 0) { // a8
+                    blackQueenside = False;
+                }
+                break;
+            default:
+                break;
         }
 
         // Check if a rook was captured on its starting square
@@ -71,11 +72,9 @@ service CastlingManager {
      * Check if castling is available for a specific side.
      */
     static Boolean canCastle(CastlingRights rights, Color color, Boolean kingside) {
-        if (color == Color.White) {
-            return kingside ? rights.whiteKingside : rights.whiteQueenside;
-        } else {
-            return kingside ? rights.blackKingside : rights.blackQueenside;
-        }
+            return color == White
+                    ? (kingside ? rights.whiteKingside : rights.whiteQueenside)
+                    : (kingside ? rights.blackKingside : rights.blackQueenside);
     }
 
     /**

@@ -95,8 +95,8 @@ const EvaluationConfig {
      * Get material value for a piece.
      */
     Int getPieceValue(Char piece) {
-        Char lower = piece.lowercase;
-        switch (lower) {
+
+        switch (piece.lowercase) {
             case 'p': return pawnValue;
             case 'n': return knightValue;
             case 'b': return bishopValue;
@@ -112,9 +112,8 @@ const EvaluationConfig {
      */
     Int getPieceSquareValue(Char piece, Int square, Boolean isBlack) {
         Int index = isBlack ? square : (63 - square);
-        
-        Char lower = piece.lowercase;
-        switch (lower) {
+
+        switch (piece.lowercase) {
             case 'p': return pawnTable[index];
             case 'n': return knightTable[index];
             case 'b': return bishopTable[index];

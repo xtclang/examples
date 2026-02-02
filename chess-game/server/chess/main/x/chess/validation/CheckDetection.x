@@ -47,7 +47,7 @@ class CheckDetection {
      * Check if a pawn can attack a square (diagonal only).
      */
     static Boolean canPawnAttack(Char piece, Int from, Int to) {
-        Boolean isWhite = piece >= 'A' && piece <= 'Z';
+        Boolean isWhite = 'A' <= piece <= 'Z';
         Int direction = isWhite ? -8 : 8;
         Int diff = to - from;
         

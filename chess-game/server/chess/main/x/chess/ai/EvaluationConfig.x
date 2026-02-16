@@ -91,6 +91,26 @@ const EvaluationConfig {
          20, 30, 10,  0,  0, 10, 30, 20
     ];
 
+    // King endgame table — king should centralize in the endgame
+    Int[] kingTableEndgame = [
+        -50,-40,-30,-20,-20,-30,-40,-50,
+        -30,-20,-10,  0,  0,-10,-20,-30,
+        -30,-10, 20, 30, 30, 20,-10,-30,
+        -30,-10, 30, 40, 40, 30,-10,-30,
+        -30,-10, 30, 40, 40, 30,-10,-30,
+        -30,-10, 20, 30, 30, 20,-10,-30,
+        -30,-30,  0,  0,  0,  0,-30,-30,
+        -50,-30,-30,-30,-30,-30,-30,-50
+    ];
+
+    // Passed pawn bonus by rank (from Black's perspective: rank 0 = 8th rank = promotion)
+    Int[] passedPawnBonusByRank = [0, 120, 80, 50, 30, 15, 10, 0];
+
+    // ----- Endgame Bonuses -------------------------------------------------
+    Int kingProximityBonus = 10;    // Bonus for king being close to opponent's king (mating)
+    Int rookOn7thBonus = 20;        // Bonus for rook on 7th rank
+    Int connectedRooksBonus = 15;   // Bonus for connected rooks
+
     /**
      * Get material value for a piece.
      */
@@ -109,8 +129,9 @@ const EvaluationConfig {
 
     /**
      * Get piece-square table value.
+     * Uses endgame tables for king when isEndgame is True.
      */
-    Int getPieceSquareValue(Char piece, Int square, Boolean isBlack) {
+    Int getPieceSquareValue(Char piece, Int square, Boolean isBlack, Boolean isEndgame = False) {
         Int index = isBlack ? square : (63 - square);
 
         switch (piece.lowercase) {
@@ -119,7 +140,7 @@ const EvaluationConfig {
             case 'b': return bishopTable[index];
             case 'r': return rookTable[index];
             case 'q': return queenTable[index];
-            case 'k': return kingTableMidgame[index];
+            case 'k': return isEndgame ? kingTableEndgame[index] : kingTableMidgame[index];
             default: return 0;
         }
     }

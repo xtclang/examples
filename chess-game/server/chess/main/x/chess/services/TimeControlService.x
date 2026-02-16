@@ -38,23 +38,35 @@ service TimeControlService {
      * Update time control after a move.
      * @param tc Current time control
      * @param movedColor Which player made the move
+     * @param isFirstMove True if this is the first move of the game (no time should be deducted)
      * @return Updated time control with adjusted times
      */
-    TimeControl updateAfterMove(TimeControl tc, Color movedColor) {
+    TimeControl updateAfterMove(TimeControl tc, Color movedColor, Boolean isFirstMove = False) {
         Int now = currentTimeMs();
-        Int elapsed = now - tc.lastMoveTime;
 
         Int newWhiteTime = tc.whiteTimeMs;
         Int newBlackTime = tc.blackTimeMs;
 
-        if (movedColor == White) {
-            newWhiteTime = (tc.whiteTimeMs - elapsed).maxOf(0);
-            // Add increment
-            newWhiteTime += tc.incrementMs;
+        // For the first move, don't subtract thinking time - just start the clock
+        if (!isFirstMove) {
+            Int elapsed = now - tc.lastMoveTime;
+            
+            if (movedColor == White) {
+                newWhiteTime = (tc.whiteTimeMs - elapsed).maxOf(0);
+                // Add increment
+                newWhiteTime += tc.incrementMs;
+            } else {
+                newBlackTime = (tc.blackTimeMs - elapsed).maxOf(0);
+                // Add increment
+                newBlackTime += tc.incrementMs;
+            }
         } else {
-            newBlackTime = (tc.blackTimeMs - elapsed).maxOf(0);
-            // Add increment
-            newBlackTime += tc.incrementMs;
+            // First move - just add increment if any
+            if (movedColor == White) {
+                newWhiteTime += tc.incrementMs;
+            } else {
+                newBlackTime += tc.incrementMs;
+            }
         }
 
         return new TimeControl(newWhiteTime, newBlackTime, tc.incrementMs, now);
@@ -95,11 +107,21 @@ service TimeControlService {
     }
 
     /**
-     * Common time control presets (in milliseconds).
+     * Common time control presets following FIDE standards.
+     * All values in milliseconds.
      */
-    TimeControl bullet() = create(60_000, 0);           // 1 minute, no increment
-    TimeControl blitz() = create(300_000, 0);          // 5 minutes, no increment
-    TimeControl rapid() = create(600_000, 0);          // 10 minutes, no increment
-    TimeControl classic() = create(1_800_000, 0);      // 30 minutes, no increment
-    TimeControl fischerBlitz() = create(180_000, 2_000); // 3 minutes + 2 seconds
+    TimeControl bullet() = create(60_000, 0);           // 1 minute bullet
+    TimeControl bullet1plus1() = create(60_000, 1_000); // 1+1 bullet (1 min + 1 sec increment)
+    TimeControl bullet2plus1() = create(120_000, 1_000); // 2+1 bullet 
+    
+    TimeControl blitz3() = create(180_000, 0);          // 3 minute blitz
+    TimeControl blitz3plus2() = create(180_000, 2_000); // 3+2 blitz (standard)
+    TimeControl blitz5() = create(300_000, 0);          // 5 minute blitz
+    TimeControl blitz5plus3() = create(300_000, 3_000); // 5+3 blitz
+    
+    TimeControl rapid10() = create(600_000, 0);         // 10 minute rapid
+    TimeControl rapid15plus10() = create(900_000, 10_000); // 15+10 rapid (standard)
+    TimeControl rapid30() = create(1_800_000, 0);       // 30 minute rapid
+    
+    TimeControl classical() = create(5_400_000, 30_000); // 90+30 classical (FIDE standard)
 }

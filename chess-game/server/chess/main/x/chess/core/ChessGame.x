@@ -177,13 +177,22 @@ class ChessGame {
         String boardStr = new String(board);
         Boolean givesCheck = CheckDetection.isInCheck(boardStr, nextTurn);
 
-        // Check game status (checkmate/stalemate)
+        // Check game status (checkmate/stalemate/draws)
         (Boolean isCheckmate, Boolean isStalemate) = CheckDetection.checkGameEnd(
             boardStr, nextTurn, newCastlingRights, newEnPassantTarget);
 
-        GameStatus status = isCheckmate ? Checkmate :
-                            isStalemate ? Stalemate :
-                                          Ongoing;
+        GameStatus status;
+        if (isCheckmate) {
+            status = Checkmate;
+        } else if (isStalemate) {
+            status = Stalemate;
+        } else if (CheckDetection.isFiftyMoveRule(newHalfMoveClock)) {
+            status = FiftyMoveRule;
+        } else if (CheckDetection.isInsufficientMaterial(boardStr)) {
+            status = InsufficientMaterial;
+        } else {
+            status = Ongoing;
+        }
 
         // Create move history entry
         Int moveNumber = record.moveHistory.size + 1;
@@ -194,6 +203,13 @@ class ChessGame {
             castleType, isEnPassant, notation, boardStr);
 
         MoveHistoryEntry[] newHistory = record.moveHistory.addAll([historyEntry]);
+
+        // Check threefold repetition (must be done after building history)
+        if (status == Ongoing
+                && CheckDetection.isThreefoldRepetition(
+                       newHistory, boardStr, nextTurn, newCastlingRights, newEnPassantTarget)) {
+            status = ThreefoldRepetition;
+        }
 
         return new GameRecord(
             boardStr,

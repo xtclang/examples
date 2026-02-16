@@ -105,11 +105,13 @@ service ChatApi {
                 for (ChatMessage msg : schema.chatMessages.values) {
                     if (msg.roomCode == roomCode) {
                         String colorName = msg.playerColor == White ? "White" : "Black";
+                        // Convert Time to epoch milliseconds (picoseconds / 1_000_000_000)
+                        Int epochMs = (msg.timestamp.epochPicos / 1_000_000_000).toInt64();
                         messages.add(new ChatMessageResponse(
                             msg.playerId,
                             colorName,
                             msg.message,
-                            msg.timestamp.timeOfDay.milliseconds
+                            epochMs
                         ));
                         count++;
                         if (count >= limit) {
@@ -150,13 +152,15 @@ service ChatApi {
                 ChatMessageResponse[] messages = new Array<ChatMessageResponse>();
                 
                 for (ChatMessage msg : schema.chatMessages.values) {
-                    if (msg.roomCode == roomCode && msg.timestamp.timeOfDay.milliseconds > since) {
+                    // Convert Time to epoch milliseconds for comparison
+                    Int epochMs = (msg.timestamp.epochPicos / 1_000_000_000).toInt64();
+                    if (msg.roomCode == roomCode && epochMs > since) {
                         String colorName = msg.playerColor == White ? "White" : "Black";
                         messages.add(new ChatMessageResponse(
                             msg.playerId,
                             colorName,
                             msg.message,
-                            msg.timestamp.timeOfDay.milliseconds
+                            epochMs
                         ));
                     }
                 }

@@ -42,6 +42,12 @@ const chatSendBtn = document.getElementById('chatSendBtn');
 const chatBadge = document.getElementById('chatBadge');
 const chatToggleBtn = document.getElementById('chatToggleBtn');
 
+// Move history panel elements
+const moveHistoryPanel = document.getElementById('moveHistoryPanel');
+const closeMoveHistoryPanel = document.getElementById('closeMoveHistoryPanel');
+const moveHistoryContainer = document.getElementById('moveHistoryContainer');
+const moveHistoryToggleBtn = document.getElementById('moveHistoryToggleBtn');
+
 // Info popover
 const infoToggle = document.getElementById('infoToggle');
 const infoPopover = document.getElementById('infoPopover');
@@ -53,8 +59,25 @@ const blackTimerEl = document.getElementById('blackTimer');
 const whiteTimeEl = document.getElementById('whiteTime');
 const blackTimeEl = document.getElementById('blackTime');
 
+// Time control modal elements
+const timeControlModal = document.getElementById('timeControlModal');
+const closeTimeControlModal = document.getElementById('closeTimeControlModal');
+const timeControlOptions = document.querySelectorAll('.time-control-option');
+const startWithTimeControl = document.getElementById('startWithTimeControl');
+const onlineTimeControl = document.getElementById('onlineTimeControl');
+
 // Backdrop
 const backdrop = document.getElementById('backdrop');
+
+// Game End Modal elements
+const gameEndModal = document.getElementById('gameEndModal');
+const gameEndTitle = document.getElementById('gameEndTitle');
+const gameEndIcon = document.getElementById('gameEndIcon');
+const gameEndMessage = document.getElementById('gameEndMessage');
+const finalWhiteScore = document.getElementById('finalWhiteScore');
+const finalBlackScore = document.getElementById('finalBlackScore');
+const playAgainBtn = document.getElementById('playAgainBtn');
+const closeGameEndModal = document.getElementById('closeGameEndModal');
 
 // ===== Piece Map =====
 const pieceMap = {
@@ -89,6 +112,12 @@ let singlePlayerSessionId = null;
 let timeControl = null;
 let clockInterval = null;
 let currentTurn = 'White';
+let previousTurn = null; // Track previous turn to detect turn changes
+let selectedTimeControlMs = 600000; // Default: 10 min (Rapid)
+let selectedIncrementMs = 0;
+
+// Move history state
+let moveHistory = [];
 
 // ===== Utility Functions =====
 function pushToast(message, variant = 'accent') {
@@ -270,14 +299,23 @@ async function loadState() {
 
 async function resetGame() {
   setMessage('Resetting…');
+  resetGameEndState(); // Reset game end modal state
   try {
     if (gameMode === 'multi' && isInRoom) {
       await resetOnlineGame();
     } else {
       const sessionId = getSinglePlayerSessionId();
-      const res = await fetch(`/api/reset/${sessionId}`, { method: 'POST' });
+      const res = await fetch(`/api/reset/${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timeControlMs: selectedTimeControlMs,
+          incrementMs: selectedIncrementMs
+        })
+      });
       const payload = await res.json();
       lastMove = null;
+      clearMoveHistory();
       applyState(payload);
     }
   } catch (err) {
@@ -323,50 +361,163 @@ function syncScores(state) {
 function formatTime(ms) {
   if (ms == null || ms < 0) return '--:--';
   const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+
+  // Show h:mm:ss when >= 1 hour
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Show m:ss.t (tenths) when < 10 seconds for urgency
+  if (totalSeconds < 10) {
+    const tenths = Math.floor((ms % 1000) / 100);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}.${tenths}`;
+  }
+
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-function updateTimeControl(tc, turn) {
+function updateTimeControl(tc, turn, gameStatus = 'Ongoing', hasMoves = false) {
   if (!tc || (tc.whiteTimeMs === 0 && tc.blackTimeMs === 0)) {
     hideTimeControl();
     return;
   }
   
-  timeControl = tc;
+  const turnChanged = previousTurn !== null && previousTurn !== turn;
+  previousTurn = turn;
   currentTurn = turn;
   
   // Show time control bar
   if (timeControlBar) timeControlBar.classList.add('visible');
   
-  // Update displayed times
+  // Always update times from server (server is authoritative)
+  timeControl = tc;
   if (whiteTimeEl) whiteTimeEl.textContent = formatTime(tc.whiteTimeMs);
   if (blackTimeEl) blackTimeEl.textContent = formatTime(tc.blackTimeMs);
   
-  // Update active state
-  if (whiteTimerEl) {
-    whiteTimerEl.classList.toggle('active', turn === 'White');
-    whiteTimerEl.classList.toggle('low-time', tc.whiteTimeMs > 0 && tc.whiteTimeMs < 30000);
-  }
-  if (blackTimerEl) {
-    blackTimerEl.classList.toggle('active', turn === 'Black');
-    blackTimerEl.classList.toggle('low-time', tc.blackTimeMs > 0 && tc.blackTimeMs < 30000);
+  // Only run clock if game is ongoing AND at least one move has been made
+  const shouldRunClock = gameStatus === 'Ongoing' && hasMoves;
+  
+  if (shouldRunClock && (turnChanged || !clockInterval)) {
+    startClock();
+  } else if (!shouldRunClock) {
+    stopClock();
   }
   
-  // Start clock countdown
-  startClock();
+  // Update active state (always update visual indicators)
+  if (whiteTimerEl) {
+    whiteTimerEl.classList.toggle('active', turn === 'White' && shouldRunClock);
+    whiteTimerEl.classList.toggle('low-time', timeControl.whiteTimeMs > 0 && timeControl.whiteTimeMs < 30000);
+  }
+  if (blackTimerEl) {
+    blackTimerEl.classList.toggle('active', turn === 'Black' && shouldRunClock);
+    blackTimerEl.classList.toggle('low-time', timeControl.blackTimeMs > 0 && timeControl.blackTimeMs < 30000);
+  }
 }
 
 function hideTimeControl() {
   if (timeControlBar) timeControlBar.classList.remove('visible');
   stopClock();
   timeControl = null;
+  previousTurn = null; // Reset turn tracking when hiding
+}
+
+// ===== Game End Modal =====
+let gameEndShown = false;
+
+/**
+ * Determine game result display properties based on status and winner.
+ */
+function determineGameResult(status, message, isOnline, myColor) {
+  const isWhiteWinner = message?.includes('White wins') ?? false;
+  const isBlackWinner = message?.includes('Black wins') ?? false;
+  
+  // Draw statuses
+  const drawStatuses = {
+    'Stalemate': { icon: '🤝', title: 'Stalemate' },
+    'FiftyMoveRule': { icon: '🤝', title: 'Draw — 50-Move Rule' },
+    'InsufficientMaterial': { icon: '🤝', title: 'Draw — Insufficient Material' },
+    'ThreefoldRepetition': { icon: '🔄', title: 'Draw — Threefold Repetition' },
+  };
+  
+  if (drawStatuses[status]) {
+    return { resultType: 'draw', ...drawStatuses[status] };
+  }
+  
+  // Timeout — someone lost on time (not a draw)
+  if (status === 'Timeout') {
+    const didIWin = isOnline && myColor
+      ? (myColor === 'White' && isBlackWinner) || (myColor === 'Black' && isWhiteWinner)
+        ? false
+        : (myColor === 'White' && isWhiteWinner) || (myColor === 'Black' && isBlackWinner)
+      : !message?.includes('Black wins');
+    
+    if (didIWin) {
+      return { resultType: 'win', icon: '⏱️', title: isOnline ? 'Victory on Time!' : 'You Win on Time!' };
+    }
+    return { resultType: 'loss', icon: '⏱️', title: isOnline ? 'Lost on Time' : 'You Lost on Time' };
+  }
+  
+  if (status !== 'Checkmate') {
+    return { resultType: 'draw', icon: '🤝', title: 'Game Over' };
+  }
+  
+  // Checkmate — determine winner
+  const didIWin = isOnline && myColor
+    ? (myColor === 'White' && isWhiteWinner) || (myColor === 'Black' && isBlackWinner)
+    : isWhiteWinner;
+  
+  if (didIWin) {
+    return { resultType: 'win', icon: '🏆', title: isOnline ? 'Checkmate! Victory!' : 'Checkmate! You Win!' };
+  }
+  
+  if (isWhiteWinner || isBlackWinner) {
+    return { resultType: 'loss', icon: '😔', title: isOnline ? 'Checkmate — Defeat' : 'Checkmate — You Lost' };
+  }
+  
+  return { resultType: 'draw', icon: '🤝', title: 'Game Over' };
+}
+
+function showGameEndModal(status, message, whiteScore, blackScore, isOnline = false, myColor = null) {
+  if (gameEndShown || !gameEndModal) return;
+  gameEndShown = true;
+  
+  const { resultType, icon, title } = determineGameResult(status, message, isOnline, myColor);
+  
+  // Update modal content
+  if (gameEndTitle) gameEndTitle.textContent = title;
+  if (gameEndIcon) gameEndIcon.textContent = icon;
+  if (gameEndMessage) gameEndMessage.textContent = message || status;
+  if (finalWhiteScore) finalWhiteScore.textContent = whiteScore;
+  if (finalBlackScore) finalBlackScore.textContent = blackScore;
+  
+  // Update modal class
+  gameEndModal.className = 'modal-overlay';
+  const modalContent = gameEndModal.querySelector('.modal-content');
+  if (modalContent) {
+    modalContent.className = `modal-content game-end-modal result-${resultType}`;
+  }
+  
+  // Show modal
+  gameEndModal.classList.remove('hidden');
+}
+
+function hideGameEndModal() {
+  if (gameEndModal) gameEndModal.classList.add('hidden');
+  gameEndShown = false;
+}
+
+function resetGameEndState() {
+  gameEndShown = false;
 }
 
 function startClock() {
   stopClock();
   if (!timeControl) return;
+  
+  let lastUpdateTime = Date.now();
   
   clockInterval = setInterval(() => {
     if (!timeControl) {
@@ -374,17 +525,28 @@ function startClock() {
       return;
     }
     
-    // Decrement current player's time
+    const now = Date.now();
+    const deltaMs = now - lastUpdateTime;
+    lastUpdateTime = now;
+    
+    // Update display only (don't modify the stored timeControl object)
+    // The server will send authoritative time updates
     if (currentTurn === 'White') {
-      timeControl.whiteTimeMs = Math.max(0, timeControl.whiteTimeMs - 1000);
-      if (whiteTimeEl) whiteTimeEl.textContent = formatTime(timeControl.whiteTimeMs);
-      if (whiteTimerEl) whiteTimerEl.classList.toggle('low-time', timeControl.whiteTimeMs > 0 && timeControl.whiteTimeMs < 30000);
+      const newWhiteTime = Math.max(0, timeControl.whiteTimeMs - deltaMs);
+      if (whiteTimeEl) whiteTimeEl.textContent = formatTime(newWhiteTime);
+      if (whiteTimerEl) whiteTimerEl.classList.toggle('low-time', newWhiteTime > 0 && newWhiteTime < 30000);
+      
+      // Stop local countdown if time runs out (server will handle the actual timeout)
+      if (newWhiteTime <= 0) stopClock();
     } else {
-      timeControl.blackTimeMs = Math.max(0, timeControl.blackTimeMs - 1000);
-      if (blackTimeEl) blackTimeEl.textContent = formatTime(timeControl.blackTimeMs);
-      if (blackTimerEl) blackTimerEl.classList.toggle('low-time', timeControl.blackTimeMs > 0 && timeControl.blackTimeMs < 30000);
+      const newBlackTime = Math.max(0, timeControl.blackTimeMs - deltaMs);
+      if (blackTimeEl) blackTimeEl.textContent = formatTime(newBlackTime);
+      if (blackTimerEl) blackTimerEl.classList.toggle('low-time', newBlackTime > 0 && newBlackTime < 30000);
+      
+      // Stop local countdown if time runs out (server will handle the actual timeout)
+      if (newBlackTime <= 0) stopClock();
     }
-  }, 1000);
+  }, 100); // Update every 100ms for smoother countdown
 }
 
 function stopClock() {
@@ -422,9 +584,16 @@ function applyState(state) {
 
   // Update time control display
   if (state.timeControl) {
-    updateTimeControl(state.timeControl, state.turn);
+    const hasMoves = state.moveHistory && state.moveHistory.length > 0;
+    updateTimeControl(state.timeControl, state.turn, state.status, hasMoves);
   } else {
     hideTimeControl();
+  }
+
+  // Update move history display
+  if (state.moveHistory) {
+    moveHistory = state.moveHistory;
+    renderMoveHistory();
   }
 
   const move = state.lastMove ? `Last move: ${state.lastMove}` : 'Ready';
@@ -436,13 +605,41 @@ function applyState(state) {
 
   announceMove(state.lastMove, previousMove);
   hasInitializedState = true;
+
+  // Show game end modal if game is over
+  if (state.status !== 'Ongoing') {
+    stopClock();
+    showGameEndModal(
+      state.status,
+      state.message,
+      state.playerScore || 0,
+      state.opponentScore || 0,
+      false,
+      null
+    );
+  }
 }
 
 // ===== Online Multiplayer =====
 async function createRoom() {
   setMessage('Creating room…');
   try {
-    const res = await fetch('/api/online/create', { method: 'POST' });
+    // Get time control from dropdown
+    let tcMs = 600000, incMs = 0;
+    if (onlineTimeControl) {
+      const [time, inc] = onlineTimeControl.value.split('|').map(Number);
+      tcMs = time;
+      incMs = inc;
+    }
+    
+    const res = await fetch('/api/online/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        timeControlMs: tcMs,
+        incrementMs: incMs
+      })
+    });
     const data = await res.json();
 
     if (data.roomCode && data.playerId) {
@@ -530,10 +727,12 @@ async function sendOnlineMove(from, to) {
 
 async function resetOnlineGame() {
   if (!roomCode || !playerId) return;
+  resetGameEndState(); // Reset game end modal state
   try {
     const res = await fetch(`/api/online/reset/${roomCode}/${playerId}`, { method: 'POST' });
     const state = await res.json();
     lastMove = null;
+    clearMoveHistory();
     applyOnlineState(state);
   } catch (err) {
     setMessage('Reset failed: ' + err.message);
@@ -550,6 +749,59 @@ async function leaveRoom() {
   setMessage('Left the room.');
 }
 
+/**
+ * Update multiplayer status pill based on game state.
+ */
+function updateStatusPill(state) {
+  if (!mpStatusPill) return;
+  
+  if (state.waitingForOpponent) {
+    mpStatusPill.textContent = 'Waiting for opponent...';
+  } else if (state.status === 'Ongoing' && state.isYourTurn) {
+    mpStatusPill.textContent = 'Your turn!';
+  } else if (state.status === 'Ongoing') {
+    mpStatusPill.textContent = "Opponent's turn...";
+  } else {
+    // Game over — show descriptive status
+    const statusLabels = {
+      'Checkmate': '♚ Checkmate',
+      'Stalemate': '🤝 Stalemate',
+      'FiftyMoveRule': '🤝 Draw — 50-Move Rule',
+      'InsufficientMaterial': '🤝 Draw — Insufficient Material',
+      'ThreefoldRepetition': '🔄 Draw — Repetition',
+      'Timeout': '⏱️ Timeout',
+    };
+    mpStatusPill.textContent = statusLabels[state.status] || state.status;
+  }
+}
+
+/**
+ * Update UI elements based on online state.
+ */
+function updateOnlineUI(state) {
+  const disabled = !state.isYourTurn && state.status === 'Ongoing';
+  if (state.board?.length > 0) {
+    renderBoard(state.board, disabled);
+  }
+
+  if (turnEl) turnEl.textContent = state.turn ?? '—';
+  if (statusEl) statusEl.textContent = state.status ?? '—';
+  if (selectionEl) selectionEl.textContent = state.isYourTurn ? 'Your turn' : 'Waiting…';
+  syncScores(state);
+
+  if (state.moveHistory) {
+    moveHistory = state.moveHistory;
+    renderMoveHistory();
+  }
+
+  if (state.timeControl) {
+    const hasMoves = state.moveHistory && state.moveHistory.length > 0;
+    updateTimeControl(state.timeControl, state.turn, state.status, hasMoves);
+  } else {
+    hideTimeControl();
+  }
+}
+
 function applyOnlineState(state) {
   if (!state) {
     setMessage('Unexpected response from server.');
@@ -564,49 +816,33 @@ function applyOnlineState(state) {
   const previousMove = lastMove;
   if (state.lastMove) lastMove = state.lastMove;
 
-  const disabled = !state.isYourTurn && state.status === 'Ongoing';
-  if (state.board?.length > 0) {
-    renderBoard(state.board, disabled);
-  }
-
-  if (turnEl) turnEl.textContent = state.turn ?? '—';
-  if (statusEl) statusEl.textContent = state.status ?? '—';
-  if (selectionEl) selectionEl.textContent = state.isYourTurn ? 'Your turn' : 'Waiting…';
-  syncScores(state);
+  updateOnlineUI(state);
 
   // Handle opponent leaving
   if (state.opponentLeft) {
     if (mpStatusPill) mpStatusPill.textContent = 'Opponent left';
     pushToast('Your opponent has left the game', 'secondary');
     setMessage('Opponent left the room. You win!');
-    // Don't start polling again - game is over
     return;
   }
 
-  if (mpStatusPill) {
-    if (state.waitingForOpponent) {
-      mpStatusPill.textContent = 'Waiting for opponent...';
-    } else if (state.isYourTurn) {
-      mpStatusPill.textContent = 'Your turn!';
-    } else if (state.status === 'Ongoing') {
-      mpStatusPill.textContent = "Opponent's turn...";
-    } else {
-      mpStatusPill.textContent = state.status;
-    }
-  }
+  updateStatusPill(state);
 
   const move = state.lastMove ? `Last move: ${state.lastMove}` : '';
   setMessage(`${state.message || 'Synced.'}\n${move}`);
 
   if (state.status === 'Ongoing') {
     opponentRefresh = setTimeout(loadOnlineState, 1000);
-  } else if (state.status !== 'Ongoing') {
-    // Game ended, show result
-    if (state.winner) {
-      const isWinner = (state.winner === 'White' && playerColor === 'White') ||
-                       (state.winner === 'Black' && playerColor === 'Black');
-      pushToast(isWinner ? 'You won!' : 'You lost!', isWinner ? 'success' : 'accent');
-    }
+  } else {
+    stopClock();
+    showGameEndModal(
+      state.status,
+      state.message,
+      state.playerScore || 0,
+      state.opponentScore || 0,
+      true,
+      playerColor
+    );
   }
 
   announceMove(state.lastMove, previousMove);
@@ -684,6 +920,7 @@ function setGameMode(mode) {
       // If already in a room, show room info and resume
       showRoomInfo();
       openOnlinePanel();
+      openChatPanel(); // Restart chat polling when switching back to multiplayer
       startMultiplayerPolling();
       loadOnlineState();
     } else {
@@ -737,6 +974,14 @@ function closeChatPanelFn() {
   chatPanel?.classList.remove('open');
 }
 
+function openMoveHistoryPanel() {
+  moveHistoryPanel?.classList.add('open');
+}
+
+function closeMoveHistoryPanelFn() {
+  moveHistoryPanel?.classList.remove('open');
+}
+
 function toggleInfoPopover() {
   infoPopover?.classList.toggle('open');
 }
@@ -744,7 +989,18 @@ function toggleInfoPopover() {
 function closeAllPanels() {
   closeOnlinePanelFn();
   closeChatPanelFn();
+  closeMoveHistoryPanelFn();
   infoPopover?.classList.remove('open');
+  hideTimeControlModal();
+}
+
+// ===== Time Control Modal =====
+function showTimeControlModal() {
+  timeControlModal?.classList.remove('hidden');
+}
+
+function hideTimeControlModal() {
+  timeControlModal?.classList.add('hidden');
 }
 
 // ===== Chat =====
@@ -778,7 +1034,9 @@ async function sendChatMessage(message) {
 async function loadChatMessages() {
   if (!roomCode || !playerId) return;
   try {
-    const res = await fetch(`/api/chat/history/${roomCode}/${playerId}?limit=100`);
+    // Add cache-busting parameter to prevent stale responses
+    const timestamp = Date.now();
+    const res = await fetch(`/api/chat/history/${roomCode}/${playerId}?limit=100&_=${timestamp}`);
     const data = await res.json();
     if (data.success && data.messages) {
       displayChatMessages(data.messages);
@@ -794,7 +1052,9 @@ async function loadChatMessages() {
 async function pollNewChatMessages() {
   if (!roomCode || !playerId) return;
   try {
-    const res = await fetch(`/api/chat/recent/${roomCode}/${playerId}/${lastChatTimestamp || 0}`);
+    // Add cache-busting parameter to prevent stale responses
+    const timestamp = Date.now();
+    const res = await fetch(`/api/chat/recent/${roomCode}/${playerId}/${lastChatTimestamp || 0}?_=${timestamp}`);
     const data = await res.json();
     if (data.success && data.messages?.length > 0) {
       appendChatMessages(data.messages, { notify: true });
@@ -840,9 +1100,8 @@ function createChatMessageElement(msg) {
   const isOwn = msg.playerId === playerId;
   div.className = `chat-message ${msg.playerColor.toLowerCase()}${isOwn ? ' own' : ''}`;
 
-  let ts = msg.timestamp;
-  if (ts < 946684800000) ts *= 1000;
-  const time = new Date(ts);
+  // Timestamp is now always in epoch milliseconds from server
+  const time = new Date(msg.timestamp);
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   div.innerHTML = `
@@ -890,6 +1149,8 @@ function resetChatBadge() {
 
 function startChatPolling() {
   stopChatPolling();
+  // Poll immediately, then set up interval
+  pollNewChatMessages();
   chatPollInterval = setInterval(pollNewChatMessages, 2000);
 }
 
@@ -897,6 +1158,96 @@ function stopChatPolling() {
   if (chatPollInterval) {
     clearInterval(chatPollInterval);
     chatPollInterval = null;
+  }
+}
+
+// ===== Move History =====
+const pieceSymbolMap = {
+  'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+  'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+};
+
+/**
+ * Get maximum move number from a list of moves.
+ */
+function getMaxMoveNumber(moves) {
+  if (moves.length === 0) return 0;
+  return Math.max(...moves.map(m => m.moveNumber));
+}
+
+/**
+ * Build move history table HTML.
+ */
+function buildMoveHistoryTable(whiteMoves, blackMoves, maxMoveNum) {
+  const rows = [];
+  for (let i = 1; i <= maxMoveNum; i++) {
+    const whiteMove = whiteMoves.find(m => m.moveNumber === i);
+    const blackMove = blackMoves.find(m => m.moveNumber === i);
+    rows.push(`<tr>
+      <td class="move-number">${i}.</td>
+      <td class="white-move">${formatMoveEntry(whiteMove)}</td>
+      <td class="black-move">${formatMoveEntry(blackMove)}</td>
+    </tr>`);
+  }
+  return `<table class="move-history-table">
+    <thead><tr><th>#</th><th>♔ White</th><th>♚ Black</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>`;
+}
+
+function renderMoveHistory() {
+  if (!moveHistoryContainer) return;
+  
+  if (!moveHistory || moveHistory.length === 0) {
+    moveHistoryContainer.innerHTML = '<div class="move-history-empty">No moves yet. Start playing!</div>';
+    return;
+  }
+
+  const whiteMoves = moveHistory.filter(m => m.color === 'White');
+  const blackMoves = moveHistory.filter(m => m.color === 'Black');
+  const maxMoveNum = Math.max(getMaxMoveNumber(whiteMoves), getMaxMoveNumber(blackMoves));
+
+  moveHistoryContainer.innerHTML = buildMoveHistoryTable(whiteMoves, blackMoves, maxMoveNum);
+  moveHistoryContainer.scrollTop = moveHistoryContainer.scrollHeight;
+}
+
+/**
+ * Build chess notation from move object.
+ */
+function buildMoveNotation(move) {
+  const piece = move.piece?.toUpperCase() || '';
+  const pieceSymbol = piece && piece !== 'P' ? piece : '';
+  const capture = move.capturedPiece ? 'x' : '';
+  const to = move.toSquare || '';
+  const promo = move.promotion ? `=${move.promotion.toUpperCase()}` : '';
+  let check = '';
+  if (move.isCheckmate) check = '#';
+  else if (move.isCheck) check = '+';
+  return `${pieceSymbol}${capture}${to}${promo}${check}`;
+}
+
+/**
+ * Get CSS class for move type styling.
+ */
+function getMoveClassName(move) {
+  if (move.isCheckmate) return 'checkmate';
+  if (move.isCheck) return 'check';
+  if (move.capturedPiece) return 'capture';
+  if (move.isCastle) return 'castle';
+  return '';
+}
+
+function formatMoveEntry(move) {
+  if (!move) return '—';
+  const notation = move.notation || buildMoveNotation(move);
+  const className = getMoveClassName(move);
+  return `<span class="move-notation ${className}">${notation}</span>`;
+}
+
+function clearMoveHistory() {
+  moveHistory = [];
+  if (moveHistoryContainer) {
+    moveHistoryContainer.innerHTML = '<div class="move-history-empty">No moves yet. Start playing!</div>';
   }
 }
 
@@ -920,7 +1271,13 @@ function startMultiplayerUI(session) {
 }
 
 // ===== Event Listeners =====
-resetBtn?.addEventListener('click', resetGame);
+resetBtn?.addEventListener('click', () => {
+  if (gameMode === 'single') {
+    showTimeControlModal();
+  } else {
+    resetGame();
+  }
+});
 refreshBtn?.addEventListener('click', () => {
   if (gameMode === 'multi' && isInRoom) {
     loadOnlineState();
@@ -941,11 +1298,19 @@ leaveRoomBtn?.addEventListener('click', leaveRoom);
 
 closeOnlinePanel?.addEventListener('click', closeOnlinePanelFn);
 closeChatPanel?.addEventListener('click', closeChatPanelFn);
+closeMoveHistoryPanel?.addEventListener('click', closeMoveHistoryPanelFn);
 chatToggleBtn?.addEventListener('click', () => {
   if (chatPanel?.classList.contains('open')) {
     closeChatPanelFn();
   } else {
     openChatPanel();
+  }
+});
+moveHistoryToggleBtn?.addEventListener('click', () => {
+  if (moveHistoryPanel?.classList.contains('open')) {
+    closeMoveHistoryPanelFn();
+  } else {
+    openMoveHistoryPanel();
   }
 });
 
@@ -962,7 +1327,55 @@ chatInput?.addEventListener('keypress', (e) => {
 
 infoToggle?.addEventListener('click', toggleInfoPopover);
 
+// Time control modal handlers
+closeTimeControlModal?.addEventListener('click', hideTimeControlModal);
+startWithTimeControl?.addEventListener('click', () => {
+  hideTimeControlModal();
+  resetGame();
+});
+timeControlOptions?.forEach(option => {
+  option.addEventListener('click', () => {
+    // Update selection UI
+    timeControlOptions.forEach(o => o.classList.remove('selected'));
+    option.classList.add('selected');
+    // Update state
+    selectedTimeControlMs = Number.parseInt(option.dataset.time) || 0;
+    selectedIncrementMs = Number.parseInt(option.dataset.increment) || 0;
+  });
+});
+
 backdrop?.addEventListener('click', closeAllPanels);
+
+// Close modal when clicking outside modal content
+timeControlModal?.addEventListener('click', (e) => {
+  if (e.target === timeControlModal) {
+    hideTimeControlModal();
+  }
+});
+
+// Game end modal handlers
+closeGameEndModal?.addEventListener('click', hideGameEndModal);
+playAgainBtn?.addEventListener('click', () => {
+  hideGameEndModal();
+  if (gameMode === 'multi' && isInRoom) {
+    resetOnlineGame();
+  } else {
+    resetGame();
+  }
+});
+gameEndModal?.addEventListener('click', (e) => {
+  if (e.target === gameEndModal) {
+    hideGameEndModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    hideTimeControlModal();
+    hideGameEndModal();
+  }
+});
 
 // Close popover when clicking outside
 document.addEventListener('click', (e) => {

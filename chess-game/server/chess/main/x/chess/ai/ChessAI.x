@@ -36,18 +36,71 @@ service ChessAI {
         return DEFAULT_CONFIG.getPieceSquareValue(piece, square, isBlack);
     }
 
+    // ----- Game Phase Detection -------------------------------------------------
+
+    /**
+     * Determine if position is in endgame phase.
+     * Endgame is defined as: no queens on both sides, or every side which has a queen
+     * has at most one additional minor piece.
+     */
+    static Boolean isEndgame(Char[] board) {
+        Int whiteQueens = 0;
+        Int blackQueens = 0;
+        Int whiteMinorMajor = 0; // non-queen, non-king, non-pawn pieces
+        Int blackMinorMajor = 0;
+
+        for (Int i : 0 ..< 64) {
+            Char piece = board[i];
+            switch (piece) {
+                case 'Q': whiteQueens++; break;
+                case 'q': blackQueens++; break;
+                case 'R': whiteMinorMajor++; break;
+                case 'r': blackMinorMajor++; break;
+                case 'B': whiteMinorMajor++; break;
+                case 'b': blackMinorMajor++; break;
+                case 'N': whiteMinorMajor++; break;
+                case 'n': blackMinorMajor++; break;
+                default: break;
+            }
+        }
+
+        // No queens = endgame
+        if (whiteQueens == 0 && blackQueens == 0) {
+            return True;
+        }
+        // If queen exists but at most one additional minor piece, it's endgame
+        return whiteQueens <= 1 && whiteMinorMajor <= 1
+                && blackQueens <= 1 && blackMinorMajor <= 1;
+
+    }
+
+    /**
+     * Count total material value on the board (both sides, excludes kings).
+     */
+    static Int totalMaterial(Char[] board) {
+        Int total = 0;
+        for (Int i : 0 ..< 64) {
+            Char piece = board[i];
+            if (piece != '.' && piece != 'K' && piece != 'k') {
+                total += getPieceValue(piece);
+            }
+        }
+        return total;
+    }
+
     // ----- Board Evaluation -------------------------------------------------
 
     /**
      * Evaluate the board position from Black's perspective.
      * Positive = good for Black, Negative = good for White.
+     * Includes endgame-specific evaluation.
      */
     static Int evaluateBoard(Char[] board, GameRecord record) {
         Int score = 0;
-        Int whiteMaterial = 0;
-        Int blackMaterial = 0;
-        Int whitePieceCount = 0;
-        Int blackPieceCount = 0;
+        Boolean endgame = isEndgame(board);
+
+        Int whiteKingPos = -1;
+        Int blackKingPos = -1;
 
         // Count material and position values
         for (Int i : 0 ..< 64) {
@@ -56,23 +109,45 @@ service ChessAI {
                 continue;
             }
 
+            if (piece == 'K') {
+                whiteKingPos = i;
+            } else if (piece == 'k') {
+                blackKingPos = i;
+            }
+
             Int pieceValue = getPieceValue(piece);
-            Int posValue = getPieceSquareValue(piece, i, 'A' <= piece <= 'Z');
+            Int posValue = DEFAULT_CONFIG.getPieceSquareValue(piece, i, 'A' <= piece <= 'Z', endgame);
 
             if ('A' <= piece <= 'Z') {
-                // White piece
-                whiteMaterial += pieceValue;
-                whitePieceCount++;
-                score -= pieceValue + posValue; // Negative because good for White is bad for Black
+                score -= pieceValue + posValue;
             } else {
-                // Black piece
-                blackMaterial += pieceValue;
-                blackPieceCount++;
                 score += pieceValue + posValue;
+            }
+
+            // Endgame-specific: passed pawn bonus
+            if (endgame && (piece == 'p' || piece == 'P')) {
+                Int rank = BoardUtils.getRank(i);
+                Int file = BoardUtils.getFile(i);
+                if (isPassedPawn(board, i, piece)) {
+                    if (piece == 'p') {
+                        // Black pawn — rank 7 is promotion rank for black
+                        score += DEFAULT_CONFIG.passedPawnBonusByRank[rank];
+                    } else {
+                        // White pawn — rank 0 is promotion rank for white
+                        score -= DEFAULT_CONFIG.passedPawnBonusByRank[7 - rank];
+                    }
+                }
+            }
+
+            // Rook on 7th rank bonus
+            if (piece == 'r' && BoardUtils.getRank(i) == 6) {
+                score += DEFAULT_CONFIG.rookOn7thBonus;
+            } else if (piece == 'R' && BoardUtils.getRank(i) == 1) {
+                score -= DEFAULT_CONFIG.rookOn7thBonus;
             }
         }
 
-        // Mobility bonus (count available moves)
+        // Mobility bonus
         score += countMobility(board, Color.Black, record) * DEFAULT_CONFIG.mobilityBonus;
         score -= countMobility(board, Color.White, record) * DEFAULT_CONFIG.mobilityBonus;
 
@@ -85,7 +160,58 @@ service ChessAI {
             score -= DEFAULT_CONFIG.checkBonus;
         }
 
+        // Endgame: king proximity bonus — drive opponent king to edge for mating
+        if (endgame && whiteKingPos >= 0 && blackKingPos >= 0) {
+            Int kingDistance = chebyshevDistance(whiteKingPos, blackKingPos);
+            // In endgame with material advantage, closer kings = better for mating
+            score -= kingDistance * DEFAULT_CONFIG.kingProximityBonus;
+        }
+
         return score;
+    }
+
+    /**
+     * Chebyshev distance between two squares (max of rank and file distance).
+     */
+    static Int chebyshevDistance(Int sq1, Int sq2) {
+        Int rankDiff = (BoardUtils.getRank(sq1) - BoardUtils.getRank(sq2)).abs();
+        Int fileDiff = (BoardUtils.getFile(sq1) - BoardUtils.getFile(sq2)).abs();
+        return rankDiff.maxOf(fileDiff);
+    }
+
+    /**
+     * Check if a pawn has no opposing pawns blocking or adjacent to its file
+     * in front of it (i.e. it is a passed pawn).
+     */
+    static Boolean isPassedPawn(Char[] board, Int square, Char pawn) {
+        Int file = BoardUtils.getFile(square);
+        Int rank = BoardUtils.getRank(square);
+
+        Int minFile = file - 1 < 0 ? 0 : file - 1;
+        Int maxFile = file + 1 > 7 ? 7 : file + 1;
+
+        if (pawn == 'p') {
+            // Black pawn advances toward rank 7
+            for (Int r : rank + 1 ..< 8) {
+                for (Int f : minFile ..< maxFile + 1) {
+                    Char p = board[r * 8 + f];
+                    if (p == 'P') {
+                        return False;
+                    }
+                }
+            }
+        } else {
+            // White pawn advances toward rank 0
+            for (Int r : 0 ..< rank) {
+                for (Int f : minFile ..< maxFile + 1) {
+                    Char p = board[r * 8 + f];
+                    if (p == 'p') {
+                        return False;
+                    }
+                }
+            }
+        }
+        return True;
     }
 
     /**
@@ -305,10 +431,10 @@ service ChessAI {
      * Find the best move for Black (AI opponent).
      * Returns (from, to, score) tuple.
      * 
-     * Uses randomization to add variety:
-     * 1. In opening phase, may select from opening book
-     * 2. Otherwise, collects all moves within a score threshold of the best
-     * 3. Randomly selects from the top moves for unpredictability
+     * Strategy by game phase:
+     * 1. Opening: may select from opening book
+     * 2. Middlegame: single-ply heuristic with top-move diversity
+     * 3. Endgame: uses 2-ply minimax for more accurate play
      */
     static (Int, Int, Int) findBestMove(GameRecord record) {
         Int moveCount = record.moveHistory.size;
@@ -325,6 +451,212 @@ service ChessAI {
         }
 
         Char[] board = BoardUtils.cloneBoard(record.board);
+        Boolean endgame = isEndgame(board);
+
+        // In endgame, use minimax for more accurate play
+        if (endgame) {
+            return findBestMoveWithMinimax(record, board, 2);
+        }
+
+        // Middlegame: single-ply heuristic with diversity
+        return findBestMoveHeuristic(record, board);
+    }
+
+    /**
+     * Find best move using minimax with alpha-beta pruning.
+     * Used for endgame where accuracy matters most.
+     */
+    static (Int, Int, Int) findBestMoveWithMinimax(GameRecord record, Char[] board, Int depth) {
+        Int bestScore = MIN_SCORE;
+        Int bestFrom = -1;
+        Int bestTo = -1;
+        Int moveCount = record.moveHistory.size;
+
+        // Collect all legal moves
+        Int[] froms = new Int[];
+        Int[] tos = new Int[];
+
+        for (Int from : 0 ..< 64) {
+            Char piece = board[from];
+            if (piece == '.' || BoardUtils.colorOf(piece) != Color.Black) {
+                continue;
+            }
+            for (Int to : 0 ..< 64) {
+                if (from == to) {
+                    continue;
+                }
+                Char target = board[to];
+                if (target != '.' && BoardUtils.colorOf(target) == Color.Black) {
+                    continue;
+                }
+                if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
+                    continue;
+                }
+                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                testBoard[to] = piece;
+                testBoard[from] = '.';
+                // Handle pawn promotion
+                if (piece == 'p' && BoardUtils.getRank(to) == 7) {
+                    testBoard[to] = 'q';
+                }
+                String testBoardStr = new String(testBoard);
+                if (CheckDetection.isInCheck(testBoardStr, Color.Black)) {
+                    continue;
+                }
+                froms = froms + from;
+                tos = tos + to;
+            }
+        }
+
+        if (froms.empty) {
+            return (-1, -1, MIN_SCORE);
+        }
+
+        // Evaluate each move with minimax
+        Int alpha = MIN_SCORE;
+        Int beta = MAX_SCORE;
+
+        for (Int i : 0 ..< froms.size) {
+            Int from = froms[i];
+            Int to = tos[i];
+            Char piece = board[from];
+
+            Char[] newBoard = BoardUtils.cloneBoard(new String(board));
+            newBoard[to] = piece;
+            newBoard[from] = '.';
+            if (piece == 'p' && BoardUtils.getRank(to) == 7) {
+                newBoard[to] = 'q';
+            }
+
+            // Minimax: next level is White's turn (minimizing for Black's perspective)
+            Int score = minimax(newBoard, record, depth - 1, alpha, beta, False);
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestFrom = from;
+                bestTo = to;
+            }
+            if (score > alpha) {
+                alpha = score;
+            }
+        }
+
+        return (bestFrom, bestTo, bestScore);
+    }
+
+    /**
+     * Minimax with alpha-beta pruning.
+     * @param isMaximizing True if it's Black's turn (maximizing), False for White (minimizing)
+     */
+    static Int minimax(Char[] board, GameRecord record, Int depth, Int alpha, Int beta, Boolean isMaximizing) {
+        // Base case: evaluate position
+        if (depth <= 0) {
+            return evaluateBoard(board, record);
+        }
+
+        Color turn = isMaximizing ? Color.Black : Color.White;
+        String boardStr = new String(board);
+
+        // Check for checkmate/stalemate
+        Boolean hasLegalMove = False;
+        Boolean inCheck = CheckDetection.isInCheck(boardStr, turn);
+
+        if (isMaximizing) {
+            Int maxEval = MIN_SCORE;
+            for (Int from : 0 ..< 64) {
+                Char piece = board[from];
+                if (piece == '.' || BoardUtils.colorOf(piece) != turn) {
+                    continue;
+                }
+                for (Int to : 0 ..< 64) {
+                    if (from == to) {
+                        continue;
+                    }
+                    Char target = board[to];
+                    if (target != '.' && BoardUtils.colorOf(target) == turn) {
+                        continue;
+                    }
+                    if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
+                        continue;
+                    }
+                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    newBoard[to] = piece;
+                    newBoard[from] = '.';
+                    if (piece == 'p' && BoardUtils.getRank(to) == 7) {
+                        newBoard[to] = 'q';
+                    }
+                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                        continue;
+                    }
+                    hasLegalMove = True;
+                    Int eval = minimax(newBoard, record, depth - 1, alpha, beta, False);
+                    if (eval > maxEval) {
+                        maxEval = eval;
+                    }
+                    if (eval > alpha) {
+                        alpha = eval;
+                    }
+                    if (beta <= alpha) {
+                        return maxEval; // Beta cutoff
+                    }
+                }
+            }
+            if (!hasLegalMove) {
+                return inCheck ? -CHECKMATE_SCORE : 0; // Checkmate against us or stalemate
+            }
+            return maxEval;
+        } else {
+            Int minEval = MAX_SCORE;
+            for (Int from : 0 ..< 64) {
+                Char piece = board[from];
+                if (piece == '.' || BoardUtils.colorOf(piece) != turn) {
+                    continue;
+                }
+                for (Int to : 0 ..< 64) {
+                    if (from == to) {
+                        continue;
+                    }
+                    Char target = board[to];
+                    if (target != '.' && BoardUtils.colorOf(target) == turn) {
+                        continue;
+                    }
+                    if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
+                        continue;
+                    }
+                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    newBoard[to] = piece;
+                    newBoard[from] = '.';
+                    if (piece == 'P' && BoardUtils.getRank(to) == 0) {
+                        newBoard[to] = 'Q';
+                    }
+                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                        continue;
+                    }
+                    hasLegalMove = True;
+                    Int eval = minimax(newBoard, record, depth - 1, alpha, beta, True);
+                    if (eval < minEval) {
+                        minEval = eval;
+                    }
+                    if (eval < beta) {
+                        beta = eval;
+                    }
+                    if (beta <= alpha) {
+                        return minEval; // Alpha cutoff
+                    }
+                }
+            }
+            if (!hasLegalMove) {
+                return inCheck ? CHECKMATE_SCORE : 0; // Checkmate on opponent or stalemate
+            }
+            return minEval;
+        }
+    }
+
+    /**
+     * Find best move using single-ply heuristic with diversity (middlegame).
+     */
+    static (Int, Int, Int) findBestMoveHeuristic(GameRecord record, Char[] board) {
+        Int moveCount = record.moveHistory.size;
         Int bestScore = MIN_SCORE;
         
         // Collect all legal moves with their scores using parallel arrays

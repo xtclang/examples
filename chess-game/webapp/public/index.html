@@ -34,7 +34,7 @@
       <span class="status-item" id="status">Ongoing</span>
     </div>
 
-    <!-- Time Control Display -->
+    <!-- Time Control Display (Chess Clock) -->
     <div class="time-control-bar" id="timeControlBar">
       <div class="timer white-timer" id="whiteTimer">
         <span class="timer-label">♔</span>
@@ -87,6 +87,9 @@
         <button class="tool-btn" id="infoToggle" title="Game Info">
           <span class="tool-icon">ℹ</span>
         </button>
+        <button class="tool-btn" id="moveHistoryToggleBtn" title="Move History">
+          <span class="tool-icon">📜</span>
+        </button>
         <button class="tool-btn multiplayer-only" id="chatToggleBtn" title="Chat">
           <span class="tool-icon">💬</span>
           <span class="badge" id="chatBadge">0</span>
@@ -95,8 +98,81 @@
     </div>
   </main>
 
+  <!-- Time Control Selection Modal -->
+  <div class="modal-overlay hidden" id="timeControlModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⏱️ Time Control</h2>
+        <button class="close-btn" id="closeTimeControlModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Select game time format</p>
+        <div class="time-control-options">
+          <button class="time-control-option" data-time="0" data-increment="0">
+            <span class="tc-name">No Timer</span>
+            <span class="tc-desc">Unlimited time</span>
+          </button>
+          <button class="time-control-option" data-time="60000" data-increment="1000">
+            <span class="tc-name">Bullet</span>
+            <span class="tc-desc">1+1 min</span>
+          </button>
+          <button class="time-control-option selected" data-time="180000" data-increment="2000">
+            <span class="tc-name">Blitz</span>
+            <span class="tc-desc">3+2 min</span>
+          </button>
+          <button class="time-control-option" data-time="300000" data-increment="3000">
+            <span class="tc-name">Blitz</span>
+            <span class="tc-desc">5+3 min</span>
+          </button>
+          <button class="time-control-option" data-time="900000" data-increment="10000">
+            <span class="tc-name">Rapid</span>
+            <span class="tc-desc">15+10 min</span>
+          </button>
+          <button class="time-control-option" data-time="1800000" data-increment="0">
+            <span class="tc-name">Rapid</span>
+            <span class="tc-desc">30 min</span>
+          </button>
+          <button class="time-control-option" data-time="5400000" data-increment="30000">
+            <span class="tc-name">Classical</span>
+            <span class="tc-desc">90+30 min</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary full-width" id="startWithTimeControl">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game End Modal -->
+  <div class="modal-overlay hidden" id="gameEndModal">
+    <div class="modal-content game-end-modal">
+      <div class="modal-header">
+        <h2 id="gameEndTitle">Game Over</h2>
+      </div>
+      <div class="modal-body">
+        <div class="game-end-icon" id="gameEndIcon">🏆</div>
+        <p class="game-end-message" id="gameEndMessage">You won!</p>
+        <div class="game-end-scores">
+          <div class="final-score">
+            <span class="score-side">♔ White</span>
+            <span class="score-final" id="finalWhiteScore">0</span>
+          </div>
+          <div class="final-score">
+            <span class="score-side">♚ Black</span>
+            <span class="score-final" id="finalBlackScore">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary full-width" id="playAgainBtn">Play Again</button>
+        <button class="btn-secondary full-width" id="closeGameEndModal">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Online Panel (Slide-in from right) -->
-  <aside class="slide-panel" id="onlinePanel">
+  <aside class="slide-panel" id="onlinePanel" aria-label="Online Play Panel">
     <div class="panel-header">
       <h2>Online Play</h2>
       <button class="close-btn" id="closeOnlinePanel">×</button>
@@ -105,6 +181,19 @@
       <!-- Lobby Options -->
       <div id="lobbyOptions">
         <p class="panel-hint">Create a room or join with a code</p>
+        <div class="time-control-selector">
+          <label class="tc-label" for="onlineTimeControl">Time Control:</label>
+          <select id="onlineTimeControl" class="tc-select" title="Select game time format">
+            <option value="0|0">No Timer</option>
+            <option value="60000|1000">Bullet (1+1)</option>
+            <option value="120000|1000">Bullet (2+1)</option>
+            <option value="180000|2000" selected>Blitz (3+2)</option>
+            <option value="300000|3000">Blitz (5+3)</option>
+            <option value="900000|10000">Rapid (15+10)</option>
+            <option value="1800000|0">Rapid (30 min)</option>
+            <option value="5400000|30000">Classical (90+30)</option>
+          </select>
+        </div>
         <button class="btn-primary full-width" id="createRoomBtn">Create Room</button>
         <div class="divider"><span>or</span></div>
         <div class="input-group">
@@ -135,7 +224,7 @@
   </aside>
 
   <!-- Chat Drawer (Slide-in from LEFT) -->
-  <aside class="slide-panel left chat-drawer" id="chatPanel">
+  <aside class="slide-panel left chat-drawer" id="chatPanel" aria-label="Game Chat Panel">
     <div class="panel-header">
       <h2>💬 Game Chat</h2>
       <button class="close-btn" id="closeChatPanel">×</button>
@@ -147,6 +236,19 @@
       <div class="chat-input-row">
         <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." maxlength="500" />
         <button class="chat-send" id="chatSendBtn">Send</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Move History Panel (Slide-in from LEFT) -->
+  <aside class="slide-panel left move-history-drawer" id="moveHistoryPanel" aria-label="Move History Panel">
+    <div class="panel-header">
+      <h2>📜 Move History</h2>
+      <button class="close-btn" id="closeMoveHistoryPanel">×</button>
+    </div>
+    <div class="panel-body">
+      <div class="move-history-container" id="moveHistoryContainer">
+        <div class="move-history-empty">No moves yet. Start playing!</div>
       </div>
     </div>
   </aside>

@@ -1,4 +1,5 @@
 import db.models.TimeControl;
+import db.models.MoveHistoryEntry;
 
 /**
  * OnlineChess Helper Service
@@ -122,7 +123,7 @@ class OnlineChessLogic {
     /**
      * Convert OnlineGame to API response format.
      */
-    static OnlineApiState toOnlineApiState(OnlineGame game, String playerId, String? message) {
+    static OnlineApiState toOnlineApiState(OnlineGame game, String playerId, String? message, TimeControl? adjustedTimeControl = Null) {
         Color? playerColor = game.getPlayerColor(playerId);
         String colorStr = playerColor?.toString() : "Spectator";
         Boolean isYourTurn = playerColor != Null && playerColor == game.turn && !game.isWaitingForOpponent();
@@ -143,7 +144,9 @@ class OnlineChessLogic {
             game.isWaitingForOpponent(),
             game.mode.toString(),
             playerId,
-            opponentLeft);
+            opponentLeft,
+            game.moveHistory,
+            adjustedTimeControl);
     }
 
     /**
@@ -212,7 +215,24 @@ class OnlineChessLogic {
             return playerWon ? "Checkmate! You win!" : "Checkmate. You lost.";
 
         case GameStatus.Stalemate:
-            return "Stalemate - It's a draw!";
+            return "Draw by stalemate.";
+
+        case GameStatus.FiftyMoveRule:
+            return "Draw by 50-move rule.";
+
+        case GameStatus.InsufficientMaterial:
+            return "Draw by insufficient material.";
+
+        case GameStatus.ThreefoldRepetition:
+            return "Draw by threefold repetition.";
+
+        case GameStatus.Timeout:
+            Color? playerColor2 = game.getPlayerColor(playerId);
+            if (playerColor2 == Null) {
+                return "Game over - Time expired!";
+            }
+            Boolean playerWon2 = game.turn != playerColor2;
+            return playerWon2 ? "Opponent ran out of time! You win!" : "Time's up! You lost on time.";
 
         default:
             break;
@@ -283,7 +303,9 @@ class OnlineChessLogic {
                          Boolean waitingForOpponent,
                          String gameMode,
                          String playerId = "",
-                         Boolean opponentLeft = False);
+                         Boolean opponentLeft = False,
+                         MoveHistoryEntry[] moveHistory = [],
+                         TimeControl? timeControl = Null);
 
     /**
      * Room Creation Response

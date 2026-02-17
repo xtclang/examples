@@ -29,6 +29,37 @@ service OnlineChessApi {
     TimeControlService timeControlService = new TimeControlService();
 
     /**
+     * Calculate adjusted time control with actual remaining time.
+     * Only the active player's time should be counting down.
+     * Time does not count before first move or after game ends.
+     */
+    TimeControl? getAdjustedTime(OnlineGame game) {
+        TimeControl? tcMaybe = game.timeControl;
+        if (tcMaybe != Null) {
+            TimeControl tc = tcMaybe.as(TimeControl);
+            
+            // Don't count time if game hasn't started (no moves made) or if game is over
+            Boolean gameStarted = game.moveHistory.size > 0;
+            Boolean gameOngoing = game.status == GameStatus.Ongoing;
+            
+            if (!gameStarted || !gameOngoing) {
+                // Return stored times without subtracting elapsed
+                return tc;
+            }
+            
+            // Only subtract elapsed time from the active player's clock
+            Int whiteRemaining = game.turn == Color.White 
+                ? timeControlService.getRemainingTime(tc, Color.White)
+                : tc.whiteTimeMs;
+            Int blackRemaining = game.turn == Color.Black 
+                ? timeControlService.getRemainingTime(tc, Color.Black)
+                : tc.blackTimeMs;
+            return new TimeControl(whiteRemaining, blackRemaining, tc.incrementMs, tc.lastMoveTime);
+        }
+        return Null;
+    }
+
+    /**
      * POST /api/online/create
      *
      * Creates a new online game room. The creator becomes the White player
@@ -76,7 +107,7 @@ service OnlineChessApi {
                 }
                 (OnlineGame updated, String playerId) = OnlineChessLogic.addSecondPlayer(game, random);
                 schema.onlineGames.put(roomCode, updated);
-                return OnlineChessLogic.toOnlineApiState(updated, playerId, "Joined the game! You are Black.");
+                return OnlineChessLogic.toOnlineApiState(updated, playerId, "Joined the game! You are Black.", getAdjustedTime(updated));
             }
             return OnlineChessLogic.roomNotFoundError(roomCode, "");
         }
@@ -96,7 +127,7 @@ service OnlineChessApi {
     OnlineApiState getState(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
-                return OnlineChessLogic.toOnlineApiState(game, playerId, Null);
+                return OnlineChessLogic.toOnlineApiState(game, playerId, Null, getAdjustedTime(game));
             }
             return OnlineChessLogic.roomNotFoundError(roomCode, playerId);
         }
@@ -118,7 +149,7 @@ service OnlineChessApi {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
                 OnlineGame updated = OnlineChessLogic.resetOnlineGame(game);
                 schema.onlineGames.put(roomCode, updated);
-                return OnlineChessLogic.toOnlineApiState(updated, playerId, "Game reset!");
+                return OnlineChessLogic.toOnlineApiState(updated, playerId, "Game reset!", getAdjustedTime(updated));
             }
             return OnlineChessLogic.roomNotFoundError(roomCode, playerId);
         }
@@ -142,20 +173,56 @@ service OnlineChessApi {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
                 // Validate the move request
                 if (String error ?= OnlineChessLogic.validateMoveRequest(game, playerId)) {
-                    return OnlineChessLogic.toOnlineApiState(game, playerId, error);
+                    return OnlineChessLogic.toOnlineApiState(game, playerId, error, getAdjustedTime(game));
+                }
+                
+                // Check for timeout before processing move (if time control is active)
+                TimeControl? gameTcMaybe = game.timeControl;
+                if (gameTcMaybe != Null && game.status == GameStatus.Ongoing) {
+                    TimeControl gameTc = gameTcMaybe.as(TimeControl);
+                    if (timeControlService.hasTimedOut(gameTc, game.turn)) {
+                        // Player ran out of time
+                        String resulMessage = game.turn == Color.White
+                            ? "Time's up! Black wins on time."
+                            : "Time's up! White wins on time.";
+                        OnlineGame timedOut = new OnlineGame(
+                            game.board, game.turn, GameStatus.Timeout,
+                            game.lastMove, game.playerScore, game.opponentScore,
+                            game.roomCode, game.whitePlayerId, game.blackPlayerId, game.mode,
+                            game.castlingRights, game.enPassantTarget,
+                            game.moveHistory, game.timeControl, game.halfMoveClock, game.playerLeftId);
+                        schema.onlineGames.put(roomCode, timedOut);
+                        return OnlineChessLogic.toOnlineApiState(timedOut, playerId, resulMessage, getAdjustedTime(timedOut));
+                    }
                 }
 
                 // Apply the move
                 GameRecord record = game.toGameRecord();
+                Color movedColor = game.turn;
                 MoveOutcome result = ChessLogic.applyHumanMove(record, from, target, Null);
                 if (!result.ok) {
-                    return OnlineChessLogic.toOnlineApiState(game, playerId, result.message);
+                    return OnlineChessLogic.toOnlineApiState(game, playerId, result.message, getAdjustedTime(game));
+                }
+                
+                // Update time control if active
+                GameRecord updatedRecord = result.record;
+                TimeControl? recordTcMaybe = updatedRecord.timeControl;
+                if (recordTcMaybe != Null) {
+                    TimeControl recordTc = recordTcMaybe.as(TimeControl);
+                    Boolean isFirstMove = game.moveHistory.size == 0;
+                    TimeControl updatedTc = timeControlService.updateAfterMove(
+                        recordTc, movedColor, isFirstMove);
+                    updatedRecord = new GameRecord(
+                        updatedRecord.board, updatedRecord.turn, updatedRecord.status,
+                        updatedRecord.lastMove, updatedRecord.playerScore, updatedRecord.opponentScore,
+                        updatedRecord.castlingRights, updatedRecord.enPassantTarget,
+                        updatedRecord.moveHistory, updatedTc, updatedRecord.halfMoveClock);
                 }
 
                 // Update and save the game
-                OnlineGame updated = OnlineChessLogic.applyMoveResult(game, result.record);
+                OnlineGame updated = OnlineChessLogic.applyMoveResult(game, updatedRecord);
                 schema.onlineGames.put(roomCode, updated);
-                return OnlineChessLogic.toOnlineApiState(updated, playerId, Null);
+                return OnlineChessLogic.toOnlineApiState(updated, playerId, Null, getAdjustedTime(updated));
             }
             return OnlineChessLogic.roomNotFoundError(roomCode, playerId);
         }

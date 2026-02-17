@@ -4,7 +4,9 @@ import core.ChessGame.MoveOutcome;
 import core.ChessGame.AutoResponse;
 import db.models.GameStatus;
 import db.models.TimeControl;
+import db.models.MoveHistoryEntry;
 import validation.ValidMovesHelper;
+import services.TimeControlService;
 import core.ChessLogic;
 /**
  * ChessApi Service
@@ -26,6 +28,7 @@ service ChessApi {
     // Injected dependencies for database access and time tracking
     @Inject ChessSchema schema;  // Database schema for game persistence
     @Inject Clock         clock; // System clock for timing opponent moves
+    TimeControlService timeControlService = new TimeControlService();
 
     // Per-session pending state tracking
     @Atomic private Map<String, Boolean> pendingActiveMap = new HashMap();
@@ -76,12 +79,46 @@ service ChessApi {
         using (schema.createTransaction()) {
             // Ensure game exists for this session
             GameRecord record = ensureGame(sessionId);
+            
+            // Check for timeout before processing move (if time control is active)
+            TimeControl? tcMaybe = record.timeControl;
+            if (tcMaybe != Null && record.status == GameStatus.Ongoing) {
+                TimeControl tc = tcMaybe.as(TimeControl);
+                if (timeControlService.hasTimedOut(tc, record.turn)) {
+                    // Player ran out of time
+                    String resultMessage = record.turn == Color.White
+                        ? "Time's up! Black wins on time."
+                        : "Time's up! White wins on time.";
+                    GameRecord timedOut = new GameRecord(
+                        record.board, record.turn, GameStatus.Timeout,
+                        record.lastMove, record.playerScore, record.opponentScore,
+                        record.castlingRights, record.enPassantTarget,
+                        record.moveHistory, record.timeControl, record.halfMoveClock);
+                    saveGame(sessionId, timedOut);
+                    return toApiState(timedOut, resultMessage, sessionId);
+                }
+            }
+            
             try {
                 // Validate and apply the human player's move
                 MoveOutcome result = ChessLogic.applyHumanMove(record, from, target, Null);
                 if (result.ok) {
-                    // Move was legal, check if opponent should respond
-                    GameRecord current = maybeResolveAuto(result.record, sessionId);
+                    // Update time control if active
+                    GameRecord current = result.record;
+                    if (current.timeControl != Null) {
+                        TimeControl currentTc = current.timeControl.as(TimeControl);
+                        Boolean isFirstMove = record.moveHistory.size == 0;
+                        TimeControl updatedTc = timeControlService.updateAfterMove(
+                            currentTc, record.turn, isFirstMove);
+                        current = new GameRecord(
+                            current.board, current.turn, current.status,
+                            current.lastMove, current.playerScore, current.opponentScore,
+                            current.castlingRights, current.enPassantTarget,
+                            current.moveHistory, updatedTc, current.halfMoveClock);
+                    }
+                    
+                    // Check if opponent should respond
+                    current = maybeResolveAuto(current, sessionId);
                     // Persist the updated game state
                     saveGame(sessionId, current);
                     return toApiState(current, Null, sessionId);
@@ -101,16 +138,28 @@ service ChessApi {
      * Resets the game for a specific session to initial state.
      *
      * @param sessionId The unique session identifier for this browser
+     * @param request Optional request body with time control settings
      * @return ApiState with fresh game state and confirmation message
      */
     @Post("reset/{sessionId}")
     @Produces(Json)
-    ApiState reset(String sessionId) {
+    ApiState reset(String sessionId, @BodyParam ResetRequest? request = Null) {
         using (schema.createTransaction()) {
             // Remove existing game from database
             schema.singlePlayerGames.remove(sessionId);
             // Create a fresh game with initial board setup
             GameRecord resetGame = ChessLogic.resetGame();
+            
+            // Apply time control if specified
+            if (request != Null && request.timeControlMs > 0) {
+                TimeControl tc = timeControlService.create(request.timeControlMs, request.incrementMs);
+                resetGame = new GameRecord(
+                    resetGame.board, resetGame.turn, resetGame.status,
+                    resetGame.lastMove, resetGame.playerScore, resetGame.opponentScore,
+                    resetGame.castlingRights, resetGame.enPassantTarget,
+                    resetGame.moveHistory, tc, resetGame.halfMoveClock);
+            }
+            
             // Save the new game
             schema.singlePlayerGames.put(sessionId, resetGame);
             // Clear pending move flags for this session
@@ -119,6 +168,11 @@ service ChessApi {
             return toApiState(resetGame, "New game started", sessionId);
         }
     }
+
+    /**
+     * Request body for resetting a game with time control.
+     */
+    static const ResetRequest(Int timeControlMs = 0, Int incrementMs = 0);
 
 
     /**
@@ -136,6 +190,7 @@ service ChessApi {
      * @param opponentScore    Number of player pieces captured by Black
      * @param opponentPending  True if the opponent is currently "thinking"
      * @param timeControl      Optional time control information for chess clocks
+     * @param moveHistory      Complete history of all moves made in the game
      */
     static const ApiState(String[] board,
                    String turn,
@@ -145,7 +200,8 @@ service ChessApi {
                    Int playerScore,
                    Int opponentScore,
                    Boolean opponentPending,
-                   TimeControl? timeControl = Null);
+                   TimeControl? timeControl = Null,
+                   MoveHistoryEntry[] moveHistory = []);
 
 
     // ----- Helper Methods ------------------------------------------------------
@@ -191,6 +247,33 @@ service ChessApi {
         Boolean pending = pendingActive && isOpponentPending(record);
         // Generate appropriate status message
         String  detail  = message ?: describeState(record, pending);
+        
+        // Calculate adjusted time control with elapsed time subtracted
+        // Only the active player's time should be counting down
+        // Time does not count before first move or after game ends
+        TimeControl? adjustedTc = Null;
+        TimeControl? tcMaybe = record.timeControl;
+        if (tcMaybe != Null) {
+            TimeControl tc = tcMaybe.as(TimeControl);
+            
+            // Don't count time if game hasn't started (no moves made) or if game is over
+            Boolean gameStarted = record.moveHistory.size > 0;
+            Boolean gameOngoing = record.status == GameStatus.Ongoing;
+            
+            if (!gameStarted || !gameOngoing) {
+                // Return stored times without subtracting elapsed
+                adjustedTc = tc;
+            } else {
+                Int whiteRemaining = record.turn == Color.White 
+                    ? timeControlService.getRemainingTime(tc, Color.White)
+                    : tc.whiteTimeMs;
+                Int blackRemaining = record.turn == Color.Black 
+                    ? timeControlService.getRemainingTime(tc, Color.Black)
+                    : tc.blackTimeMs;
+                adjustedTc = new TimeControl(whiteRemaining, blackRemaining, tc.incrementMs, tc.lastMoveTime);
+            }
+        }
+        
         // Construct API state with all game information
         return new ApiState(
                 ChessLogic.boardRows(record.board),  // Board as array of 8 strings
@@ -201,7 +284,8 @@ service ChessApi {
                 record.playerScore,                   // White's capture count
                 record.opponentScore,                 // Black's capture count
                 pending,                              // Is opponent thinking?
-                record.timeControl);                  // Time control for chess clocks
+                adjustedTc,                           // Time control with current remaining time
+                record.moveHistory);                  // Complete move history
     }
 
     /**
@@ -225,14 +309,26 @@ service ChessApi {
         // Handle game-over states
         switch (record.status) {
         case GameStatus.Checkmate:
-            // Determine winner based on whose turn it is (loser has no pieces)
             return record.turn == Color.White
-                    ? "Opponent captured all your pieces. Game over."
-                    : "You captured every opponent piece. Victory!";
+                    ? "Checkmate! Black wins."
+                    : "Checkmate! White wins.";
 
         case GameStatus.Stalemate:
-            // Only kings remain - draw condition
-            return "Only kings remain. Stalemate.";
+            return "Draw by stalemate. No legal moves available.";
+
+        case GameStatus.FiftyMoveRule:
+            return "Draw by 50-move rule. No captures or pawn moves in 50 moves.";
+
+        case GameStatus.InsufficientMaterial:
+            return "Draw by insufficient material. Neither side can checkmate.";
+
+        case GameStatus.ThreefoldRepetition:
+            return "Draw by threefold repetition. Same position occurred three times.";
+
+        case GameStatus.Timeout:
+            return record.turn == Color.White
+                    ? "Time's up! Black wins on time."
+                    : "Time's up! White wins on time.";
 
         default:
             break;
@@ -298,7 +394,22 @@ service ChessApi {
             AutoResponse reply = ChessLogic.autoMove(record);
             pendingActiveMap.put(sessionId, False);
             autoApplied = True;
-            return reply.record;
+            
+            // Update time control for AI move if active (never first move - AI plays after human)
+            GameRecord result = reply.record;
+            TimeControl? resultTcMaybe = result.timeControl;
+            if (resultTcMaybe != Null && reply.moved) {
+                TimeControl resultTc = resultTcMaybe.as(TimeControl);
+                TimeControl updatedTc = timeControlService.updateAfterMove(
+                    resultTc, Color.Black, False);
+                result = new GameRecord(
+                    result.board, result.turn, result.status,
+                    result.lastMove, result.playerScore, result.opponentScore,
+                    result.castlingRights, result.enPassantTarget,
+                    result.moveHistory, updatedTc, result.halfMoveClock);
+            }
+            
+            return result;
         }
 
         // Still thinking, return unchanged record

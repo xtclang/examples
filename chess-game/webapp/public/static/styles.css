@@ -147,12 +147,14 @@ body {
 }
 
 /* ===== Time Control ===== */
+/* ===== Chess Clock Display ===== */
 .time-control-bar {
   display: none;
   justify-content: center;
-  gap: 40px;
-  padding: 12px 20px;
-  margin-bottom: 10px;
+  align-items: stretch;
+  padding: 0;
+  margin-bottom: 12px;
+  perspective: 600px;
 }
 
 .time-control-bar.visible {
@@ -162,41 +164,127 @@ body {
 .timer {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--border);
-  min-width: 120px;
+  gap: 12px;
+  padding: 14px 28px;
+  min-width: 160px;
   justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* White side - left half of chess clock */
+.white-timer {
+  background: linear-gradient(145deg, #2a2a2e 0%, #1a1a1e 100%);
+  border-radius: 14px 0 0 14px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Black side - right half of chess clock */
+.black-timer {
+  background: linear-gradient(145deg, #1a1a1e 0%, #0e0e12 100%);
+  border-radius: 0 14px 14px 0;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Clock body styling - shared housing */
+.time-control-bar::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .timer.active {
-  border-color: var(--accent);
-  background: rgba(251, 191, 36, 0.1);
+  background: linear-gradient(145deg, #1c2a1a 0%, #0f1a0d 100%);
+  border-color: var(--success);
+  box-shadow:
+    0 0 20px rgba(34, 197, 94, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.timer.active .timer-value {
+  color: #4ade80 !important;
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
+}
+
+/* Active indicator flag */
+.timer.active::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+  animation: clock-pulse 1.5s ease-in-out infinite;
+}
+
+.white-timer.active::after {
+  right: 10px;
+}
+
+.black-timer.active::after {
+  left: 10px;
 }
 
 .timer.low-time {
-  border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.15);
+  background: linear-gradient(145deg, #2a1a1a 0%, #1a0d0d 100%) !important;
+  border-color: #ef4444 !important;
+  box-shadow:
+    0 0 20px rgba(239, 68, 68, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   animation: pulse-warning 1s ease-in-out infinite;
+}
+
+.timer.low-time .timer-value {
+  color: #f87171 !important;
+  text-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
+  animation: time-blink 0.8s ease-in-out infinite;
+}
+
+.timer.low-time::after {
+  background: #ef4444 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6) !important;
 }
 
 @keyframes pulse-warning {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes time-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes clock-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
 .timer-label {
-  font-size: 20px;
+  font-size: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
 .timer-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  font-family: 'Monaco', 'Consolas', monospace;
-  min-width: 70px;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  min-width: 80px;
   text-align: center;
+  letter-spacing: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .white-timer .timer-value {
@@ -204,7 +292,7 @@ body {
 }
 
 .black-timer .timer-value {
-  color: rgba(180, 180, 180, 0.9);
+  color: rgba(200, 200, 210, 0.9);
 }
 
 /* ===== Board ===== */
@@ -1241,13 +1329,16 @@ body.mode-multi .multiplayer-only { display: flex; }
 }
 
 .modal-content {
-  background: var(--surface);
+  background: rgba(15, 20, 30, 0.98);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border);
   width: min(420px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);
   overflow: auto;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  color: var(--light);
 }
 
 .modal-header {
@@ -1256,12 +1347,14 @@ body.mode-multi .multiplayer-only { display: flex; }
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid var(--border);
+  color: var(--light);
 }
 
 .modal-header h2 {
   font-size: 18px;
   font-weight: 700;
   margin: 0;
+  color: var(--light);
 }
 
 .modal-body {
@@ -1301,6 +1394,7 @@ body.mode-multi .multiplayer-only { display: flex; }
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
+  color: var(--light);
 }
 
 .time-control-option:hover {
@@ -1316,7 +1410,7 @@ body.mode-multi .multiplayer-only { display: flex; }
 .tc-name {
   font-size: 16px;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--light);
 }
 
 .tc-desc {
@@ -1343,7 +1437,7 @@ body.mode-multi .multiplayer-only { display: flex; }
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  color: var(--foreground);
+  color: var(--light);
   font-size: 14px;
   font-family: inherit;
   cursor: pointer;
@@ -1355,8 +1449,8 @@ body.mode-multi .multiplayer-only { display: flex; }
 }
 
 .tc-select option {
-  background: var(--surface);
-  color: var(--foreground);
+  background: #1a2535;
+  color: var(--light);
 }
 
 /* ===== Game End Modal ===== */
@@ -1372,6 +1466,7 @@ body.mode-multi .multiplayer-only { display: flex; }
 
 .game-end-modal .modal-header h2 {
   font-size: 24px;
+  color: var(--light);
 }
 
 .game-end-icon {
@@ -1388,7 +1483,7 @@ body.mode-multi .multiplayer-only { display: flex; }
 .game-end-message {
   font-size: 18px;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--light);
   margin: 0 0 24px;
 }
 

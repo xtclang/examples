@@ -69,11 +69,9 @@ service ChessAI {
             return True;
         }
         // If queen exists but at most one additional minor piece, it's endgame
-        if (whiteQueens <= 1 && whiteMinorMajor <= 1
-                && blackQueens <= 1 && blackMinorMajor <= 1) {
-            return True;
-        }
-        return False;
+        return whiteQueens <= 1 && whiteMinorMajor <= 1
+                && blackQueens <= 1 && blackMinorMajor <= 1;
+
     }
 
     /**
@@ -178,7 +176,7 @@ service ChessAI {
     static Int chebyshevDistance(Int sq1, Int sq2) {
         Int rankDiff = (BoardUtils.getRank(sq1) - BoardUtils.getRank(sq2)).abs();
         Int fileDiff = (BoardUtils.getFile(sq1) - BoardUtils.getFile(sq2)).abs();
-        return rankDiff > fileDiff ? rankDiff : fileDiff;
+        return rankDiff.maxOf(fileDiff);
     }
 
     /**

@@ -193,8 +193,7 @@ class CheckDetection {
             }
 
             switch (piece) {
-                case 'K': break; // ignore kings
-                case 'k': break;
+                case 'K', 'k': break; // ignore kings
                 case 'N': whiteKnights++; break;
                 case 'n': blackKnights++; break;
                 case 'B': {
@@ -263,7 +262,7 @@ class CheckDetection {
 
         // Walk backwards through move history checking board-after states
         // We approximate position key from boardAfter + who moved (to derive turn)
-        for (Int i = moveHistory.size - 1; i >= 0; i--) {
+        for (Int i : moveHistory.size >.. 0) {
             MoveHistoryEntry entry = moveHistory[i];
 
             // After this entry's move, the turn goes to the opposite color

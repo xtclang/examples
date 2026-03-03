@@ -38,6 +38,7 @@ service ChatApi {
      */
     @Post("send/{roomCode}/{playerId}")
     @Produces(Json)
+    @HttpsRequired
     SendMessageResponse sendMessage(String roomCode, String playerId, @BodyParam SendMessageRequest request) {
         using (schema.createTransaction()) {
             // Verify the room exists
@@ -88,6 +89,7 @@ service ChatApi {
      */
     @Get("history/{roomCode}/{playerId}")
     @Produces(Json)
+    @HttpsRequired
     ChatHistoryResponse getHistory(String roomCode, String playerId, @QueryParam("limit") Int limit = 100) {
         using (schema.createTransaction()) {
             // Verify the room exists
@@ -139,6 +141,7 @@ service ChatApi {
      */
     @Get("recent/{roomCode}/{playerId}/{since}")
     @Produces(Json)
+    @HttpsRequired
     ChatHistoryResponse getRecent(String roomCode, String playerId, Int since) {
         using (schema.createTransaction()) {
             // Verify the room exists

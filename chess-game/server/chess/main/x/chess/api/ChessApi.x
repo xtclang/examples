@@ -48,6 +48,7 @@ service ChessApi {
      */
     @Get("state/{sessionId}")
     @Produces(Json)
+    @HttpsRequired
     ApiState state(String sessionId) {
         using (schema.createTransaction()) {
             // Ensure a game exists for this session
@@ -75,6 +76,7 @@ service ChessApi {
      */
     @Post("move/{sessionId}/{from}/{target}")
     @Produces(Json)
+    @HttpsRequired
     ApiState move(String sessionId, String from, String target) {
         using (schema.createTransaction()) {
             // Ensure game exists for this session
@@ -143,6 +145,7 @@ service ChessApi {
      */
     @Post("reset/{sessionId}")
     @Produces(Json)
+    @HttpsRequired
     ApiState reset(String sessionId, @BodyParam ResetRequest? request = Null) {
         using (schema.createTransaction()) {
             // Remove existing game from database
@@ -427,6 +430,7 @@ service ChessApi {
      */
     @Get("validmoves/{sessionId}/{square}")
     @Produces(Json)
+    @HttpsRequired
     ValidMovesHelper.ValidMovesResponse getValidMoves(String sessionId, String square) {
         using (schema.createTransaction()) {
             GameRecord record = ensureGame(sessionId);

@@ -7,6 +7,7 @@ import db.models.TimeControl;
 import db.models.MoveHistoryEntry;
 import validation.ValidMovesHelper;
 import services.TimeControlService;
+import ai.ChessAPIClient;
 import core.ChessLogic;
 /**
  * ChessApi Service
@@ -18,7 +19,8 @@ import core.ChessLogic;
  *
  * The API implements simplified chess rules without castling, en-passant,
  * or explicit check/checkmate detection. The opponent (Black) is automated
- * with AI-driven move selection after a configurable delay.
+ * with AI-driven move selection via the Stockfish Online API after a
+ * configurable delay.
  *
  * All operations are transactional to ensure data consistency.
  * Each browser session gets its own independent game via session IDs.
@@ -29,6 +31,7 @@ service ChessApi {
     @Inject ChessSchema schema;  // Database schema for game persistence
     @Inject Clock         clock; // System clock for timing opponent moves
     TimeControlService timeControlService = new TimeControlService();
+    ChessAPIClient     apiClient          = new ChessAPIClient();
 
     // Per-session pending state tracking
     @Atomic private Map<String, Boolean> pendingActiveMap = new HashMap();
@@ -390,8 +393,9 @@ service ChessApi {
         Time pendingStart = pendingStartMap.getOrDefault(sessionId, now);
         Duration waited = now - pendingStart;
         if (waited >= moveDelay) {
-            // Time's up! Make the opponent's move
-            AutoResponse reply = ChessLogic.autoMove(record);
+            // Time's up! Get the best move from the Stockfish API
+            (Int from, Int to, String? promotion) = apiClient.findBestMove(record);
+            AutoResponse reply = ChessLogic.autoMove(record, from, to, promotion);
             pendingActiveMap.put(sessionId, False);
             autoApplied = True;
             

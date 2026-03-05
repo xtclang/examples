@@ -43,7 +43,7 @@ chess-game/
 │           ├── ChessApi.x      # REST API endpoints
 │           ├── ChessGame.x     # Core game state management
 │           ├── ChessLogic.x    # Move execution logic
-│           ├── ChessAI.x       # AI opponent with randomization
+│           ├── ChessAPIClient.x # AI opponent via Stockfish Online API
 │           ├── PieceValidator.x # Move validation
 │           ├── CheckDetection.x # Check/checkmate detection
 │           ├── BoardUtils.x    # Board utilities
@@ -273,7 +273,7 @@ This will automatically rebuild and restart the server when files change.
 The server uses a modular architecture:
 - **ChessApi**: Routes HTTP requests to appropriate handlers
 - **ChessGame**: Manages game state and coordinates logic
-- **ChessAI**: Intelligent move selection with randomization
+- **ChessAPIClient**: AI move selection via the Stockfish Online API
 - **ChessLogic**: Executes moves and updates state
 - **PieceValidator**: Validates move legality per piece type
 - **CheckDetection**: Determines check, checkmate, and stalemate

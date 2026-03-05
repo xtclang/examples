@@ -1,4 +1,3 @@
-import ai.ChessAI.*;
 import db.models.CastlingRights;
 import db.models.MoveHistoryEntry;
 
@@ -7,9 +6,9 @@ import db.models.MoveHistoryEntry;
  * Main Chess Game Service
  * Main game logic module that coordinates:
  * - Move application and validation
-  * - Game state management
-  * - AI opponent moves
-  * - Win/loss detection
+ * - Game state management
+ * - AI opponent moves (via external Stockfish API)
+ * - Win/loss detection
  */
 @Abstract
 class ChessGame {
@@ -251,14 +250,17 @@ class ChessGame {
     // ----- AI Move -------------------------------------------------
 
     /**
-     * Let the AI make a move (for Black).
+     * Apply an AI move returned by the external Stockfish API.
+     *
+     * @param record    current game state
+     * @param from      source square index
+     * @param to        destination square index
+     * @param promotion optional promotion piece (e.g. "q")
      */
-    static AutoResponse autoMove(GameRecord record) {
+    static AutoResponse autoMove(GameRecord record, Int from, Int to, String? promotion) {
         if (record.status != GameStatus.Ongoing || record.turn != Color.Black) {
             return new AutoResponse(False, record, "Ready for a move");
         }
-
-        (Int from, Int to, Int score) = ChessAI.findBestMove(record);
 
         if (from < 0 || to < 0) {
             // No legal moves available
@@ -273,7 +275,7 @@ class ChessGame {
 
         // Apply the AI's move
         Char[] board = BoardUtils.cloneBoard(record.board);
-        GameRecord updated = applyMove(record, board, from, to, Null);
+        GameRecord updated = applyMove(record, board, from, to, promotion);
         String moveStr = updated.lastMove ?: "AI moved";
         return new AutoResponse(True, updated, $"AI: {moveStr}");
     }

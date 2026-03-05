@@ -8,7 +8,7 @@ import validation.ValidMovesHelper;
 import config.CastlingManager;
 import core.ChessLogic;
 import core.OnlineChessLogic;
-import ai.ChessAI;
+import ai.ChessAPIClient;
 /**
  * Chess Game Server Module
  * 

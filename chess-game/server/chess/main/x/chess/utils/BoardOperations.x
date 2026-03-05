@@ -1,5 +1,4 @@
 import db.models.Color;
-import ai.EvaluationConfig;
 
 /**
  * Board Operations
@@ -111,8 +110,9 @@ service BoardOperations {
 
     /**
      * Calculate material balance (positive = White ahead, negative = Black ahead).
+     * Uses standard piece values: P=100, N=320, B=330, R=500, Q=900.
      */
-    static Int calculateMaterialBalance(Char[] board, EvaluationConfig config) {
+    static Int calculateMaterialBalance(Char[] board) {
         Int whiteValue = 0;
         Int blackValue = 0;
         
@@ -121,7 +121,14 @@ service BoardOperations {
             if (piece == '.') {
                 continue;
             }
-            Int value = config.getPieceValue(piece);
+            Int value = switch (piece.lowercase) {
+                case 'p': 100;
+                case 'n': 320;
+                case 'b': 330;
+                case 'r': 500;
+                case 'q': 900;
+                default: 0;
+            };
             if ('A' <= piece <= 'Z') {
                 whiteValue += value;
             } else {

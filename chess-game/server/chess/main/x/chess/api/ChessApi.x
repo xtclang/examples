@@ -5,6 +5,7 @@ import core.ChessGame.AutoResponse;
 import db.models.GameStatus;
 import db.models.TimeControl;
 import db.models.MoveHistoryEntry;
+import services.TimeControlService;
 import validation.ValidMovesHelper;
 import core.ChessLogic;
 /**
@@ -28,6 +29,8 @@ service ChessApi {
     // Injected dependencies for database access and time tracking
     @Inject ChessSchema schema;  // Database schema for game persistence
     @Inject Clock         clock; // System clock for timing opponent moves
+    TimeControlService timeControlService = new TimeControlService();
+    ChessAPIClient apiClient = new ChessAPIClient();
 
     // Per-session pending state tracking
     @Atomic private Map<String, Boolean> pendingActiveMap = new HashMap();
@@ -144,7 +147,7 @@ service ChessApi {
      */
     @Post("reset/{sessionId}")
     @Produces(Json)
-    ApiState reset(String sessionId) {
+    ApiState reset(String sessionId, @BodyParam ResetRequest? request = Null) {
         using (schema.createTransaction()) {
             // Remove existing game from database
             schema.singlePlayerGames.remove(sessionId);

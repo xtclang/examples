@@ -70,6 +70,7 @@ service OnlineChessApi {
      */
     @Post("create")
     @Produces(Json)
+    @HttpsRequired
     RoomCreated createRoom(@BodyParam CreateRoomRequest? request = Null) {
         using (schema.createTransaction()) {
             TimeControl? timeCtrl = Null;
@@ -99,6 +100,7 @@ service OnlineChessApi {
      */
     @Post("join/{roomCode}")
     @Produces(Json)
+    @HttpsRequired
     OnlineApiState joinRoom(String roomCode) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
@@ -124,6 +126,7 @@ service OnlineChessApi {
      */
     @Get("state/{roomCode}/{playerId}")
     @Produces(Json)
+    @HttpsRequired
     OnlineApiState getState(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
@@ -144,6 +147,7 @@ service OnlineChessApi {
      */
     @Post("reset/{roomCode}/{playerId}")
     @Produces(Json)
+    @HttpsRequired
     OnlineApiState resetGame(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
@@ -168,6 +172,7 @@ service OnlineChessApi {
      */
     @Post("move/{roomCode}/{playerId}/{from}/{target}")
     @Produces(Json)
+    @HttpsRequired
     OnlineApiState makeMove(String roomCode, String playerId, String from, String target) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
@@ -239,6 +244,7 @@ service OnlineChessApi {
      */
     @Post("leave/{roomCode}/{playerId}")
     @Produces(Json)
+    @HttpsRequired
     OnlineApiState leaveGame(String roomCode, String playerId) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {
@@ -279,6 +285,7 @@ service OnlineChessApi {
      */
     @Get("validmoves/{roomCode}/{playerId}/{square}")
     @Produces(Json)
+    @HttpsRequired
     ValidMovesResponse getValidMoves(String roomCode, String playerId, String square) {
         using (schema.createTransaction()) {
             if (OnlineGame game := schema.onlineGames.get(roomCode)) {

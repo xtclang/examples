@@ -6,8 +6,6 @@ import db.models.GameStatus;
 import db.models.TimeControl;
 import db.models.MoveHistoryEntry;
 import validation.ValidMovesHelper;
-import services.TimeControlService;
-import ai.ChessAPIClient;
 import core.ChessLogic;
 /**
  * ChessApi Service
@@ -30,8 +28,6 @@ service ChessApi {
     // Injected dependencies for database access and time tracking
     @Inject ChessSchema schema;  // Database schema for game persistence
     @Inject Clock         clock; // System clock for timing opponent moves
-    TimeControlService timeControlService = new TimeControlService();
-    ChessAPIClient     apiClient          = new ChessAPIClient();
 
     // Per-session pending state tracking
     @Atomic private Map<String, Boolean> pendingActiveMap = new HashMap();
@@ -51,6 +47,7 @@ service ChessApi {
      */
     @Get("state/{sessionId}")
     @Produces(Json)
+    @HttpsRequired
     ApiState state(String sessionId) {
         using (schema.createTransaction()) {
             // Ensure a game exists for this session
@@ -78,6 +75,7 @@ service ChessApi {
      */
     @Post("move/{sessionId}/{from}/{target}")
     @Produces(Json)
+    @HttpsRequired
     ApiState move(String sessionId, String from, String target) {
         using (schema.createTransaction()) {
             // Ensure game exists for this session
@@ -146,7 +144,7 @@ service ChessApi {
      */
     @Post("reset/{sessionId}")
     @Produces(Json)
-    ApiState reset(String sessionId, @BodyParam ResetRequest? request = Null) {
+    ApiState reset(String sessionId) {
         using (schema.createTransaction()) {
             // Remove existing game from database
             schema.singlePlayerGames.remove(sessionId);
@@ -431,6 +429,7 @@ service ChessApi {
      */
     @Get("validmoves/{sessionId}/{square}")
     @Produces(Json)
+    @HttpsRequired
     ValidMovesHelper.ValidMovesResponse getValidMoves(String sessionId, String square) {
         using (schema.createTransaction()) {
             GameRecord record = ensureGame(sessionId);

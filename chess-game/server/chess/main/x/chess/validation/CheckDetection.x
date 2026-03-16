@@ -71,8 +71,7 @@ class CheckDetection {
     /**
      * Check if the king of a given color is in check.
      */
-    static Boolean isInCheck(String boardStr, Color kingColor) {
-        Char[] board = BoardUtils.cloneBoard(boardStr);
+    static Boolean isInCheck(Char[] board, Color kingColor) {
         Int kingPos = findKing(board, kingColor);
         if (kingPos < 0) {
             return False; // No king found
@@ -82,15 +81,21 @@ class CheckDetection {
     }
 
     /**
+     * Check if the king of a given color is in check.
+     */
+    static Boolean isInCheck(String boardStr, Color kingColor) {
+        return isInCheck(BoardUtils.cloneBoard(boardStr).freeze(), kingColor);
+    }
+
+    /**
      * Simulate a move and check if it leaves the king in check.
      * @return True if the move is legal (doesn't leave king in check)
      */
     static Boolean isMoveLegalWithCheck(Char[] board, Int from, Int to, Color playerColor) {
         // Make a copy and simulate the move
         Char[] testBoard = BoardOperations.boardWithMove(board, from, to);
-        
-        String testBoardStr = BoardOperations.boardToString(testBoard);
-        return !isInCheck(testBoardStr, playerColor);
+
+        return !isInCheck(testBoard.freeze(), playerColor);
     }
 
     /**

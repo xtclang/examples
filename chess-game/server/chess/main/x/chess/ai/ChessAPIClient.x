@@ -151,15 +151,15 @@ service ChessAPIClient {
         Boolean isWhite = 'A' <= piece <= 'Z';
         Int index = isWhite ? square : (63 - square);
 
-        switch (piece.lowercase) {
-            case 'p': return PAWN_TABLE[index];
-            case 'n': return KNIGHT_TABLE[index];
-            case 'b': return BISHOP_TABLE[index];
-            case 'r': return ROOK_TABLE[index];
-            case 'q': return QUEEN_TABLE[index];
-            case 'k': return isEndgame ? KING_TABLE_END[index] : KING_TABLE_MID[index];
-            default:  return 0;
-        }
+        return switch (piece.lowercase) {
+                case 'p': PAWN_TABLE[index];
+                case 'n': KNIGHT_TABLE[index];
+                case 'b': BISHOP_TABLE[index];
+                case 'r': ROOK_TABLE[index];
+                case 'q': QUEEN_TABLE[index];
+                case 'k': isEndgame ? KING_TABLE_END[index] : KING_TABLE_MID[index];
+                default:  0;
+        };
     }
 
     // ----- Endgame Detection -------------------------------------------------
@@ -290,11 +290,11 @@ service ChessAPIClient {
         }
 
         // Check bonus
-        String boardStr = new String(board);
-        if (CheckDetection.isInCheck(boardStr, Color.White)) {
+        immutable Char[] immutableBoard = board.freeze();
+        if (CheckDetection.isInCheck(immutableBoard, White)) {
             score += CHECK_BONUS;
         }
-        if (CheckDetection.isInCheck(boardStr, Color.Black)) {
+        if (CheckDetection.isInCheck(immutableBoard, Black)) {
             score -= CHECK_BONUS;
         }
 
@@ -318,9 +318,8 @@ service ChessAPIClient {
             return evaluateBoard(board, record);
         }
 
-        Color turn = isMaximizing ? Color.Black : Color.White;
-        String boardStr = new String(board);
-        Boolean inCheck = CheckDetection.isInCheck(boardStr, turn);
+        Color turn = isMaximizing ? Black : White;
+        Boolean inCheck = CheckDetection.isInCheck(board.freeze(), turn);
         Boolean hasLegalMove = False;
 
         if (isMaximizing) {
@@ -343,13 +342,13 @@ service ChessAPIClient {
                         continue;
                     }
 
-                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    Char[] newBoard = BoardUtils.cloneBoard(board);
                     newBoard[to] = piece;
                     newBoard[from] = '.';
                     if (piece == 'p' && BoardUtils.getRank(to) == 7) {
                         newBoard[to] = 'q';
                     }
-                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                    if (CheckDetection.isInCheck(newBoard.freeze(), turn)) {
                         continue;
                     }
 
@@ -367,7 +366,9 @@ service ChessAPIClient {
                 }
             }
             if (!hasLegalMove) {
-                return inCheck ? -CHECKMATE_SCORE : 0;
+                return hasLegalMove
+                ? maxEval
+                : inCheck ? -CHECKMATE_SCORE : 0;
             }
             return maxEval;
         } else {
@@ -390,13 +391,13 @@ service ChessAPIClient {
                         continue;
                     }
 
-                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    Char[] newBoard = BoardUtils.cloneBoard(board);
                     newBoard[to] = piece;
                     newBoard[from] = '.';
                     if (piece == 'P' && BoardUtils.getRank(to) == 0) {
                         newBoard[to] = 'Q';
                     }
-                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                    if (CheckDetection.isInCheck(newBoard.freeze(), turn)) {
                         continue;
                     }
 
@@ -414,7 +415,9 @@ service ChessAPIClient {
                 }
             }
             if (!hasLegalMove) {
-                return inCheck ? CHECKMATE_SCORE : 0;
+                return hasLegalMove
+                ? minEval
+                : inCheck ? -CHECKMATE_SCORE : 0;
             }
             return minEval;
         }
@@ -450,12 +453,8 @@ service ChessAPIClient {
         }
 
         // Development bonus for minor pieces in opening
-        if (record.moveHistory.size < 20) {
-            if (piece == 'n' || piece == 'b') {
-                if (BoardUtils.getRank(from) == 0) {
-                    score += DEVELOPMENT_BONUS;
-                }
-            }
+        if (record.moveHistory.size < 20 && (piece == 'n' || piece == 'b') && BoardUtils.getRank(from) == 0) {
+            score += DEVELOPMENT_BONUS;
         }
 
         // Castling bonus
@@ -467,10 +466,10 @@ service ChessAPIClient {
         }
 
         // Check bonus
-        Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+        Char[] testBoard = BoardUtils.cloneBoard(board);
         testBoard[to] = piece;
         testBoard[from] = '.';
-        if (CheckDetection.isInCheck(new String(testBoard), Color.White)) {
+        if (CheckDetection.isInCheck(testBoard.freeze(), White)) {
             score += CHECK_BONUS;
         }
 
@@ -544,10 +543,10 @@ service ChessAPIClient {
                     continue;
                 }
 
-                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
-                if (CheckDetection.isInCheck(new String(testBoard), Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
                     continue;
                 }
 
@@ -617,7 +616,7 @@ service ChessAPIClient {
                 Char[] testBoard = BoardUtils.cloneBoard(record.board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
-                if (CheckDetection.isInCheck(new String(testBoard), Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
                     continue;
                 }
 
@@ -723,10 +722,10 @@ service ChessAPIClient {
                     continue;
                 }
 
-                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to]   = piece;
                 testBoard[from] = '.';
-                if (CheckDetection.isInCheck(new String(testBoard), record.turn)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), record.turn)) {
                     continue;
                 }
 
@@ -749,11 +748,11 @@ service ChessAPIClient {
      * Convert a GameRecord to FEN (Forsyth-Edwards Notation).
      */
     static String boardToFen(GameRecord record) {
-        String fen = "";
+        StringBuffer fen = new StringBuffer();
 
         for (Int rank = 0; rank < 8; rank++) {
             if (rank > 0) {
-                fen += "/";
+                fen.addAll("/");
             }
             Int emptyCount = 0;
             for (Int file = 0; file < 8; file++) {
@@ -762,32 +761,44 @@ service ChessAPIClient {
                     emptyCount++;
                 } else {
                     if (emptyCount > 0) {
-                        fen += emptyCount.toString();
+                        fen.addAll(emptyCount.toString());
                         emptyCount = 0;
                     }
-                    fen += piece.toString();
+                    fen.addAll(piece.toString());
                 }
             }
             if (emptyCount > 0) {
-                fen += emptyCount.toString();
+                fen.addAll(emptyCount.toString());
             }
         }
 
-        fen += record.turn == Color.White ? " w" : " b";
+        fen.addAll(record.turn == Color.White ? " w" : " b");
 
-        String castling = "";
-        if (record.castlingRights.whiteKingside)  { castling += "K"; }
-        if (record.castlingRights.whiteQueenside) { castling += "Q"; }
-        if (record.castlingRights.blackKingside)  { castling += "k"; }
-        if (record.castlingRights.blackQueenside) { castling += "q"; }
-        fen += castling.size == 0 ? " -" : $" {castling}";
+        StringBuffer castling = new StringBuffer();
+        if (record.castlingRights.whiteKingside)  { castling.addAll("K"); }
+        if (record.castlingRights.whiteQueenside) { castling.addAll("Q"); }
+        if (record.castlingRights.blackKingside)  { castling.addAll("k"); }
+        if (record.castlingRights.blackQueenside) { castling.addAll("q"); }
+        if (castling.size == 0) {
+            fen.addAll(" -");
+        } else {
+            fen.addAll(" ");
+            fen.addAll(castling.toString());
+        }
 
-        fen += record.enPassantTarget != Null ? $" {record.enPassantTarget}" : " -";
-        fen += $" {record.halfMoveClock}";
+        if (record.enPassantTarget != Null) {
+            fen.addAll(" ");
+            fen.addAll(record.enPassantTarget.toString());
+        } else {
+            fen.addAll(" -");
+        }
+        fen.addAll(" ");
+        fen.addAll(record.halfMoveClock.toString());
 
         Int fullmove = (record.moveHistory.size / 2) + 1;
-        fen += $" {fullmove}";
+        fen.addAll(" ");
+        fen.addAll(fullmove.toString());
 
-        return fen;
+        return fen.toString();
     }
 }

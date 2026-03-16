@@ -152,11 +152,11 @@ service ChessAI {
         score -= countMobility(board, Color.White, record) * DEFAULT_CONFIG.mobilityBonus;
 
         // Check bonus
-        String boardStr = new String(board);
-        if (CheckDetection.isInCheck(boardStr, Color.White)) {
+        immutable Char[] immutableBoard = board.freeze();
+        if (CheckDetection.isInCheck(immutableBoard, Color.White)) {
             score += DEFAULT_CONFIG.checkBonus;
         }
-        if (CheckDetection.isInCheck(boardStr, Color.Black)) {
+        if (CheckDetection.isInCheck(immutableBoard, Color.Black)) {
             score -= DEFAULT_CONFIG.checkBonus;
         }
 
@@ -254,7 +254,7 @@ service ChessAI {
         }
 
         // Simulate the move
-        Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+        Char[] testBoard = BoardUtils.cloneBoard(board);
         testBoard[to] = piece;
         testBoard[from] = '.';
 
@@ -268,8 +268,7 @@ service ChessAI {
         score += evaluateBoard(testBoard, record) / 10;
 
         // Bonus for giving check
-        String testBoardStr = new String(testBoard);
-        if (CheckDetection.isInCheck(testBoardStr, Color.White)) {
+        if (CheckDetection.isInCheck(testBoard.freeze(), Color.White)) {
             score += DEFAULT_CONFIG.checkBonus;
         }
 
@@ -405,11 +404,10 @@ service ChessAI {
                 }
                 
                 // Verify move doesn't leave king in check
-                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
-                String testBoardStr = new String(testBoard);
-                if (CheckDetection.isInCheck(testBoardStr, Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
                     continue;
                 }
                 
@@ -492,15 +490,14 @@ service ChessAI {
                 if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
                     continue;
                 }
-                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
                 // Handle pawn promotion
                 if (piece == 'p' && BoardUtils.getRank(to) == 7) {
                     testBoard[to] = 'q';
                 }
-                String testBoardStr = new String(testBoard);
-                if (CheckDetection.isInCheck(testBoardStr, Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
                     continue;
                 }
                 froms = froms + from;
@@ -521,7 +518,7 @@ service ChessAI {
             Int to = tos[i];
             Char piece = board[from];
 
-            Char[] newBoard = BoardUtils.cloneBoard(new String(board));
+            Char[] newBoard = BoardUtils.cloneBoard(board);
             newBoard[to] = piece;
             newBoard[from] = '.';
             if (piece == 'p' && BoardUtils.getRank(to) == 7) {
@@ -555,11 +552,9 @@ service ChessAI {
         }
 
         Color turn = isMaximizing ? Color.Black : Color.White;
-        String boardStr = new String(board);
-
         // Check for checkmate/stalemate
         Boolean hasLegalMove = False;
-        Boolean inCheck = CheckDetection.isInCheck(boardStr, turn);
+        Boolean inCheck = CheckDetection.isInCheck(board.freeze(), turn);
 
         if (isMaximizing) {
             Int maxEval = MIN_SCORE;
@@ -579,13 +574,13 @@ service ChessAI {
                     if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
                         continue;
                     }
-                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    Char[] newBoard = BoardUtils.cloneBoard(board);
                     newBoard[to] = piece;
                     newBoard[from] = '.';
                     if (piece == 'p' && BoardUtils.getRank(to) == 7) {
                         newBoard[to] = 'q';
                     }
-                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                    if (CheckDetection.isInCheck(newBoard.freeze(), turn)) {
                         continue;
                     }
                     hasLegalMove = True;
@@ -623,13 +618,13 @@ service ChessAI {
                     if (!PieceValidator.isLegal(piece, from, to, board, record.castlingRights, record.enPassantTarget)) {
                         continue;
                     }
-                    Char[] newBoard = BoardUtils.cloneBoard(boardStr);
+                    Char[] newBoard = BoardUtils.cloneBoard(board);
                     newBoard[to] = piece;
                     newBoard[from] = '.';
                     if (piece == 'P' && BoardUtils.getRank(to) == 0) {
                         newBoard[to] = 'Q';
                     }
-                    if (CheckDetection.isInCheck(new String(newBoard), turn)) {
+                    if (CheckDetection.isInCheck(newBoard.freeze(), turn)) {
                         continue;
                     }
                     hasLegalMove = True;
@@ -683,11 +678,10 @@ service ChessAI {
                 }
 
                 // Verify move doesn't leave king in check
-                Char[] testBoard = BoardUtils.cloneBoard(new String(board));
+                Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
-                String testBoardStr = new String(testBoard);
-                if (CheckDetection.isInCheck(testBoardStr, Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
                     continue;
                 }
 

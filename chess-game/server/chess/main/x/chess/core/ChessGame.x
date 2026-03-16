@@ -174,7 +174,7 @@ class ChessGame {
 
         // Check if move gives check
         String boardStr = new String(board);
-        Boolean givesCheck = CheckDetection.isInCheck(boardStr, nextTurn);
+        Boolean givesCheck = CheckDetection.isInCheck(board.freeze(), nextTurn);
 
         // Check game status (checkmate/stalemate/draws)
         (Boolean isCheckmate, Boolean isStalemate) = CheckDetection.checkGameEnd(

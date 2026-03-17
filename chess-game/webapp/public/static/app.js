@@ -907,6 +907,8 @@ function setGameMode(mode) {
   multiplayerBtn?.classList.toggle('active', mode === 'multi');
 
   if (mode === 'single') {
+    localStorage.removeItem('chess_session');
+
     // Switch to single player mode but keep the online session active
     // Only the "Leave Room" button will actually exit the room
     lastMove = null;
@@ -1253,6 +1255,7 @@ function clearMoveHistory() {
 
 // ===== Restore Session =====
 function startMultiplayerUI(session) {
+  gameMode = 'multi';
   document.body.classList.remove('mode-single');
   document.body.classList.add('mode-multi');
   multiplayerBtn?.classList.add('active');
@@ -1385,11 +1388,13 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== Initialize =====
-(async () => {
+async function initializeApp() {
   const savedSession = loadSession();
   if (savedSession) {
     startMultiplayerUI(savedSession);
   } else {
     await loadState();
   }
-})();
+}
+
+initializeApp();

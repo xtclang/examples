@@ -84,7 +84,7 @@ class CheckDetection {
      * Check if the king of a given color is in check.
      */
     static Boolean isInCheck(String boardStr, Color kingColor) {
-        return isInCheck(BoardUtils.cloneBoard(boardStr).freeze(), kingColor);
+        return isInCheck(BoardUtils.freeze(), kingColor);
     }
 
     /**

@@ -36,11 +36,11 @@ service AIOpeningBook {
                 }
 
                 Char piece = board[from];
-                if (piece == '.' || BoardUtils.colorOf(piece) != Color.Black) {
+                if (piece == '.' || BoardUtils.colorOf(piece) != Black) {
                     continue;
                 }
                 Char target = board[to];
-                if (target != '.' && BoardUtils.colorOf(target) == Color.Black) {
+                if (target != '.' && BoardUtils.colorOf(target) == Black) {
                     continue;
                 }
                 if (!PieceValidator.isLegal(piece, from, to, board,
@@ -51,7 +51,7 @@ service AIOpeningBook {
                 Char[] testBoard = BoardUtils.cloneBoard(board);
                 testBoard[to] = piece;
                 testBoard[from] = '.';
-                if (CheckDetection.isInCheck(testBoard.freeze(), Color.Black)) {
+                if (CheckDetection.isInCheck(testBoard.freeze(), Black)) {
                     continue;
                 }
 

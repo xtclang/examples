@@ -60,6 +60,11 @@ service BoardUtils {
     }
 
     /**
+     * Clone a board array to a mutable array.
+     */
+    static Char[] cloneBoard(Char[] board) = new Char[64](i -> board[i]);
+
+    /**
      * Convert board string to array of 8 row strings.
      */
     static String[] boardRows(String board) {

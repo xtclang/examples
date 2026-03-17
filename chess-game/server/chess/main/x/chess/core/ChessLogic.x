@@ -12,7 +12,7 @@ import core.ChessGame.AutoResponse;
  * delegating to specialized modules:
  * - ChessBoard: Board utilities and notation
  * - ChessPieces: Piece-specific move validation
- * - ChessAI: AI opponent move selection
+ * - ChessAPIClient: External Stockfish API for AI move selection
  * - ChessGame: Game state management and move application
  * This maintains backward compatibility while organizing code into
  * focused, maintainable modules.
@@ -26,9 +26,9 @@ service ChessLogic {
     }
 
     /**
-     * Generate AI opponent move.
+     * Apply an AI opponent move with pre-computed from/to squares.
      */
-    static AutoResponse autoMove(GameRecord record) = ChessGame.autoMove(record);
+    static AutoResponse autoMove(GameRecord record, Int from, Int to, String? promotion) = ChessGame.autoMove(record, from, to, promotion);
 
     /**
      * Get default starting board.

@@ -157,13 +157,16 @@ docker run --rm -v $(pwd)/out:/out --entrypoint cp xtc-examples -r /opt/examples
 ls out/*.xtc
 ```
 
-You can also mount your source tree and run Gradle interactively:
+If you don't have Java or Gradle installed, you can build directly from source
+and get the compiled modules on your local filesystem in one command:
 
 ```bash
-docker run -it --rm -v $(pwd):/workspace -w /workspace gradle:jdk25 bash
-gradle build installDist
-ls build/install/examples/lib/
+docker run --rm -v $(pwd):/workspace -w /workspace gradle:jdk25 gradle build installDist
+ls build/install/examples/lib/*.xtc
 ```
+
+The output lands in `build/install/examples/lib/` on your host machine via the
+volume mount — no JDK, Gradle, or Node.js installation required.
 
 ### Using the XDK Docker image
 

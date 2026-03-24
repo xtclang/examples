@@ -1,9 +1,18 @@
-module cardGame.examples.org {
-
-    void run() {
+/**
+ * CardGame application module.
+ *
+ * Run with: ./gradlew runXtc
+ * Run with args: ./gradlew runXtc --args=World,XTC
+ */
+module CardGame {
+    void run(String[] args=[]) {
         @Inject Console console;
-        console.print("Starting Eights with default players.");
-        Eights game = new Eights("Player 1", "Player 2");
-        game.playGame();
+        if (args.empty) {
+            console.print("Hello from CardGame!");
+            return;
+        }
+        for (String arg : args) {
+            console.print($"Hello, {arg}!");
+        }
     }
 }

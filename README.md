@@ -136,23 +136,32 @@ xtc run -L out BankStressTest
 
 ### Full Gradle build in Docker
 
-The included `Dockerfile` builds all examples using Gradle in a container,
-requiring only Docker on the host — no JDK, Gradle, or Node.js needed:
+The included `Dockerfile` is a multi-stage build that:
+1. Compiles all examples using `gradle:jdk25` (with dependency layer caching)
+2. Copies the XVM runtime from `ghcr.io/xtclang/xvm:latest`
+3. Runs `welcomeTest` as a build-time verification
+4. Produces a slim JRE image with compiled modules and the `xtc` CLI
 
 ```bash
-# Build the image (compiles all examples)
+# Build the image (compiles all examples, runs welcomeTest to verify)
 docker build -t xtc-examples .
 
+# Run the welcomeTest (default entrypoint)
+docker run --rm xtc-examples
+
+# Run any module using xtc
+docker run --rm xtc-examples run -L /opt/examples/lib welcomeTest
+
 # Copy the compiled modules to your local machine
-docker run --rm -v $(pwd)/out:/out xtc-examples sh -c 'cp /opt/examples/lib/* /out/'
+docker run --rm -v $(pwd)/out:/out --entrypoint cp xtc-examples -r /opt/examples/lib/. /out/
 ls out/*.xtc
 ```
 
 You can also mount your source tree and run Gradle interactively:
 
 ```bash
-docker run -it --rm -v $(pwd):/workspace -w /workspace eclipse-temurin:25-jdk bash
-./gradlew build installDist
+docker run -it --rm -v $(pwd):/workspace -w /workspace gradle:jdk25 bash
+gradle build installDist
 ls build/install/examples/lib/
 ```
 

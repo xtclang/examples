@@ -54,7 +54,10 @@ examples/
 
 ## Prerequisites
 
-- **Java 25** (auto-downloaded via Gradle toolchain if not present)
+- **Java 21+** — needed to bootstrap the Gradle wrapper (`./gradlew`). Gradle
+  will then auto-download JDK 25 via its toolchain support to compile XTC sources.
+  Install via [SDKMAN](https://sdkman.io/) (`sdk install java`),
+  [Adoptium](https://adoptium.net/), or your system package manager.
 - **XDK** — resolved automatically from Maven repositories
 - **Node.js** — only needed for the `welcome` example (auto-downloaded by default)
 

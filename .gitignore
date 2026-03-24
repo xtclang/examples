@@ -13,6 +13,14 @@ xunit/
 
 # Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+coverage/
+.env.local
+.env.*.local
 
 # IntelliJ
 .idea/

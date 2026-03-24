@@ -44,10 +44,13 @@ if (file("webapp/package.json").exists()) {
         nodeProjectDir.set(file("webapp"))
     }
 
+    val npmInstall by tasks.existing
+    val processResources by tasks.existing
+
     val buildWebapp by tasks.registering(NpmTask::class) {
         args.set(listOf("run", "build"))
         workingDir.set(file("webapp"))
-        dependsOn(tasks.named("npmInstall"))
+        dependsOn(npmInstall)
 
         inputs.dir("webapp/src")
         inputs.dir("webapp/public")
@@ -58,7 +61,7 @@ if (file("webapp/package.json").exists()) {
         outputs.cacheIf { true }
     }
 
-    tasks.named<Copy>("processResources") {
+    processResources {
         dependsOn(buildWebapp)
     }
 }

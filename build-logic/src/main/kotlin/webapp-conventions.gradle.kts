@@ -36,6 +36,16 @@ sourceSets {
     }
 }
 
+// For projects with a Node.js-based webapp (e.g. welcome's React app), we need to
+// run npm to build the webapp before XTC compilation. This block detects the presence
+// of webapp/package.json and wires up the Node/npm build:
+//   1. Configure Node.js to auto-download and point at the webapp/ directory
+//   2. Register a buildWebapp task that runs `npm run build` with proper caching
+//   3. Make processResources depend on buildWebapp so the compiled webapp output
+//      is available as XTC module resources (used by @StaticContent annotations)
+//
+// Projects with only static HTML in webapp/public/ (banking, counter, chess-game)
+// skip this block entirely — their content is picked up directly by the srcDir above.
 if (file("webapp/package.json").exists()) {
     node {
         download.set(providers.gradleProperty("node.download")

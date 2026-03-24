@@ -1,6 +1,11 @@
 /*
- * Main build file for the "chess-game" example.
+ * Build file for the "chess-game" example.
  */
 
-group = "chess-game"
-version = "0.1.0"
+plugins {
+    id("static-webapp-conventions")
+}
+
+dependencies {
+    xdkDistribution(libs.xdk)
+}

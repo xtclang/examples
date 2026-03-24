@@ -1,9 +1,11 @@
 /**
- * This is a simple console-based db test. To run it, use the following commands:
+ * A simple console-based database test for the welcome example.
  *
- *  cd welcome
- *  xtc -o server/build -L server/build server/main/x/welcomeTest.x
- *  xec -L server/build server/main/x/welcomeTest
+ * Run via Gradle:
+ *   ./gradlew runXtc -PmoduleName=welcomeTest
+ *
+ * Or directly:
+ *   xtc run -L build/install/examples/lib welcomeTest
  */
 module welcomeTest {
     package jsondb import jsondb.xtclang.org;
@@ -20,7 +22,10 @@ module welcomeTest {
 
         using (WelcomeSchema schema =
                 jsondb.createConnection(db.qualifiedName, dataDir, buildDir).as(WelcomeSchema)) {
-            console.print($"Welcome! You are guest #{schema.count.next()}");
+            String guest = "test-guest";
+            Int    count = schema.counters.getOrDefault(guest, 0);
+            schema.counters.put(guest, ++count);
+            console.print($"Welcome! You are guest #{guest}, visit #{count}");
         }
     }
 }

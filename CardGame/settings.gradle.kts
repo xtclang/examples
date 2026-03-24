@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "CardGame"
+rootProject.name = "cardGame"
 
 pluginManagement {
     repositories {

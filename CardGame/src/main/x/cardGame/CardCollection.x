@@ -1,0 +1,68 @@
+class CardCollection (String label){
+    private Card[] cards = new Card[];
+
+    void addCard(Card card) {
+        cards.add(card);
+    }
+
+    conditional Card popCard() {
+        if (cards.size == 0) {
+            return False;
+        }
+        Card card = cards[cards.size - 1];
+        cards.delete(cards.size - 1);
+        return True, card;
+    }
+
+    conditional Card removeCard(Int index) {
+        if (0 <= index < cards.size) {
+            Card card = cards[index];
+            cards.delete(index);
+            return True, card;
+        }
+        return False;
+    }
+
+    Boolean isEmpty() = cards.empty;
+
+    Int size() = cards.size;
+
+
+    conditional Card getCard(Int index) {
+        return 0 <= index < cards.size
+                ? (True, cards[index])
+                : False;
+    }
+
+    void clear() {
+        cards.clear();
+    }
+
+    void swapCards(Int index1, Int index2) {
+        if (0 <= index1 < cards.size && 0 <= index2 < cards.size) {
+              cards.swap(index1, index2);
+        }
+    }
+
+    void shuffle() {
+        @Inject Random rnd;
+        for (Int i : cards.size >..0 ) {
+            Int j = rnd.int(i + 1);
+            swapCards(i, j);
+        }
+    }
+
+    void deal(CardCollection! that, Int numCards) {
+        for (Int i : 0..<numCards) {
+            if (Card card := popCard()) {
+                that.addCard(card);
+            } else {
+                return;
+            }
+        }
+    }
+
+    void dealAll(CardCollection! that) {
+        deal(that, size());
+    }
+}

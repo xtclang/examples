@@ -54,9 +54,12 @@ examples/
 
 ## Prerequisites
 
-- **Java 21+** (auto-downloaded via Gradle toolchain if not present)
+- **Java 25** (auto-downloaded via Gradle toolchain if not present)
 - **XDK** — resolved automatically from Maven repositories
 - **Node.js** — only needed for the `welcome` example (auto-downloaded by default)
+
+Alternatively, if you have **Docker** installed, you don't need any of the
+above — see [Building with Docker](#building-with-docker) below.
 
 ## Building
 

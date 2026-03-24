@@ -2,11 +2,8 @@ rootProject.name = "build-logic"
 
 dependencyResolutionManagement {
     repositories {
-        // mavenLocal {
-        //     content {
-        //         includeGroup("org.xtclang")
-        //     }
-        // }
+        // Uncomment for local XDK development:
+        // mavenLocal { content { includeGroup("org.xtclang") } }
         maven {
             url = uri("https://central.sonatype.com/repository/maven-snapshots/")
             mavenContent {

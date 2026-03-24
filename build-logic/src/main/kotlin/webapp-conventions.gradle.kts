@@ -1,8 +1,11 @@
 /**
- * Convention plugin for webapp integration with XTC modules.
+ * Convention plugin for XTC modules with webapp content.
  *
- * Applies to XTC modules that include a webapp (React or static content).
- * Builds the webapp and integrates the output as XTC module resources.
+ * Adds the project's webapp/ directory as a resource source, so that
+ * @StaticContent annotations can reference paths like /public/index.html.
+ *
+ * If webapp/package.json exists, the Node/npm plugin builds the webapp
+ * (e.g. React) automatically before XTC compilation.
  */
 
 import com.github.gradle.node.npm.task.NpmTask
@@ -14,11 +17,8 @@ plugins {
 
 // The node plugin overrides repository settings, so re-declare them
 repositories {
-    // mavenLocal {
-    //     content {
-    //         includeGroup("org.xtclang")
-    //     }
-    // }
+    // Uncomment for local XDK development:
+    // mavenLocal { content { includeGroup("org.xtclang") } }
     maven {
         url = uri("https://central.sonatype.com/repository/maven-snapshots/")
         mavenContent {
@@ -28,35 +28,37 @@ repositories {
     mavenCentral()
 }
 
-node {
-    download.set(providers.gradleProperty("node.download")
-        .map { it.toBoolean() }
-        .orElse(true))
-    nodeProjectDir.set(file("${project.projectDir}/webapp"))
-}
-
-val buildWebapp by tasks.registering(NpmTask::class) {
-    args.set(listOf("run", "build"))
-    workingDir.set(file("${project.projectDir}/webapp"))
-    dependsOn(tasks.named("npmInstall"))
-
-    inputs.dir("$projectDir/webapp/src")
-    inputs.dir("$projectDir/webapp/public")
-    inputs.file("$projectDir/webapp/package.json")
-    inputs.file("$projectDir/webapp/package-lock.json")
-
-    outputs.dir("$projectDir/webapp/build")
-    outputs.cacheIf { true }
-}
-
 sourceSets {
-    named("main") {
+    main {
         resources {
-            srcDir("${project.projectDir}/webapp")
+            srcDir("webapp")
         }
     }
 }
 
-tasks.named<Copy>("processResources") {
-    dependsOn(buildWebapp)
+if (file("webapp/package.json").exists()) {
+    node {
+        download.set(providers.gradleProperty("node.download")
+            .map { it.toBoolean() }
+            .orElse(true))
+        nodeProjectDir.set(file("webapp"))
+    }
+
+    val buildWebapp by tasks.registering(NpmTask::class) {
+        args.set(listOf("run", "build"))
+        workingDir.set(file("webapp"))
+        dependsOn(tasks.named("npmInstall"))
+
+        inputs.dir("webapp/src")
+        inputs.dir("webapp/public")
+        inputs.file("webapp/package.json")
+        inputs.file("webapp/package-lock.json")
+
+        outputs.dir("webapp/build")
+        outputs.cacheIf { true }
+    }
+
+    tasks.named<Copy>("processResources") {
+        dependsOn(buildWebapp)
+    }
 }

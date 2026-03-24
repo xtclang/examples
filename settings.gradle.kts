@@ -8,12 +8,8 @@ pluginManagement {
     includeBuild("build-logic")
 
     repositories {
-        // mavenLocal {
-        //     content {
-        //         includeGroup("org.xtclang")
-        //         includeGroup("org.xtclang.xtc-plugin")
-        //     }
-        // }
+        // Uncomment for local XDK development:
+        // mavenLocal { content { includeGroup("org.xtclang"); includeGroup("org.xtclang.xtc-plugin") } }
         maven {
             url = uri("https://central.sonatype.com/repository/maven-snapshots/")
             mavenContent {
@@ -33,11 +29,8 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 dependencyResolutionManagement {
     repositories {
-        // mavenLocal {
-        //     content {
-        //         includeGroup("org.xtclang")
-        //     }
-        // }
+        // Uncomment for local XDK development:
+        // mavenLocal { content { includeGroup("org.xtclang") } }
         maven {
             url = uri("https://central.sonatype.com/repository/maven-snapshots/")
             mavenContent {

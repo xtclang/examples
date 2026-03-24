@@ -3,7 +3,7 @@
  */
 
 plugins {
-    id("static-webapp-conventions")
+    id("webapp-conventions")
 }
 
 dependencies {

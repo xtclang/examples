@@ -159,7 +159,7 @@ docker run --rm xtc-examples
 docker run --rm xtc-examples run -L /opt/examples/lib welcomeTest
 
 # Copy the compiled modules to your local machine
-docker run --rm -v $(pwd)/out:/out --entrypoint cp xtc-examples -r /opt/examples/lib/. /out/
+docker run --rm -v "$(pwd)/out:/out" --entrypoint cp xtc-examples -r /opt/examples/lib/. /out/
 ls out/*.xtc
 ```
 
@@ -167,7 +167,7 @@ If you don't have Java or Gradle installed, you can build directly from source
 and get the compiled modules on your local filesystem in one command:
 
 ```bash
-docker run --rm -v $(pwd):/workspace -w /workspace gradle:jdk25 gradle build installDist
+docker run --rm -v "$(pwd):/workspace" -w /workspace gradle:jdk25 gradle build installDist
 ls build/install/examples/lib/*.xtc
 ```
 
@@ -181,14 +181,14 @@ Docker image:
 
 ```bash
 # Build and run the chess game
-docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest \
+docker run --rm -v "$(pwd):/workspace" ghcr.io/xtclang/xvm:latest \
   xtc build -o /workspace/out -r /workspace/chess-game/webapp \
   /workspace/chess-game/src/main/x/chessDB.x \
   /workspace/chess-game/src/main/x/chessLogic.x \
   /workspace/chess-game/src/main/x/chess.x
 
 # Interactive shell
-docker run -it --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest bash
+docker run -it --rm -v "$(pwd):/workspace" ghcr.io/xtclang/xvm:latest bash
 cd /workspace
 xtc build -o out -r chess-game/webapp chess-game/src/main/x/*.x
 ```

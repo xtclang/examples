@@ -134,8 +134,32 @@ xtc run -L out BankStressTest
 
 ## Building with Docker
 
-You can build and run examples without installing the XDK locally, using the
-official Docker image:
+### Full Gradle build in Docker
+
+The included `Dockerfile` builds all examples using Gradle in a container,
+requiring only Docker on the host — no JDK, Gradle, or Node.js needed:
+
+```bash
+# Build the image (compiles all examples)
+docker build -t xtc-examples .
+
+# Copy the compiled modules to your local machine
+docker run --rm -v $(pwd)/out:/out xtc-examples sh -c 'cp /opt/examples/lib/* /out/'
+ls out/*.xtc
+```
+
+You can also mount your source tree and run Gradle interactively:
+
+```bash
+docker run -it --rm -v $(pwd):/workspace -w /workspace eclipse-temurin:25-jdk bash
+./gradlew build installDist
+ls build/install/examples/lib/
+```
+
+### Using the XDK Docker image
+
+To compile and run individual examples without Gradle, use the official XDK
+Docker image:
 
 ```bash
 # Build and run the chess game
@@ -145,17 +169,10 @@ docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest \
   /workspace/chess-game/src/main/x/chessLogic.x \
   /workspace/chess-game/src/main/x/chess.x
 
-docker run --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest \
-  xtc run -L /workspace/out chess.examples.org
-```
-
-Or use an interactive shell inside the container:
-
-```bash
+# Interactive shell
 docker run -it --rm -v $(pwd):/workspace ghcr.io/xtclang/xvm:latest bash
 cd /workspace
 xtc build -o out -r chess-game/webapp chess-game/src/main/x/*.x
-xtc run -L out chess.examples.org
 ```
 
 ## Example Descriptions

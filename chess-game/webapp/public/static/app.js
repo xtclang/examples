@@ -81,8 +81,8 @@ const closeGameEndModal = document.getElementById('closeGameEndModal');
 
 // ===== Piece Map =====
 const pieceMap = {
-  r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',
-  R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',
+  r: '♜︎', n: '♞︎', b: '♝︎', q: '♛︎', k: '♚︎', p: '♟︎',
+  R: '♖︎', N: '♘︎', B: '♗︎', Q: '♕︎', K: '♔︎', P: '♙︎',
   '.': ''
 };
 
@@ -165,6 +165,21 @@ function getSinglePlayerSessionId() {
     }
   }
   return singlePlayerSessionId;
+}
+
+function isIOSSafari() {
+  const ua = navigator.userAgent;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(ua)
+    || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const isSafariEngine = /WebKit/.test(ua) && /Safari/.test(ua);
+  const isKnownNonSafari = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/.test(ua);
+  return isIOSDevice && isSafariEngine && !isKnownNonSafari;
+}
+
+function applyIOSSafariSymbolFallback() {
+  if (isIOSSafari()) {
+    document.documentElement.classList.add('ios-safari');
+  }
 }
 
 function loadSession() {
@@ -1397,4 +1412,5 @@ async function initializeApp() {
   }
 }
 
+applyIOSSafariSymbolFallback();
 initializeApp();

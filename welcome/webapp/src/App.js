@@ -16,9 +16,9 @@ class App extends Component {
         .then(response => response.json())
         .then(data =>
             {
-            var count = data == 1 ? 'first'  :
-                        data == 2 ? 'second' :
-                        data == 3 ? 'third'  :
+            var count = data === 1 ? 'first'  :
+                        data === 2 ? 'second' :
+                        data === 3 ? 'third'  :
                                   '' + data + '-th';
             this.setState(state => ({count: count}));
             });

@@ -2,16 +2,17 @@
  * Convention plugin for XTC modules with webapp content.
  *
  * Adds the project's webapp/ directory as a resource source, so that
- * @StaticContent annotations can reference paths like /public/index.html.
+ * static content can be served at runtime.
  *
  * If webapp/package.json exists, the Node/npm plugin builds the webapp
- * (e.g. React) automatically before XTC compilation.
+ * (e.g. React) automatically before resource processing.
  */
 
 import com.github.gradle.node.npm.task.NpmTask
 
 plugins {
-    id("org.xtclang.xtc-plugin")
+    `java-base`
+    // Note: catalog aliases (libs.plugins.node) are unavailable in precompiled plugins {} blocks
     id("com.github.node-gradle.node")
 }
 
@@ -28,11 +29,9 @@ repositories {
     mavenCentral()
 }
 
-sourceSets {
-    main {
-        resources {
-            srcDir("webapp")
-        }
+sourceSets.named("main") {
+    resources {
+        srcDir("webapp")
     }
 }
 

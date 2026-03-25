@@ -1,5 +1,6 @@
 [versions]
 xtc = "0.4.4-SNAPSHOT"
+java = "25"
 node = "7.1.0"
 nodejs = "22.21.0"
 npm = "11.6.2"

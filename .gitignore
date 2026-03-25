@@ -5,6 +5,7 @@ out/
 # Tests
 data/
 test-output/
+# TODO: Why is xunit writing stuff to the build root instead of its test output directory?
 xunit/
 
 # Gradle
@@ -27,3 +28,6 @@ coverage/
 
 # macOS
 .DS_Store
+
+# Claude
+.claude

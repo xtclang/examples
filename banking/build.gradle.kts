@@ -3,9 +3,6 @@
  */
 
 plugins {
+    id("xtc-conventions")
     id("webapp-conventions")
-}
-
-dependencies {
-    xdkDistribution(libs.xdk)
 }

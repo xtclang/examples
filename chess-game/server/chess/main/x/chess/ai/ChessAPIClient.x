@@ -9,6 +9,7 @@
  * - AIUtility: randomness, fallback move, FEN conversion
  */
 service ChessAPIClient {
+    // Shared score constants for search decisions.
     static Int MIN_SCORE       = -1000000;
     static Int MAX_SCORE       =  1000000;
     static Int CHECKMATE_SCORE =  100000;
@@ -54,6 +55,9 @@ service ChessAPIClient {
         return AIOpeningBook.getOpeningMove(record);
     }
 
+    /**
+     * Main AI move selection entrypoint used by game logic.
+     */
     (Int, Int, String?) findBestMove(GameRecord record) {
         Int moveCount = record.moveHistory.size;
 
@@ -113,10 +117,16 @@ service ChessAPIClient {
         return (bestFrom, bestTo, bestPromotion);
     }
 
+    /**
+     * Returns a legal random fallback move when needed.
+     */
     static (Int, Int, String?) findRandomLegalMove(GameRecord record) {
         return AIUtility.findRandomLegalMove(record);
     }
 
+    /**
+     * Exposes FEN conversion for external consumers.
+     */
     static String boardToFen(GameRecord record) {
         return AIUtility.boardToFen(record);
     }

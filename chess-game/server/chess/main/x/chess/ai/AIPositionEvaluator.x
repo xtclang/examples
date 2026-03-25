@@ -3,10 +3,12 @@
  * Pure functions: no external mutable state.
  */
 service AIPositionEvaluator {
+    // Evaluation bonuses and penalties.
     static Int CHECK_BONUS    = 50;
     static Int ROOK_7TH_BONUS = 20;
     static Int KING_PROXIMITY = 10;
 
+    // Material values.
     static Int PAWN_VALUE   = 100;
     static Int KNIGHT_VALUE = 320;
     static Int BISHOP_VALUE = 330;
@@ -93,6 +95,9 @@ service AIPositionEvaluator {
 
     static Int[] PASSED_PAWN_BONUS = [0, 120, 80, 50, 30, 15, 10, 0];
 
+    /**
+     * Returns the material value for a piece symbol.
+     */
     static Int getPieceValue(Char piece) {
         switch (piece.lowercase) {
             case 'p': return PAWN_VALUE;
@@ -105,21 +110,27 @@ service AIPositionEvaluator {
         }
     }
 
+    /**
+     * Returns piece-square table value, mirrored for Black pieces.
+     */
     static Int getPSTValue(Char piece, Int square, Boolean isEndgame) {
         Boolean isWhite = 'A' <= piece <= 'Z';
         Int index = isWhite ? square : (63 - square);
 
-        return switch (piece.lowercase) {
-            case 'p': PAWN_TABLE[index];
-            case 'n': KNIGHT_TABLE[index];
-            case 'b': BISHOP_TABLE[index];
-            case 'r': ROOK_TABLE[index];
-            case 'q': QUEEN_TABLE[index];
-            case 'k': isEndgame ? KING_TABLE_END[index] : KING_TABLE_MID[index];
-            default:  0;
-        };
+        switch (piece.lowercase) {
+            case 'p':  return PAWN_TABLE[index];
+            case 'n':  return KNIGHT_TABLE[index];
+            case 'b':  return BISHOP_TABLE[index];
+            case 'r':  return ROOK_TABLE[index];
+            case 'q':  return QUEEN_TABLE[index];
+            case 'k':  return isEndgame ? KING_TABLE_END[index] : KING_TABLE_MID[index];
+            default:   return 0;
+        }
     }
 
+    /**
+     * Detects simplified positions where endgame king tables are preferred.
+     */
     static Boolean isEndgame(Char[] board) {
         Int whiteQueens = 0;
         Int blackQueens = 0;
@@ -147,6 +158,9 @@ service AIPositionEvaluator {
             && blackQueens <= 1 && blackMinor <= 1;
     }
 
+    /**
+     * Checks whether a pawn has no opposing pawns ahead on adjacent files.
+     */
     static Boolean isPassedPawn(Char[] board, Int square, Char pawn) {
         Int file = BoardUtils.getFile(square);
         Int rank = BoardUtils.getRank(square);
@@ -173,12 +187,18 @@ service AIPositionEvaluator {
         return True;
     }
 
+    /**
+     * Computes king distance for endgame opposition/proximity scoring.
+     */
     static Int chebyshevDistance(Int sq1, Int sq2) {
         Int rankDiff = (BoardUtils.getRank(sq1) - BoardUtils.getRank(sq2)).abs();
         Int fileDiff = (BoardUtils.getFile(sq1) - BoardUtils.getFile(sq2)).abs();
         return rankDiff.maxOf(fileDiff);
     }
 
+    /**
+     * Produces a signed score from Black's perspective (higher is better for Black).
+     */
     static Int evaluateBoard(Char[] board, GameRecord record) {
         Int score = 0;
         Boolean endgame = isEndgame(board);

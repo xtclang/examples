@@ -90,7 +90,7 @@ service ChessApi {
                 TimeControl tc = tcMaybe.as(TimeControl);
                 if (timeControlService.hasTimedOut(tc, record.turn)) {
                     // Player ran out of time
-                    String resultMessage = record.turn == Color.White
+                    String resultMessage = record.turn == White
                         ? "Time's up! Black wins on time."
                         : "Time's up! White wins on time.";
                     GameRecord timedOut = new GameRecord(
@@ -268,11 +268,11 @@ service ChessApi {
                 // Return stored times without subtracting elapsed
                 adjustedTc = tc;
             } else {
-                Int whiteRemaining = record.turn == Color.White 
-                    ? timeControlService.getRemainingTime(tc, Color.White)
+                Int whiteRemaining = record.turn == White
+                    ? timeControlService.getRemainingTime(tc, White)
                     : tc.whiteTimeMs;
-                Int blackRemaining = record.turn == Color.Black 
-                    ? timeControlService.getRemainingTime(tc, Color.Black)
+                Int blackRemaining = record.turn == Black
+                    ? timeControlService.getRemainingTime(tc, Black)
                     : tc.blackTimeMs;
                 adjustedTc = new TimeControl(whiteRemaining, blackRemaining, tc.incrementMs, tc.lastMoveTime);
             }
@@ -299,7 +299,7 @@ service ChessApi {
      * @return True if game is ongoing and it's Black's turn
      */
     Boolean isOpponentPending(GameRecord record) {
-        return record.status == GameStatus.Ongoing && record.turn == Color.Black;
+        return record.status == GameStatus.Ongoing && record.turn == Black;
     }
 
     /**
@@ -313,7 +313,7 @@ service ChessApi {
         // Handle game-over states
         switch (record.status) {
         case GameStatus.Checkmate:
-            return record.turn == Color.White
+            return record.turn == White
                     ? "Checkmate! Black wins."
                     : "Checkmate! White wins.";
 
@@ -330,7 +330,7 @@ service ChessApi {
             return "Draw by threefold repetition. Same position occurred three times.";
 
         case GameStatus.Timeout:
-            return record.turn == Color.White
+            return record.turn == White
                     ? "Time's up! Black wins on time."
                     : "Time's up! White wins on time.";
 
@@ -347,7 +347,7 @@ service ChessApi {
                     : $"You moved {move}. Opponent thinking...";
         }
 
-        if (record.turn == Color.White) {
+        if (record.turn == White) {
             // It's the player's turn
             return move == Null
                     ? "Your move."
@@ -406,7 +406,7 @@ service ChessApi {
             if (resultTcMaybe != Null && reply.moved) {
                 TimeControl resultTc = resultTcMaybe.as(TimeControl);
                 TimeControl updatedTc = timeControlService.updateAfterMove(
-                    resultTc, Color.Black, False);
+                    resultTc, Black, False);
                 result = new GameRecord(
                     result.board, result.turn, result.status,
                     result.lastMove, result.playerScore, result.opponentScore,
@@ -438,11 +438,11 @@ service ChessApi {
             GameRecord record = ensureGame(sessionId);
             
             // Only show moves for White (player)
-            if (record.turn != Color.White) {
+            if (record.turn != White) {
                 return new ValidMovesHelper.ValidMovesResponse(False, "Not your turn", []);
             }
 
-            String[] moves = ValidMovesHelper.getValidMoves(record.board, square, Color.White);
+            String[] moves = ValidMovesHelper.getValidMoves(record.board, square, White);
             return new ValidMovesHelper.ValidMovesResponse(True, Null, moves);
         }
     }

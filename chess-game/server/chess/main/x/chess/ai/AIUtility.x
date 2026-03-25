@@ -2,6 +2,9 @@
  * Generic AI utility helpers.
  */
 service AIUtility {
+    /**
+     * Deterministic hash-based pseudo-random helper.
+     */
     static Int hashRandom(Int seed, Int counter) {
         Int hash = seed ^ (counter * 2654435761);
         hash = ((hash >> 16) ^ hash) * 73244475;
@@ -10,6 +13,9 @@ service AIUtility {
         return hash.abs();
     }
 
+    /**
+     * Picks any legal move for the side to move, used as fallback behavior.
+     */
     static (Int, Int, String?) findRandomLegalMove(GameRecord record) {
         Char[] board = BoardUtils.cloneBoard(record.board);
         Int[] validFroms = new Int[];
@@ -53,6 +59,9 @@ service AIUtility {
         return (validFroms[index], validTos[index], Null);
     }
 
+    /**
+     * Converts current game state to a FEN-like notation string.
+     */
     static String boardToFen(GameRecord record) {
         StringBuffer fen = new StringBuffer();
 

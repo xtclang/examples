@@ -9,10 +9,10 @@ const Piece{
 
     public Int getCentiPawns() {return this.centipawns;}
 
-  construct (Color color, Char char, Int centipawns) {
+    construct (Color color, Char char, Int centipawns) {
         this.color = color;
         this.char = color == White ? char.lowercase : char.uppercase;
         this.centipawns = centipawns;
 
-   }
+    }
 }

@@ -20,7 +20,7 @@ class CheckDetection {
      */
     static Boolean isSquareAttacked(Int square, Char[] board, Color byColor) {
         // Check all squares on the board for pieces of the attacking color
-        for (Int from = 0; from < 64; from++) {
+        for (Int from : 0 ..< 64) {
             Char piece = board[from];
             if (piece == '.') {
                 continue;
@@ -113,14 +113,14 @@ class CheckDetection {
         MovePair[] legalMoves = new MovePair[];
         
         // Check all possible moves
-        for (Int from = 0; from < 64; from++) {
+        for (Int from : 0 ..< 64) {
             Char piece = board[from];
             if (piece == '.' || BoardUtils.colorOf(piece) != turn) {
                 continue;
             }
             
             // Try all possible destination squares
-            for (Int to = 0; to < 64; to++) {
+            for (Int to : 0 ..< 64) {
                 if (from == to) {
                     continue;
                 }

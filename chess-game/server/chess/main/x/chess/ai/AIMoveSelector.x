@@ -2,11 +2,15 @@
  * Move ordering and heuristic scoring for search.
  */
 service AIMoveSelector {
+    // Heuristic tuning constants used to prioritize move ordering.
     static Int CASTLING_BONUS    = 60;
     static Int DEVELOPMENT_BONUS = 30;
     static Int CENTER_BONUS      = 25;
     static Int CHECK_BONUS       = 50;
 
+    /**
+     * Scores one candidate move for ordering before deeper search.
+     */
     static Int scoreMoveHeuristic(Char piece, Int from, Int to, Char[] board, GameRecord record) {
         Int score = 0;
         Char target = board[to];
@@ -48,6 +52,9 @@ service AIMoveSelector {
         return score;
     }
 
+    /**
+     * Collects all legal Black moves and sorts them by heuristic score (descending).
+     */
     static (Int[], Int[], Int[]) collectOrderedLegalMoves(GameRecord record, Char[] board) {
         Int[] moveFroms  = new Int[];
         Int[] moveTos    = new Int[];

@@ -32,7 +32,7 @@ class ChessGame {
      * Create a default game with starting position.
      */
     static GameRecord defaultGame() {
-        return new GameRecord(defaultBoard(), Color.White, GameStatus.Ongoing, Null, 0, 0,
+        return new GameRecord(defaultBoard(), White, GameStatus.Ongoing, Null, 0, 0,
                              new CastlingRights(), Null, [], Null, 0);
     }
 
@@ -130,7 +130,7 @@ class ChessGame {
         }
 
         if (isCapture) {
-            if (record.turn == Color.White) {
+            if (record.turn == White) {
                 newPlayerScore++;
             } else {
                 newOpponentScore++;
@@ -170,7 +170,7 @@ class ChessGame {
         String moveStr = $"{BoardUtils.toAlgebraic(from)}{BoardUtils.toAlgebraic(to)}";
 
         // Switch turn
-        Color nextTurn = record.turn == Color.White ? Color.Black : Color.White;
+        Color nextTurn = record.turn == White ? Black : White;
 
         // Check if move gives check
         String boardStr = new String(board);
@@ -258,13 +258,13 @@ class ChessGame {
      * @param promotion optional promotion piece (e.g. "q")
      */
     static AutoResponse autoMove(GameRecord record, Int from, Int to, String? promotion) {
-        if (record.status != GameStatus.Ongoing || record.turn != Color.Black) {
+        if (record.status != GameStatus.Ongoing || record.turn != Black) {
             return new AutoResponse(False, record, "Ready for a move");
         }
 
-        if (from < 0 || to < 0) {
+        if ((from | to) < 0) {
             // No legal moves available
-            GameStatus status = checkGameStatus(record.board, Color.Black);
+            GameStatus status = checkGameStatus(record.board, Black);
             GameRecord updated = new GameRecord(
                 record.board, record.turn, status,
                 record.lastMove, record.playerScore, record.opponentScore,

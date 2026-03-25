@@ -2,12 +2,16 @@
  * Opening book move selection.
  */
 service AIOpeningBook {
+    // Candidate Black responses for early-game randomization.
     static String[][] OPENING_RESPONSES = [
         ["e7e5", "c7c5", "e7e6", "c7c6", "d7d5", "g8f6"],
         ["d7d5", "g8f6", "e7e6", "c7c5", "f7f5"],
         ["g8f6", "d7d5", "e7e6", "c7c6", "e7e5", "c7c5", "g7g6"]
     ];
 
+    /**
+     * Returns a legal opening move if one is available from the lightweight book.
+     */
     static (Int, Int) getOpeningMove(GameRecord record) {
         if (record.moveHistory.size >= 12) {
             return (-1, -1);
@@ -28,8 +32,8 @@ service AIOpeningBook {
                 Int fromRank = 8 - (move[1] - '0');
                 Int toFile   = move[2] - 'a';
                 Int toRank   = 8 - (move[3] - '0');
-                Int from = fromRank * 8 + fromFile;
-                Int to   = toRank   * 8 + toFile;
+                Int from     = fromRank * 8 + fromFile;
+                Int to       = toRank   * 8 + toFile;
 
                 if (from < 0 || from >= 64 || to < 0 || to >= 64) {
                     continue;

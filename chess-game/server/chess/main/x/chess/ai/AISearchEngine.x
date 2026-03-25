@@ -2,17 +2,21 @@
  * Minimax search with alpha-beta pruning.
  */
 service AISearchEngine {
+    // Search score bounds and terminal score.
     static Int MIN_SCORE       = -1000000;
     static Int MAX_SCORE       =  1000000;
     static Int CHECKMATE_SCORE =  100000;
 
+    /**
+     * Runs depth-limited minimax with alpha-beta pruning.
+     */
     static Int minimax(Char[] board, GameRecord record, Int depth,
                        Int alpha, Int beta, Boolean isMaximizing) {
         if (depth <= 0) {
             return AIPositionEvaluator.evaluateBoard(board, record);
         }
 
-        Color turn = isMaximizing ? Color.Black : Color.White;
+        Color turn = isMaximizing ? Black : White;
         Boolean inCheck = CheckDetection.isInCheck(board.freeze(), turn);
         Boolean hasLegalMove = False;
 

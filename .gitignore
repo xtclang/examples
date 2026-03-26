@@ -1,16 +1,33 @@
-# production
+# Build output
 build/
+out/
 
-# tests
+# Tests
 data/
 test-output/
+# TODO: Why is xunit writing stuff to the build root instead of its test output directory?
 xunit/
 
-# gradle
+# Gradle
 .gradle/
+.kotlin/
 
-# Intellij
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+coverage/
+.env.local
+.env.*.local
+
+# IntelliJ
 .idea/
 
-#Mac OS
+# macOS
 .DS_Store
+
+# Claude
+.claude

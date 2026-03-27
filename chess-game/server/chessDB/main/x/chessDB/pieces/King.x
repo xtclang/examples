@@ -1,0 +1,1 @@
+const King(Color color) extends Piece(color, 'k', 20000);

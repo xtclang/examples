@@ -8,4 +8,16 @@ class Card (Int suit, Int rank) {
     String toString() {
         return RANKS[rank] + " of " + SUITS[suit];
     }
+
+    Boolean equals(Object obj) {
+        if (obj.is(Card)) {
+            Card that = obj.as(Card);
+            return this.suit == that.suit && this.rank == that.rank;
+        }
+        return False;
+    }
+
+    Int hashCode() {
+        return suit * 13 + rank;
+    }
 }

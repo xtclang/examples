@@ -2,7 +2,7 @@
  * Unit tests for the CardGame application module.
  */
 module CardGameTest {
-    package app import CardGame;
+    package cardGame import cardGame;
 
     /**
      * Basic tests for the application.

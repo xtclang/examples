@@ -1,4 +1,4 @@
-module cardGame.examples.org {
+module cardGame {
 
     void run() {
         @Inject Console console;

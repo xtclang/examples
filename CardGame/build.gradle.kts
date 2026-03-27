@@ -10,6 +10,6 @@ dependencies {
 //   ./gradlew runXtc --module=other --method=main --args=arg1,arg2
 xtcRun {
     module {
-        moduleName = "CardGame"
+        moduleName = "cardGame"
     }
 }

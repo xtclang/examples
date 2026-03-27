@@ -3,6 +3,7 @@
  * Core logic lives in dedicated helper services.
  */
 service ChessAI {
+    // Legacy score constants retained for older call sites.
     static Int MIN_SCORE = -1000000;
     static Int MAX_SCORE = 1000000;
     static Int CHECKMATE_SCORE = 100000;
@@ -34,6 +35,9 @@ service ChessAI {
     static Int evaluateBoard(Char[] board, GameRecord record) {
         return AIPositionEvaluator.evaluateBoard(board, record);
     }
+    /**
+     * Counts pseudo-legal mobility for a side.
+     */
 
     static Int chebyshevDistance(Int sq1, Int sq2) {
         return AIPositionEvaluator.chebyshevDistance(sq1, sq2);
@@ -62,6 +66,9 @@ service ChessAI {
         return moveCount;
     }
 
+    /**
+     * Scores one move using heuristic + shallow evaluation blend.
+     */
     static Int scoreMove(Char piece, Int from, Int to, Char[] board, GameRecord record) {
         Int score = AIMoveSelector.scoreMoveHeuristic(piece, from, to, board, record);
 
@@ -97,6 +104,9 @@ service ChessAI {
         return AIOpeningBook.getOpeningMove(record);
     }
 
+    /**
+     * Queries the modern API client and returns move with evaluation score.
+     */
     static (Int, Int, Int) findBestMove(GameRecord record) {
         ChessAPIClient client = new ChessAPIClient();
         (Int from, Int to, String? promotion) = client.findBestMove(record);
@@ -116,6 +126,9 @@ service ChessAI {
         return (from, to, score);
     }
 
+    /**
+     * Legacy minimax wrapper that picks best move from ordered candidates.
+     */
     static (Int, Int, Int) findBestMoveWithMinimax(GameRecord record, Char[] board, Int depth) {
         (Int[] froms, Int[] tos, Int[] scores) = AIMoveSelector.collectOrderedLegalMoves(record, board);
         if (froms.empty) {
@@ -158,6 +171,9 @@ service ChessAI {
         return AISearchEngine.minimax(board, record, depth, alpha, beta, isMaximizing);
     }
 
+    /**
+     * Heuristic-only move picker with bounded randomness among top choices.
+     */
     static (Int, Int, Int) findBestMoveHeuristic(GameRecord record, Char[] board) {
         (Int[] allFroms, Int[] allTos, Int[] allScores) = AIMoveSelector.collectOrderedLegalMoves(record, board);
         if (allFroms.empty) {

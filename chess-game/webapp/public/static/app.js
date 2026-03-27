@@ -81,8 +81,8 @@ const closeGameEndModal = document.getElementById('closeGameEndModal');
 
 // ===== Piece Map =====
 const pieceMap = {
-  r: '♜', n: '♞', b: '♝', q: '♛', k: '♚', p: '♟',
-  R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔', P: '♙',
+  r: '♜︎', n: '♞︎', b: '♝︎', q: '♛︎', k: '♚︎', p: '♟︎',
+  R: '♖︎', N: '♘︎', B: '♗︎', Q: '♕︎', K: '♔︎', P: '♙︎',
   '.': ''
 };
 
@@ -165,6 +165,21 @@ function getSinglePlayerSessionId() {
     }
   }
   return singlePlayerSessionId;
+}
+
+function isIOSSafari() {
+  const ua = navigator.userAgent;
+  const isIOSDevice = /iPad|iPhone|iPod/.test(ua)
+    || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const isSafariEngine = /WebKit/.test(ua) && /Safari/.test(ua);
+  const isKnownNonSafari = /CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/.test(ua);
+  return isIOSDevice && isSafariEngine && !isKnownNonSafari;
+}
+
+function applyIOSSafariSymbolFallback() {
+  if (isIOSSafari()) {
+    document.documentElement.classList.add('ios-safari');
+  }
 }
 
 function loadSession() {
@@ -907,6 +922,8 @@ function setGameMode(mode) {
   multiplayerBtn?.classList.toggle('active', mode === 'multi');
 
   if (mode === 'single') {
+    localStorage.removeItem('chess_session');
+
     // Switch to single player mode but keep the online session active
     // Only the "Leave Room" button will actually exit the room
     lastMove = null;
@@ -1253,6 +1270,7 @@ function clearMoveHistory() {
 
 // ===== Restore Session =====
 function startMultiplayerUI(session) {
+  gameMode = 'multi';
   document.body.classList.remove('mode-single');
   document.body.classList.add('mode-multi');
   multiplayerBtn?.classList.add('active');
@@ -1385,11 +1403,14 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== Initialize =====
-(async () => {
+async function initializeApp() {
   const savedSession = loadSession();
   if (savedSession) {
     startMultiplayerUI(savedSession);
   } else {
     await loadState();
   }
-})();
+}
+
+applyIOSSafariSymbolFallback();
+initializeApp();

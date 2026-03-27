@@ -48,11 +48,11 @@ service OnlineChessApi {
             }
             
             // Only subtract elapsed time from the active player's clock
-            Int whiteRemaining = game.turn == Color.White 
-                ? timeControlService.getRemainingTime(tc, Color.White)
+            Int whiteRemaining = game.turn == White
+                ? timeControlService.getRemainingTime(tc, White)
                 : tc.whiteTimeMs;
-            Int blackRemaining = game.turn == Color.Black 
-                ? timeControlService.getRemainingTime(tc, Color.Black)
+            Int blackRemaining = game.turn == Black
+                ? timeControlService.getRemainingTime(tc, Black)
                 : tc.blackTimeMs;
             return new TimeControl(whiteRemaining, blackRemaining, tc.incrementMs, tc.lastMoveTime);
         }
@@ -187,7 +187,7 @@ service OnlineChessApi {
                     TimeControl gameTc = gameTcMaybe.as(TimeControl);
                     if (timeControlService.hasTimedOut(gameTc, game.turn)) {
                         // Player ran out of time
-                        String resulMessage = game.turn == Color.White
+                        String resulMessage = game.turn == White
                             ? "Time's up! Black wins on time."
                             : "Time's up! White wins on time.";
                         OnlineGame timedOut = new OnlineGame(

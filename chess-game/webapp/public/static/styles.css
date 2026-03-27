@@ -318,6 +318,8 @@ body {
   aspect-ratio: 1;
   border: none;
   font-size: clamp(24px, 5vmin, 44px);
+  font-family: 'Apple Symbols', 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'Arial Unicode MS', serif;
+  font-variant-emoji: text;
   color: var(--light);
   display: grid;
   place-items: center;
@@ -325,6 +327,11 @@ body {
   position: relative;
   transition: transform 0.1s ease, filter 0.1s ease;
   text-shadow: 1px 2px 4px rgba(0,0,0,0.4);
+}
+
+.ios-safari .square {
+  font-family: 'Apple Symbols', 'Arial Unicode MS', serif;
+  font-variant-emoji: text;
 }
 
 .square.dark { background: var(--dark-square); }

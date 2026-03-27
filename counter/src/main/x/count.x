@@ -3,9 +3,11 @@
  */
 @WebApp
 module count.examples.org {
-    package db  import countDB.examples.org;
-    package web import web.xtclang.org;
+    package db   import countDB.examples.org;
+    package sec  import sec.xtclang.org;
+    package web  import web.xtclang.org;
 
+    import sec.*;
     import web.*;
     import web.security.*;
 
@@ -41,14 +43,7 @@ module count.examples.org {
          */
         @LoginRequired
         @Get("count")
-        Int count() {
-            using (schema.createTransaction()) {
-                Int    id    = principalId;
-                Int    count = schema.counters.getOrDefault(id, 0);
-                schema.counters.put(id, ++count);
-                return count;
-            }
-        }
+        Int count() = schema.updateUserData(principalId);
 
         // ----- restricted endpoints for external REST API (allowing entitlements) ----------------
 
@@ -62,5 +57,20 @@ module count.examples.org {
         Int allCount() = schema.counters.reduce(0, (v, e) -> v + e.value);
 
         @RO Int principalId.get() = session?.principal?.principalId : assert;
+    }
+
+    annotation SessionData
+            into Session {
+        @Override
+        void sessionAuthenticated(Principal? principal, Credential? credential,
+                                  Entitlement[] entitlements) {
+            assert principal != Null;
+
+            // an example of non-persistent web app logging
+            @Inject Console console;
+            console.print($"User {principal.name}#{principal.principalId} has logged in");
+
+            super(principal, credential, entitlements);
+        }
     }
 }

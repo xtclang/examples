@@ -1,6 +1,8 @@
 /*
- * Main build file for the "banking" example.
+ * Build file for the "banking" example.
  */
 
-group = "banking"
-version = "0.1.0"
+plugins {
+    id("xtc-conventions")
+    id("webapp-conventions")
+}

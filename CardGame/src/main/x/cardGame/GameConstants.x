@@ -8,9 +8,9 @@ class GameConstants {
     static Int INITIAL_HAND_SIZE = 5;
 
     /**
-     * Total number of cards in a standard deck (4 suits * 13 ranks).
+     * Total number of cards in a standard deck.
      */
-    static Int DECK_SIZE = 4 * 13;
+    static Int DECK_SIZE = Rank.values.size * Suit.values.size;
 
     /**
      * The card rank that acts as a wild card (can be played on any card).

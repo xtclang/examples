@@ -1,6 +1,8 @@
 /**
  * Tests for the Bank database.
  *
+ * These tests run as part of the Gradle build but can also be run manually using the `xtc` command.
+ *
  * To run from the banking directory:
  *      xtc build -L build -o build src/test/x/BankTest.x
  *      xtc test -L build BankTest
@@ -17,7 +19,6 @@ module BankTest {
 
     import xunit.annotations.AfterEach;
     import xunit.annotations.BeforeEach;
-    import xunit.annotations.Disabled;
 
     import xunit.assertions.assertThrows;
 
@@ -94,12 +95,6 @@ module BankTest {
         }
     }
 
-    // TODO: Re-enable when xunit_db PerTest lifecycle is fixed (xtclang/xvm).
-    //       The xunit runtime bug: ExecutionContext is not registered as an injectable
-    //       resource at the right point in the PerTest lifecycle, causing DbInjector.lookup()
-    //       to fail with "Invalid resource: Key: context, xunit:extensions.ExecutionContext".
-    //       The Shared lifecycle works fine — only PerTest is affected.
-    @Disabled("xunit_db PerTest lifecycle bug: ExecutionContext not injectable")
     @DatabaseTest(PerTest)
     class OpenAccountTests {
 
@@ -155,12 +150,6 @@ module BankTest {
         }
     }
 
-    // TODO: Re-enable when xunit_db PerTest lifecycle is fixed (xtclang/xvm).
-    //       The xunit runtime bug: ExecutionContext is not registered as an injectable
-    //       resource at the right point in the PerTest lifecycle, causing DbInjector.lookup()
-    //       to fail with "Invalid resource: Key: context, xunit:extensions.ExecutionContext".
-    //       The Shared lifecycle works fine — only PerTest is affected.
-    @Disabled("xunit_db PerTest lifecycle bug: ExecutionContext not injectable")
     @DatabaseTest(PerTest)
     class CloseAccountTests {
 
@@ -343,12 +332,6 @@ module BankTest {
         }
     }
 
-    // TODO: Re-enable when xunit_db PerTest lifecycle is fixed (xtclang/xvm).
-    //       The xunit runtime bug: ExecutionContext is not registered as an injectable
-    //       resource at the right point in the PerTest lifecycle, causing DbInjector.lookup()
-    //       to fail with "Invalid resource: Key: context, xunit:extensions.ExecutionContext".
-    //       The Shared lifecycle works fine — only PerTest is affected.
-    @Disabled("xunit_db PerTest lifecycle bug: ExecutionContext not injectable")
     @DatabaseTest(PerTest)
     class AuditTests {
 

@@ -13,7 +13,7 @@ module CardCollectionTest {
     @Test
     void testEmptyCollectionHasZeroSize() {
         CardCollection collection = new CardCollection("Test");
-        assert collection.size() == 0 as "New collection should have size 0";
+        assert collection.isEmpty() as "New collection should be empty";
     }
 
     @Test
@@ -25,9 +25,10 @@ module CardCollectionTest {
     @Test
     void testAddCardIncreasesSize() {
         CardCollection collection = new CardCollection("Test");
+        assert collection.isEmpty() as "New collection should be empty";
         Card card = new Card(Suit.Hearts, Rank.Five);
         collection.addCard(card);
-        assert collection.size() == 1 as "Size should be 1 after adding one card";
+        assert collection.size() == 1 as "Collection size should increase after adding a card";
     }
 
     @Test
@@ -35,10 +36,13 @@ module CardCollectionTest {
         CardCollection collection = new CardCollection("Test");
         Suit[] suits = Suit.values;
         Rank[] ranks = Rank.values;
-        for (Int i : 0..<5) {
-            collection.addCard(new Card(suits[i % 4], ranks[i % 13]));
+        Int suitCount = suits.size;
+        Int rankCount = ranks.size;
+        Int numCards = GameConstants.INITIAL_HAND_SIZE;
+        for (Int i : 0..<numCards) {
+            collection.addCard(new Card(suits[i % suitCount], ranks[i % rankCount]));
         }
-        assert collection.size() == 5 as "Collection should have 5 cards";
+        assert collection.size() == numCards as "Collection should have " + numCards + " cards";
     }
 
     @Test
@@ -49,7 +53,7 @@ module CardCollectionTest {
         
         if (Card popped := collection.popCard()) {
             assert popped == card as "Popped card should match added card";
-            assert collection.size() == 0 as "Size should be 0 after pop";
+            assert collection.isEmpty() as "Collection should be empty after pop";
         } else {
             assert False as "Pop should succeed on non-empty collection";
         }
@@ -70,10 +74,11 @@ module CardCollectionTest {
         collection.addCard(card1);
         collection.addCard(card2);
         collection.addCard(card3);
+        Int sizeBeforeRemove = collection.size();
         
         if (Card removed := collection.removeCard(1)) {
             assert removed == card2 as "Removed card should be the middle card";
-            assert collection.size() == 2 as "Size should be 2 after removal";
+            assert collection.size() == sizeBeforeRemove - 1 as "Size should decrease by 1 after removal";
         } else {
             assert False as "Remove should succeed with valid index";
         }
@@ -109,12 +114,12 @@ module CardCollectionTest {
     @Test
     void testClear() {
         CardCollection collection = new CardCollection("Test");
-        for (Int i : 0..<10) {
+        Int numCards = 10;
+        for (Int i : 0..<numCards) {
             collection.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         collection.clear();
         assert collection.isEmpty() as "Collection should be empty after clear";
-        assert collection.size() == 0 as "Size should be 0 after clear";
     }
 
     @Test
@@ -137,28 +142,31 @@ module CardCollectionTest {
     void testDealCards() {
         CardCollection source = new CardCollection("Source");
         CardCollection destination = new CardCollection("Destination");
+        Int totalCards = GameConstants.INITIAL_HAND_SIZE;
+        Int cardsDealt = 3;
         
-        for (Int i : 0..<5) {
+        for (Int i : 0..<totalCards) {
             source.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         
-        source.deal(destination, 3);
-        assert source.size() == 2 as "Source should have 2 cards after dealing 3";
-        assert destination.size() == 3 as "Destination should have 3 cards";
+        source.deal(destination, cardsDealt);
+        assert source.size() == totalCards - cardsDealt as "Source should have " + (totalCards - cardsDealt) + " cards after dealing " + cardsDealt;
+        assert destination.size() == cardsDealt as "Destination should have " + cardsDealt + " cards";
     }
 
     @Test
     void testDealAllCards() {
         CardCollection source = new CardCollection("Source");
         CardCollection destination = new CardCollection("Destination");
+        Int numCards = GameConstants.INITIAL_HAND_SIZE;
         
-        for (Int i : 0..<5) {
+        for (Int i : 0..<numCards) {
             source.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         
         source.dealAll(destination);
         assert source.isEmpty() as "Source should be empty after dealing all";
-        assert destination.size() == 5 as "Destination should have all 5 cards";
+        assert destination.size() == numCards as "Destination should have all " + numCards + " cards";
     }
 
     @Test

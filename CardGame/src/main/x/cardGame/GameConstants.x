@@ -10,7 +10,7 @@ class GameConstants {
     /**
      * Total number of cards in a standard deck (4 suits * 13 ranks).
      */
-    static Int DECK_SIZE = 52;
+    static Int DECK_SIZE = 4 * 13;
 
     /**
      * The card rank that acts as a wild card (can be played on any card).

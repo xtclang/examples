@@ -6,7 +6,7 @@ class CardCollection (String label){
     }
 
     conditional Card popCard() {
-        if (cards.size == 0) {
+        if (cards.empty) {
             return False;
         }
         Card card = cards[cards.size - 1];

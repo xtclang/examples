@@ -89,11 +89,14 @@ module HandTest {
         Hand hand = new Hand("Test Hand");
         Suit[] suits = Suit.values;
         Rank[] ranks = Rank.values;
-        for (Int i : 0..<10) {
-            hand.addCard(new Card(suits[i / 4], ranks[i % 13]));
+        Int suitCount = suits.size;
+        Int rankCount = ranks.size;
+        Int cardsToAdd = 10;
+        for (Int i : 0..<cardsToAdd) {
+            hand.addCard(new Card(suits[i / suitCount], ranks[i % rankCount]));
         }
         
         hand.shuffle();
-        assert hand.size() == 10 as "Hand should still have 10 cards after shuffle";
+        assert hand.size() == cardsToAdd as "Hand should still have " + cardsToAdd + " cards after shuffle";
     }
 }

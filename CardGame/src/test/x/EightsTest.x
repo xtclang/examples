@@ -7,12 +7,13 @@ module EightsTest {
     import cardGame.Hand;
     import cardGame.Suit;
     import cardGame.Rank;
+    import cardGame.GameConstants;
 
     @Test
     void testInitialHandSizes() {
         Eights game = new Eights("Alice", "Bob");
-        assert game.one.hand.size() == 5 as "Player one should have 5 cards";
-        assert game.two.hand.size() == 5 as "Player two should have 5 cards";
+        assert game.one.hand.size() == GameConstants.INITIAL_HAND_SIZE as "Player one should have " + GameConstants.INITIAL_HAND_SIZE + " cards";
+        assert game.two.hand.size() == GameConstants.INITIAL_HAND_SIZE as "Player two should have " + GameConstants.INITIAL_HAND_SIZE + " cards";
     }
 
     @Test
@@ -24,8 +25,9 @@ module EightsTest {
     @Test
     void testInitialDrawPileSize() {
         Eights game = new Eights("Alice", "Bob");
-        // 52 cards - 5 - 5 - 1 (discard) = 41
-        assert game.drawPile.size() == 41 as "Draw pile should have 41 cards";
+        // 52 cards - INITIAL_HAND_SIZE - INITIAL_HAND_SIZE - 1 (discard)
+        Int expectedSize = 52 - (GameConstants.INITIAL_HAND_SIZE * 2) - 1;
+        assert game.drawPile.size() == expectedSize as "Draw pile should have " + expectedSize + " cards";
     }
 
     @Test

@@ -45,7 +45,9 @@ module CardTest {
     void testAllSuits() {
         Suit[] suits = Suit.values;
         String[] expectedSuits = ["Hearts", "Diamonds", "Clubs", "Spades"];
-        for (Int s : 0 ..< 4) {
+        Int suitCount = suits.size;
+        assert suitCount == expectedSuits.size as "Suit count should match expected suits";
+        for (Int s : 0 ..< suitCount) {
             Card card = new Card(suits[s], Rank.Ace);
             assert card.toString() == $"Ace of {expectedSuits[s]}"
                 as $"Expected 'Ace of {expectedSuits[s]}'";
@@ -56,7 +58,9 @@ module CardTest {
     void testAllRanks() {
         Rank[] ranks = Rank.values;
         String[] expectedRanks = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"];
-        for (Int r : 0 ..< 13) {
+        Int rankCount = ranks.size;
+        assert rankCount == expectedRanks.size as "Rank count should match expected ranks";
+        for (Int r : 0 ..< rankCount) {
             Card card = new Card(Suit.Hearts, ranks[r]);
             assert card.toString() == $"{expectedRanks[r]} of Hearts"
                 as $"Expected '{expectedRanks[r]} of Hearts'";

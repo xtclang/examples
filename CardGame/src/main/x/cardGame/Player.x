@@ -46,6 +46,6 @@ class Player {
     static Boolean cardMatches(Card card1, Card card2) {
         return card1.suit == card2.suit
             || card1.rank == card2.rank
-            || card1.rank == Rank.Eight;
+            || card1.rank == GameConstants.SPECIAL_CARD;
     }
 }

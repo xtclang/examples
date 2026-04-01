@@ -9,6 +9,7 @@ module PlayerTest {
     import cardGame.Hand;
     import cardGame.Suit;
     import cardGame.Rank;
+    import cardGame.GameConstants;
 
     @Test
     void testPlayerCanBeCreated() {
@@ -50,7 +51,7 @@ module PlayerTest {
     @Test
     void testCardMatchesEight() {
         // Test with eight (wildcard) - eight in first position matches
-        Card eight = new Card(Suit.Hearts, Rank.Eight);
+        Card eight = new Card(Suit.Hearts, GameConstants.SPECIAL_CARD);
         Card otherCard = new Card(Suit.Diamonds, Rank.Five);
         assert Player.cardMatches(eight, otherCard) as "Eight should match any card";
         // Note: Eight is only special in the first position according to cardMatches logic
@@ -101,10 +102,13 @@ module PlayerTest {
         Player player = new Player("Test Player");
         Suit[] suits = Suit.values;
         Rank[] ranks = Rank.values;
-        for (Int i : 0..<5) {
-            player.hand.addCard(new Card(suits[i % 4], ranks[i % 13]));
+        Int cardsToAdd = GameConstants.INITIAL_HAND_SIZE;
+        Int suitCount = suits.size;
+        Int rankCount = ranks.size;
+        for (Int i : 0..<cardsToAdd) {
+            player.hand.addCard(new Card(suits[i % suitCount], ranks[i % rankCount]));
         }
         
-        assert player.hand.size() == 5 as "Player hand should have 5 cards";
+        assert player.hand.size() == cardsToAdd as "Player hand should have " + cardsToAdd + " cards";
     }
 }

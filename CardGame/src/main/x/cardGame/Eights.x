@@ -7,17 +7,17 @@ class Eights {
     construct(String name1, String name2) {
         this.one         = new Player(name1);
         this.two         = new Player(name2);
-        this.drawPile    = new Hand("Draw Pile");
-        this.discardPile = new Hand("Discard Pile");
+        this.drawPile    = new Hand(GameConstants.DRAW_PILE_NAME);
+        this.discardPile = new Hand(GameConstants.DISCARD_PILE_NAME);
     } finally {
         initializeGame();
     }
 
     private void initializeGame() {
-        Deck deck = new Deck("Deck");
+        Deck deck = new Deck(GameConstants.DECK_NAME);
         deck.shuffle();
-        deck.deal(one.hand, 5);
-        deck.deal(two.hand, 5);
+        deck.deal(one.hand, GameConstants.INITIAL_HAND_SIZE);
+        deck.deal(two.hand, GameConstants.INITIAL_HAND_SIZE);
         deck.dealAll(drawPile);
         if (Card card := drawCard()) {
             discardPile.addCard(card);
@@ -29,7 +29,7 @@ class Eights {
     }
 
     void reshuffle() {
-        if (discardPile.size() <= 1) {
+        if (discardPile.size() <= GameConstants.MIN_DISCARD_PILE_FOR_RESHUFFLE) {
             return;
         }
         if (Card top := discardPile.popCard()) {
@@ -52,7 +52,7 @@ class Eights {
 
     void displayState() {
         @Inject Console console;
-        console.print("=============================");
+        console.print(GameConstants.DISPLAY_SEPARATOR);
         if (Card top := discardPile.getCard(discardPile.size() - 1)) {
             console.print($"Top of discard: {top}");
         }
@@ -83,7 +83,7 @@ class Eights {
             takeTurn(current);
             current = nextPlayer(current);
         }
-        console.print("=============================");
+        console.print(GameConstants.DISPLAY_SEPARATOR);
         if (one.hand.isEmpty()) {
             console.print($"{one.name} wins!");
         } else {

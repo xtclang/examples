@@ -8,18 +8,19 @@ module DeckTest {
     import cardGame.Deck;
     import cardGame.Suit;
     import cardGame.Rank;
+    import cardGame.GameConstants;
 
     @Test
     void testDeckHas52Cards() {
         Deck deck = new Deck("Standard Deck");
-        assert deck.size() == 52 as "Deck should have 52 cards";
+        assert deck.size() == GameConstants.DECK_SIZE as "Deck should have " + GameConstants.DECK_SIZE + " cards";
     }
 
     @Test
     void testDeckCanPopCard() {
         Deck deck = new Deck("Standard Deck");
         if (Card card := deck.popCard()) {
-            assert deck.size() == 51 as "Deck should have 51 cards after pop";
+            assert deck.size() == GameConstants.DECK_SIZE - 1 as "Deck should have " + (GameConstants.DECK_SIZE - 1) + " cards after pop";
         } else {
             assert False as "Pop should succeed on full deck";
         }
@@ -29,7 +30,7 @@ module DeckTest {
     void testDeckCanBeShuffled() {
         Deck deck = new Deck("Standard Deck");
         deck.shuffle();
-        assert deck.size() == 52 as "Deck should still have 52 cards after shuffle";
+        assert deck.size() == GameConstants.DECK_SIZE as "Deck should still have " + GameConstants.DECK_SIZE + " cards after shuffle";
     }
 
     @Test
@@ -37,9 +38,9 @@ module DeckTest {
         Deck deck = new Deck("Standard Deck");
         cardGame.Hand hand = new cardGame.Hand("Player Hand");
         
-        deck.deal(hand, 5);
-        assert deck.size() == 47 as "Deck should have 47 cards after dealing 5";
-        assert hand.size() == 5 as "Hand should have 5 cards";
+        deck.deal(hand, GameConstants.INITIAL_HAND_SIZE);
+        assert deck.size() == GameConstants.DECK_SIZE - GameConstants.INITIAL_HAND_SIZE as "Deck should have " + (GameConstants.DECK_SIZE - GameConstants.INITIAL_HAND_SIZE) + " cards after dealing " + GameConstants.INITIAL_HAND_SIZE;
+        assert hand.size() == GameConstants.INITIAL_HAND_SIZE as "Hand should have " + GameConstants.INITIAL_HAND_SIZE + " cards";
     }
 
     @Test
@@ -52,38 +53,45 @@ module DeckTest {
     @Test
     void testDeckHasAllSuits() {
         Deck deck = new Deck("Standard Deck");
-        Boolean[] suitFound = new Boolean[4];
-        for (Int i : 0..<4) {
+        Int suitCount = Suit.values.size;
+        Boolean[] suitFound = new Boolean[suitCount];
+        for (Int i : 0..<suitCount) {
             suitFound[i] = False;
         }
         
-        for (Int i : 0..<52) {
+        for (Int i : 0..<GameConstants.DECK_SIZE) {
             if (Card card := deck.getCard(i)) {
                 suitFound[card.suit.ordinal] = True;
             }
         }
         
-        assert suitFound[0] && suitFound[1] && suitFound[2] && suitFound[3] as
-            "Deck should have cards from all 4 suits";
+        Boolean allFound = True;
+        for (Int i : 0..<suitCount) {
+            allFound = allFound && suitFound[i];
+        }
+        assert allFound as "Deck should have cards from all " + suitCount + " suits";
     }
 
     @Test
     void testDeckHasAllRanks() {
         Deck deck = new Deck("Standard Deck");
-        Boolean[] rankFound = new Boolean[13];
-        for (Int i : 0..<13) {
+        Int rankCount = Rank.values.size;
+        Boolean[] rankFound = new Boolean[rankCount];
+        for (Int i : 0..<rankCount) {
             rankFound[i] = False;
         }
         
-        for (Int i : 0..<52) {
+        for (Int i : 0..<GameConstants.DECK_SIZE) {
             if (Card card := deck.getCard(i)) {
                 rankFound[card.rank.ordinal] = True;
             }
         }
         
-        for (Int rank : 0..12) {
-            assert rankFound[rank] as $"Deck should have cards with rank {rank}";
+        Boolean allFound = True;
+        for (Int i : 0..<rankCount) {
+            allFound = allFound && rankFound[i];
         }
+        assert allFound as "Deck should have cards from all " + rankCount + " ranks";
     }
 
     @Test
@@ -95,7 +103,7 @@ module DeckTest {
             count++;
         }
         
-        assert count == 52 as "Should be able to pop all 52 cards";
+        assert count == GameConstants.DECK_SIZE as "Should be able to pop all " + GameConstants.DECK_SIZE + " cards";
         assert deck.isEmpty() as "Deck should be empty";
     }
 }

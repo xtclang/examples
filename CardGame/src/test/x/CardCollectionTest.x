@@ -8,6 +8,7 @@ module CardCollectionTest {
     import cardGame.CardCollection;
     import cardGame.Suit;
     import cardGame.Rank;
+    import cardGame.GameConstants;
 
     @Test
     void testEmptyCollectionHasZeroSize() {
@@ -165,15 +166,19 @@ module CardCollectionTest {
         CardCollection collection = new CardCollection("Test");
         Suit[] suits = Suit.values;
         Rank[] ranks = Rank.values;
-        for (Int i : 0..<52) {
-            collection.addCard(new Card(suits[i / 13], ranks[i % 13]));
+        Int suitCount = suits.size;
+        Int rankCount = ranks.size;
+        Int expectedTotal = suitCount * rankCount;
+        
+        for (Int i : 0..<expectedTotal) {
+            collection.addCard(new Card(suits[i / rankCount], ranks[i % rankCount]));
         }
         
         // Store original order
         Int[] originalOrder = new Int[];
-        for (Int i : 0..<52) {
+        for (Int i : 0..<expectedTotal) {
             if (Card card := collection.getCard(i)) {
-                originalOrder.add(card.suit.ordinal * 13 + card.rank.ordinal);
+                originalOrder.add(card.suit.ordinal * rankCount + card.rank.ordinal);
             }
         }
         
@@ -181,6 +186,6 @@ module CardCollectionTest {
         collection.shuffle();
         
         // Verify all cards are still present
-        assert collection.size() == 52 as "Collection should still have 52 cards after shuffle";
+        assert collection.size() == expectedTotal as "Collection should still have " + expectedTotal + " cards after shuffle";
     }
 }

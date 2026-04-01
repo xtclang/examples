@@ -15,7 +15,7 @@ class CardCollection (String label){
     }
 
     conditional Card removeCard(Int index) {
-        if (0 <= index < cards.size) {
+        if (index < cards.size) {
             Card card = cards[index];
             cards.delete(index);
             return True, card;
@@ -29,7 +29,7 @@ class CardCollection (String label){
 
 
     conditional Card getCard(Int index) {
-        return 0 <= index < cards.size
+        return index < cards.size
                 ? (True, cards[index])
                 : False;
     }
@@ -39,7 +39,7 @@ class CardCollection (String label){
     }
 
     void swapCards(Int index1, Int index2) {
-        if (0 <= index1 < cards.size && 0 <= index2 < cards.size) {
+        if (index1 < cards.size && index2 < cards.size) {
               cards.swap(index1, index2);
         }
     }

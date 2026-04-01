@@ -2,8 +2,8 @@ class Deck extends CardCollection {
     construct(String label) {
         construct CardCollection(label);
     } finally {
-        for (Int suit : 0..<4 ) {
-            for (Int rank : 1..13) {
+        for (Suit suit : Suit.values) {
+            for (Rank rank : Rank.values) {
                 addCard(new Card(suit, rank));
             }
         }

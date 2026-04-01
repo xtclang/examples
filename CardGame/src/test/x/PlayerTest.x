@@ -7,6 +7,8 @@ module PlayerTest {
     import cardGame.Card;
     import cardGame.Player;
     import cardGame.Hand;
+    import cardGame.Suit;
+    import cardGame.Rank;
 
     @Test
     void testPlayerCanBeCreated() {
@@ -23,7 +25,7 @@ module PlayerTest {
     @Test
     void testPlayerCanHaveCards() {
         Player player = new Player("Charlie");
-        Card card = new Card(0, 5);
+        Card card = new Card(Suit.Hearts, Rank.Five);
         player.hand.addCard(card);
         
         assert player.hand.size() == 1 as "Player hand should have 1 card";
@@ -32,35 +34,35 @@ module PlayerTest {
     @Test
     void testCardMatches() {
         // Test same suit
-        Card card1 = new Card(0, 5);
-        Card card2 = new Card(0, 10);
+        Card card1 = new Card(Suit.Hearts, Rank.Five);
+        Card card2 = new Card(Suit.Hearts, Rank.Ten);
         assert Player.cardMatches(card1, card2) as "Cards with same suit should match";
     }
 
     @Test
     void testCardMatchesSameRank() {
         // Test same rank
-        Card card1 = new Card(0, 5);
-        Card card2 = new Card(2, 5);
+        Card card1 = new Card(Suit.Hearts, Rank.Five);
+        Card card2 = new Card(Suit.Clubs, Rank.Five);
         assert Player.cardMatches(card1, card2) as "Cards with same rank should match";
     }
 
     @Test
     void testCardMatchesEight() {
         // Test with eight (wildcard) - eight in first position matches
-        Card eight = new Card(0, 8);
-        Card otherCard = new Card(1, 5);
+        Card eight = new Card(Suit.Hearts, Rank.Eight);
+        Card otherCard = new Card(Suit.Diamonds, Rank.Five);
         assert Player.cardMatches(eight, otherCard) as "Eight should match any card";
         // Note: Eight is only special in the first position according to cardMatches logic
         // When eight is in second position, it only matches if suit or rank also match
-        assert Player.cardMatches(otherCard, new Card(0, 5)) as "Cards with same suit should match";
+        assert Player.cardMatches(otherCard, new Card(Suit.Hearts, Rank.Five)) as "Cards with same suit should match";
     }
 
     @Test
     void testCardDoesNotMatch() {
         // Test no match
-        Card card1 = new Card(0, 2);
-        Card card2 = new Card(1, 5);
+        Card card1 = new Card(Suit.Hearts, Rank.Two);
+        Card card2 = new Card(Suit.Diamonds, Rank.Five);
         assert !Player.cardMatches(card1, card2) as "Card with different suit and rank should not match";
     }
 
@@ -97,8 +99,10 @@ module PlayerTest {
     @Test
     void testPlayerCanAddMultipleCards() {
         Player player = new Player("Test Player");
+        Suit[] suits = Suit.values;
+        Rank[] ranks = Rank.values;
         for (Int i : 0..<5) {
-            player.hand.addCard(new Card(i % 4, (i % 13) + 1));
+            player.hand.addCard(new Card(suits[i % 4], ranks[i % 13]));
         }
         
         assert player.hand.size() == 5 as "Player hand should have 5 cards";

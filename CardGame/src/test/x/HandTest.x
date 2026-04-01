@@ -6,6 +6,8 @@ module HandTest {
 
     import cardGame.Card;
     import cardGame.Hand;
+    import cardGame.Suit;
+    import cardGame.Rank;
 
     @Test
     void testHandCanBeCreated() {
@@ -16,8 +18,8 @@ module HandTest {
     @Test
     void testHandCanAddCards() {
         Hand hand = new Hand("Test Hand");
-        Card card1 = new Card(0, 5);
-        Card card2 = new Card(1, 10);
+        Card card1 = new Card(Suit.Hearts, Rank.Five);
+        Card card2 = new Card(Suit.Diamonds, Rank.Ten);
         
         hand.addCard(card1);
         hand.addCard(card2);
@@ -28,7 +30,7 @@ module HandTest {
     @Test
     void testHandCanPopCards() {
         Hand hand = new Hand("Test Hand");
-        Card card = new Card(2, 7);
+        Card card = new Card(Suit.Clubs, Rank.Seven);
         hand.addCard(card);
         
         if (Card popped := hand.popCard()) {
@@ -42,9 +44,9 @@ module HandTest {
     @Test
     void testHandCanRemoveCards() {
         Hand hand = new Hand("Test Hand");
-        Card card1 = new Card(0, 1);
-        Card card2 = new Card(1, 2);
-        Card card3 = new Card(2, 3);
+        Card card1 = new Card(Suit.Hearts, Rank.Ace);
+        Card card2 = new Card(Suit.Diamonds, Rank.Two);
+        Card card3 = new Card(Suit.Clubs, Rank.Three);
         
         hand.addCard(card1);
         hand.addCard(card2);
@@ -62,7 +64,7 @@ module HandTest {
     void testHandCanBeCleared() {
         Hand hand = new Hand("Test Hand");
         for (Int i : 0..<5) {
-            hand.addCard(new Card(0, 1));
+            hand.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         
         hand.clear();
@@ -72,7 +74,7 @@ module HandTest {
     @Test
     void testHandCanGetCard() {
         Hand hand = new Hand("Test Hand");
-        Card card = new Card(3, 12);
+        Card card = new Card(Suit.Spades, Rank.Queen);
         hand.addCard(card);
         
         if (Card retrieved := hand.getCard(0)) {
@@ -85,8 +87,10 @@ module HandTest {
     @Test
     void testHandInheritsShuffle() {
         Hand hand = new Hand("Test Hand");
+        Suit[] suits = Suit.values;
+        Rank[] ranks = Rank.values;
         for (Int i : 0..<10) {
-            hand.addCard(new Card(i / 4, (i % 13) + 1));
+            hand.addCard(new Card(suits[i / 4], ranks[i % 13]));
         }
         
         hand.shuffle();

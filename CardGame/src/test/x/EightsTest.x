@@ -5,6 +5,8 @@ module EightsTest {
     import cardGame.Eights;
     import cardGame.Player;
     import cardGame.Hand;
+    import cardGame.Suit;
+    import cardGame.Rank;
 
     @Test
     void testInitialHandSizes() {
@@ -73,9 +75,9 @@ module EightsTest {
         }
 
         // Add several cards to discard pile
-        game.discardPile.addCard(new Card(0, 1));
-        game.discardPile.addCard(new Card(0, 2));
-        game.discardPile.addCard(new Card(0, 3));
+        game.discardPile.addCard(new Card(Suit.Hearts, Rank.Ace));
+        game.discardPile.addCard(new Card(Suit.Hearts, Rank.Two));
+        game.discardPile.addCard(new Card(Suit.Hearts, Rank.Three));
 
         Int discardBefore = game.discardPile.size();
         game.reshuffle();
@@ -96,7 +98,7 @@ module EightsTest {
         while (!game.discardPile.isEmpty()) {
             game.discardPile.popCard();
         }
-        game.discardPile.addCard(new Card(0, 1));
+        game.discardPile.addCard(new Card(Suit.Hearts, Rank.Ace));
 
         game.reshuffle();
         assert game.drawPile.isEmpty()         as "Draw pile should still be empty";
@@ -113,8 +115,8 @@ module EightsTest {
         }
 
         // Add cards to discard so reshuffle has something to work with
-        game.discardPile.addCard(new Card(1, 5));
-        game.discardPile.addCard(new Card(2, 7));
+        game.discardPile.addCard(new Card(Suit.Diamonds, Rank.Five));
+        game.discardPile.addCard(new Card(Suit.Clubs, Rank.Seven));
 
         // drawCard should trigger reshuffle and still return a card
         if (Card card := game.drawCard()) {

@@ -6,6 +6,8 @@ module DeckTest {
 
     import cardGame.Card;
     import cardGame.Deck;
+    import cardGame.Suit;
+    import cardGame.Rank;
 
     @Test
     void testDeckHas52Cards() {
@@ -57,9 +59,7 @@ module DeckTest {
         
         for (Int i : 0..<52) {
             if (Card card := deck.getCard(i)) {
-                if (0 <= card.suit < 4) {
-                    suitFound[card.suit] = True;
-                }
+                suitFound[card.suit.ordinal] = True;
             }
         }
         
@@ -70,20 +70,18 @@ module DeckTest {
     @Test
     void testDeckHasAllRanks() {
         Deck deck = new Deck("Standard Deck");
-        Boolean[] rankFound = new Boolean[14];
-        for (Int i : 0..<14) {
+        Boolean[] rankFound = new Boolean[13];
+        for (Int i : 0..<13) {
             rankFound[i] = False;
         }
         
         for (Int i : 0..<52) {
             if (Card card := deck.getCard(i)) {
-                if (1 <= card.rank <= 13) {
-                    rankFound[card.rank] = True;
-                }
+                rankFound[card.rank.ordinal] = True;
             }
         }
         
-        for (Int rank : 1..13) {
+        for (Int rank : 0..12) {
             assert rankFound[rank] as $"Deck should have cards with rank {rank}";
         }
     }

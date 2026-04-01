@@ -6,6 +6,8 @@ module CardCollectionTest {
 
     import cardGame.Card;
     import cardGame.CardCollection;
+    import cardGame.Suit;
+    import cardGame.Rank;
 
     @Test
     void testEmptyCollectionHasZeroSize() {
@@ -22,7 +24,7 @@ module CardCollectionTest {
     @Test
     void testAddCardIncreasesSize() {
         CardCollection collection = new CardCollection("Test");
-        Card card = new Card(0, 5);
+        Card card = new Card(Suit.Hearts, Rank.Five);
         collection.addCard(card);
         assert collection.size() == 1 as "Size should be 1 after adding one card";
     }
@@ -30,8 +32,10 @@ module CardCollectionTest {
     @Test
     void testAddMultipleCards() {
         CardCollection collection = new CardCollection("Test");
+        Suit[] suits = Suit.values;
+        Rank[] ranks = Rank.values;
         for (Int i : 0..<5) {
-            collection.addCard(new Card(i % 4, (i % 13) + 1));
+            collection.addCard(new Card(suits[i % 4], ranks[i % 13]));
         }
         assert collection.size() == 5 as "Collection should have 5 cards";
     }
@@ -39,7 +43,7 @@ module CardCollectionTest {
     @Test
     void testPopCardRemovesCard() {
         CardCollection collection = new CardCollection("Test");
-        Card card = new Card(1, 7);
+        Card card = new Card(Suit.Diamonds, Rank.Seven);
         collection.addCard(card);
         
         if (Card popped := collection.popCard()) {
@@ -59,9 +63,9 @@ module CardCollectionTest {
     @Test
     void testRemoveCardByIndex() {
         CardCollection collection = new CardCollection("Test");
-        Card card1 = new Card(0, 1);
-        Card card2 = new Card(1, 2);
-        Card card3 = new Card(2, 3);
+        Card card1 = new Card(Suit.Hearts, Rank.Ace);
+        Card card2 = new Card(Suit.Diamonds, Rank.Two);
+        Card card3 = new Card(Suit.Clubs, Rank.Three);
         collection.addCard(card1);
         collection.addCard(card2);
         collection.addCard(card3);
@@ -77,14 +81,14 @@ module CardCollectionTest {
     @Test
     void testRemoveCardInvalidIndexReturnsFalse() {
         CardCollection collection = new CardCollection("Test");
-        collection.addCard(new Card(0, 1));
+        collection.addCard(new Card(Suit.Hearts, Rank.Ace));
         assert !(collection.removeCard(5)) as "Remove with invalid index should return False";
     }
 
     @Test
     void testGetCard() {
         CardCollection collection = new CardCollection("Test");
-        Card card = new Card(3, 10);
+        Card card = new Card(Suit.Spades, Rank.Ten);
         collection.addCard(card);
         
         if (Card retrieved := collection.getCard(0)) {
@@ -97,7 +101,7 @@ module CardCollectionTest {
     @Test
     void testGetCardInvalidIndexReturnsFalse() {
         CardCollection collection = new CardCollection("Test");
-        collection.addCard(new Card(0, 1));
+        collection.addCard(new Card(Suit.Hearts, Rank.Ace));
         assert !(collection.getCard(10)) as "GetCard with invalid index should return False";
     }
 
@@ -105,7 +109,7 @@ module CardCollectionTest {
     void testClear() {
         CardCollection collection = new CardCollection("Test");
         for (Int i : 0..<10) {
-            collection.addCard(new Card(0, 1));
+            collection.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         collection.clear();
         assert collection.isEmpty() as "Collection should be empty after clear";
@@ -115,8 +119,8 @@ module CardCollectionTest {
     @Test
     void testSwapCards() {
         CardCollection collection = new CardCollection("Test");
-        Card card1 = new Card(0, 1);
-        Card card2 = new Card(1, 2);
+        Card card1 = new Card(Suit.Hearts, Rank.Ace);
+        Card card2 = new Card(Suit.Diamonds, Rank.Two);
         collection.addCard(card1);
         collection.addCard(card2);
         
@@ -134,7 +138,7 @@ module CardCollectionTest {
         CardCollection destination = new CardCollection("Destination");
         
         for (Int i : 0..<5) {
-            source.addCard(new Card(0, 1));
+            source.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         
         source.deal(destination, 3);
@@ -148,7 +152,7 @@ module CardCollectionTest {
         CardCollection destination = new CardCollection("Destination");
         
         for (Int i : 0..<5) {
-            source.addCard(new Card(0, 1));
+            source.addCard(new Card(Suit.Hearts, Rank.Ace));
         }
         
         source.dealAll(destination);
@@ -159,15 +163,17 @@ module CardCollectionTest {
     @Test
     void testShuffle() {
         CardCollection collection = new CardCollection("Test");
+        Suit[] suits = Suit.values;
+        Rank[] ranks = Rank.values;
         for (Int i : 0..<52) {
-            collection.addCard(new Card(i / 13, (i % 13) + 1));
+            collection.addCard(new Card(suits[i / 13], ranks[i % 13]));
         }
         
         // Store original order
         Int[] originalOrder = new Int[];
         for (Int i : 0..<52) {
             if (Card card := collection.getCard(i)) {
-                originalOrder.add(card.suit * 13 + card.rank);
+                originalOrder.add(card.suit.ordinal * 13 + card.rank.ordinal);
             }
         }
         

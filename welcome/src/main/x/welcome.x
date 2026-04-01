@@ -10,12 +10,20 @@ module welcome.examples.org {
 
     @WebService("/welcome")
     service SimpleApi {
+        @Inject Client client;
         @Inject db.WelcomeSchema schema;
 
         @Get("org")
         String organization() {
             @Inject String org;
             return org;
+        }
+
+        @Get("info")
+        @Produces(Text)
+        String callerInfo(RequestIn request) {
+            ResponseIn response = client.get($"http://ip-api.com/json/{request.client}");
+            return response.body?.bytes.unpackUtf8() : "";
         }
 
         @Get("count")

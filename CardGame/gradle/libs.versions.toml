@@ -1,0 +1,8 @@
+[versions]
+xtc = "0.4.4-SNAPSHOT"
+
+[plugins]
+xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc" }
+
+[libraries]
+xdk = { module = "org.xtclang:xdk", version.ref = "xtc" }

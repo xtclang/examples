@@ -15,7 +15,7 @@ class GameConstants {
     /**
      * The card rank that acts as a wild card (can be played on any card).
      */
-    static Rank SPECIAL_CARD = Rank.Eight;
+    static Rank SPECIAL_CARD = Eight;
 
     /**
      * Minimum number of cards that must remain in the discard pile

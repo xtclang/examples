@@ -11,6 +11,6 @@ class Hand extends CardCollection {
                 console.print(card);
             }
         }
-        console.print("");
+        console.print();
     }
 }

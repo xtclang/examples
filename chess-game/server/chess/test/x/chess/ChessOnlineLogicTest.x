@@ -93,8 +93,10 @@ module ChessOnlineLogicTest {
         @Test
         void shouldGenerateUniqueRoomCodes() {
             Random random = new ecstasy.numbers.PseudoRandom();
-            (OnlineGame game1, String _) = OnlineChessLogic.createNewRoom(random, (String code) -> False);
-            (OnlineGame game2, String _) = OnlineChessLogic.createNewRoom(random, (String code) -> False);
+            val result1 = OnlineChessLogic.createNewRoom(random, (String code) -> False);
+            OnlineGame game1 = result1[0];
+            val result2 = OnlineChessLogic.createNewRoom(random, (String code) -> False);
+            OnlineGame game2 = result2[0];
             // Room codes should be 6 characters
             assert game1.roomCode.size == 6;
             assert game2.roomCode.size == 6;

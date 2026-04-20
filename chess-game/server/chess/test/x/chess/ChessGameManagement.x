@@ -1,5 +1,5 @@
 /**
- * Chess Game Management CLI — Functional test tool.
+ * Chess Game Management CLI - Functional test tool.
  *
  * Exercises all chess REST API endpoints (single-player, online multiplayer, chat)
  * from the command line using the `@TerminalApp` / `@Command` pattern.
@@ -9,9 +9,9 @@
  *   - Type a command at the prompt (e.g. "new-game", "move e2 e4").
  *
  * Endpoint mapping:
- *   ChessApi        → /api/...
- *   OnlineChessApi  → /api/online/...
- *   ChatApi         → /api/chat/...
+ *   ChessApi        -> /api/...
+ *   OnlineChessApi  -> /api/online/...
+ *   ChatApi         -> /api/chat/...
  */
 @TerminalApp("Chess Game Management CLI", "Chess>")
 module ChessGameManagement.examples.org {
@@ -20,7 +20,7 @@ module ChessGameManagement.examples.org {
     import webcli.*;
 
     // =====================================================================
-    //  Single-player commands — ChessApi (/api)
+    //  Single-player commands - ChessApi (/api)
     // =====================================================================
 
     /**
@@ -60,7 +60,7 @@ module ChessGameManagement.examples.org {
     String reset(String sessionId) = post($"api/reset/{sessionId}");
 
     // =====================================================================
-    //  Online multiplayer commands — OnlineChessApi (/api/online)
+    //  Online multiplayer commands - OnlineChessApi (/api/online)
     // =====================================================================
 
     /**
@@ -111,7 +111,7 @@ module ChessGameManagement.examples.org {
         get($"api/online/validmoves/{roomCode}/{playerId}/{square}");
 
     // =====================================================================
-    //  Chat commands — ChatApi (/api/chat)
+    //  Chat commands - ChatApi (/api/chat)
     // =====================================================================
 
     /**
@@ -146,17 +146,21 @@ module ChessGameManagement.examples.org {
      */
     @Command("new-timed-game", "Start a timed game (sessionId timeMs incrementMs)")
     String newTimedGame(String sessionId, String timeMs, String incrementMs) =
-        post($"api/reset/{sessionId}", $|\{"timeControlMs":{timeMs},"incrementMs":{incrementMs}\});
+        post($|api/reset/{sessionId}
+            , $|\{"timeControlMs":{timeMs},"incrementMs":{incrementMs}\}
+            );
 
     /**
      * Create an online room with time control.
      */
     @Command("create-timed-room", "Create timed online room (timeMs incrementMs)")
     String createTimedRoom(String timeMs, String incrementMs) =
-        post("api/online/create", $|\{"timeControlMs":{timeMs},"incrementMs":{incrementMs}\});
+        post($|api/online/create
+            , $|\{"timeControlMs":{timeMs},"incrementMs":{incrementMs}\}
+            );
 
     // =====================================================================
-    //  Full game flow commands — execute multiple moves in sequence
+    //  Full game flow commands - execute multiple moves in sequence
     // =====================================================================
 
     /**

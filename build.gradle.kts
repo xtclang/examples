@@ -20,6 +20,14 @@ dependencies {
     xtcModule(projects.welcome)
     xtcModule(projects.banking)
     xtcModule(projects.counter)
+
+    // Chess-game is an included composite build. Gradle's composite-build
+    // dependency substitution routes these coordinate-based deps to the
+    // matching subprojects (org.xtclang.examples:app -> :chess-game:app,
+    // :db -> :chess-game:db). That brings chess.xtc and chessDB.xtc into
+    // the root's xtcModule configuration so installDist picks them up.
+    xtcModule("org.xtclang.examples:app")
+    xtcModule("org.xtclang.examples:db")
 }
 
 /**

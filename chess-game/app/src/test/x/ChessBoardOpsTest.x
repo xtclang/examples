@@ -90,9 +90,9 @@ module ChessBoardOpsTest {
                            "PPPPPPPP" +
                            "RNBQKBNR";
             Char[] array = BoardUtils.cloneBoard(board);
-            Int[] pawns = BoardOperations.findPieces(array, 'P');
+            Int[] pawns = BoardOperations.findPieces(array, 'P', Color.White);
             assert pawns.size == 8;
-            Int[] knights = BoardOperations.findPieces(array, 'N');
+            Int[] knights = BoardOperations.findPieces(array, 'N', Color.White);
             assert knights.size == 2;
         }
 

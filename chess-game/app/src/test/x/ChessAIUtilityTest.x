@@ -48,14 +48,14 @@ module ChessAIUtilityTest {
             GameRecord game = ChessLogic.defaultGame();
             String fen = AIUtility.boardToFen(game);
             // Should contain White's turn
-            assert fen.indexOf(" w ") >= 0;
+            assert fen.indexOf(" w ");
             // Should contain full castling rights
-            assert fen.indexOf("KQkq") >= 0;
+            assert fen.indexOf("KQkq");
 
             // After a move, turn should switch
             GameRecord afterE4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null).record;
             String fenAfterE4 = AIUtility.boardToFen(afterE4);
-            assert fenAfterE4.indexOf(" b ") >= 0;
+            assert fenAfterE4.indexOf(" b ");
         }
 
         @Test

@@ -35,12 +35,12 @@ module ChessDBPieceTest {
             Piece queen;
             Piece king;
 
-            if (Piece p ?= PieceFactory.createPiece('p', Color.White)) { pawn = p; } else { assert False; }
-            if (Piece n ?= PieceFactory.createPiece('n', Color.Black)) { knight = n; } else { assert False; }
-            if (Piece b ?= PieceFactory.createPiece('b', Color.White)) { bishop = b; } else { assert False; }
-            if (Piece r ?= PieceFactory.createPiece('r', Color.Black)) { rook = r; } else { assert False; }
-            if (Piece q ?= PieceFactory.createPiece('q', Color.White)) { queen = q; } else { assert False; }
-            if (Piece k ?= PieceFactory.createPiece('k', Color.Black)) { king = k; } else { assert False; }
+            if (Piece p := PieceFactory.createPiece('p', Color.White)) { pawn = p; } else { assert False; }
+            if (Piece n := PieceFactory.createPiece('n', Color.Black)) { knight = n; } else { assert False; }
+            if (Piece b := PieceFactory.createPiece('b', Color.White)) { bishop = b; } else { assert False; }
+            if (Piece r := PieceFactory.createPiece('r', Color.Black)) { rook = r; } else { assert False; }
+            if (Piece q := PieceFactory.createPiece('q', Color.White)) { queen = q; } else { assert False; }
+            if (Piece k := PieceFactory.createPiece('k', Color.Black)) { king = k; } else { assert False; }
 
             assert pawn.getChar() == 'p';
             assert knight.getChar() == 'N';

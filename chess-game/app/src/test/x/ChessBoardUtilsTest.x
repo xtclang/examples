@@ -30,7 +30,7 @@ module ChessBoardUtilsTest {
 
         @Test
         void shouldCloneAndSplitBoardRows() {
-            String board = "rnbqkbnr" +
+            val board = "rnbqkbnr" +
                            "pppppppp" +
                            "........" +
                            "........" +
@@ -38,7 +38,7 @@ module ChessBoardUtilsTest {
                            "........" +
                            "PPPPPPPP" +
                            "RNBQKBNR";
-            Char[] clone = BoardUtils.cloneBoard(board);
+            val clone = BoardUtils.cloneBoard(board);
             clone[0] = '.';
             assert board[0] == 'r';
             assert BoardUtils.boardRows(board)[0] == "rnbqkbnr";
@@ -69,7 +69,7 @@ module ChessBoardUtilsTest {
 
         @Test
         void shouldCheckRayAndPathBlocking() {
-            Char[] board = BoardUtils.cloneBoard("rnbqkbnr" +
+            val board = BoardUtils.cloneBoard("rnbqkbnr" +
                                                 "pppppppp" +
                                                 "........" +
                                                 "........" +
@@ -86,7 +86,7 @@ module ChessBoardUtilsTest {
             board[48] = '.';
             assert DirectionUtils.isPathClear(0, 56, board);
 
-            Int[] ray = DirectionUtils.getRaySquares(0, DirectionUtils.SOUTH, 3);
+            val ray = DirectionUtils.getRaySquares(0, DirectionUtils.SOUTH, 3);
             assert ray.size == 3;
             assert ray[0] == 8;
             assert ray[2] == 24;

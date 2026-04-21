@@ -205,7 +205,8 @@ service ChessApi {
                    Int opponentScore,
                    Boolean opponentPending,
                    TimeControl? timeControl = Null,
-                   MoveHistoryEntry[] moveHistory = []);
+                   MoveHistoryEntry[] moveHistory = [],
+                   String sessionId = "");
 
 
     // ----- Helper Methods ------------------------------------------------------
@@ -289,7 +290,8 @@ service ChessApi {
                 record.opponentScore,                 // Black's capture count
                 pending,                              // Is opponent thinking?
                 adjustedTc,                           // Time control with current remaining time
-                record.moveHistory);                  // Complete move history
+                record.moveHistory,                   // Complete move history
+                sessionId);                           // Echo sessionId for client sanity-check
     }
 
     /**

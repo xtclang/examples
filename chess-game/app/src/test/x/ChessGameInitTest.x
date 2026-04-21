@@ -18,26 +18,26 @@ module ChessGameInitTest {
     class GameInitializationTests {
         @Test
         void shouldCreateDefaultAndResetGames() {
-            String board = ChessLogic.defaultBoard();
+            val board = ChessLogic.defaultBoard();
             assert board.size == 64;
             assert ChessLogic.boardRows(board)[0] == "rnbqkbnr";
             assert ChessLogic.boardRows(board)[7] == "RNBQKBNR";
 
-            GameRecord game = ChessLogic.defaultGame();
+            val game = ChessLogic.defaultGame();
             assert game.board == board;
             assert game.turn == Color.White;
             assert game.status == GameStatus.Ongoing;
             assert game.castlingRights.whiteKingside;
             assert game.moveHistory.empty;
 
-            GameRecord reset = ChessLogic.resetGame();
+            val reset = ChessLogic.resetGame();
             assert reset.board == board;
             assert reset.turn == Color.White;
         }
 
         @Test
         void shouldHaveCorrectInitialPiecePlacement() {
-            GameRecord game = ChessLogic.defaultGame();
+            val game = ChessLogic.defaultGame();
             // Black back rank
             assert game.board[0] == 'r';
             assert game.board[4] == 'k';
@@ -60,7 +60,7 @@ module ChessGameInitTest {
 
         @Test
         void shouldHaveAllCastlingRightsAndZeroClocks() {
-            GameRecord game = ChessLogic.defaultGame();
+            val game = ChessLogic.defaultGame();
             assert game.castlingRights.whiteKingside;
             assert game.castlingRights.whiteQueenside;
             assert game.castlingRights.blackKingside;
@@ -75,8 +75,8 @@ module ChessGameInitTest {
 
         @Test
         void shouldApplyAStandardPawnMove() {
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome result = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val game = ChessLogic.defaultGame();
+            val result = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert result.ok;
             assert result.record.turn == Color.Black;
             assert result.record.lastMove == "e2e4";
@@ -87,8 +87,8 @@ module ChessGameInitTest {
 
         @Test
         void shouldRejectInvalidHumanMoveInput() {
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome result = ChessLogic.applyHumanMove(game, "zz", "e4", Null);
+            val game = ChessLogic.defaultGame();
+            val result = ChessLogic.applyHumanMove(game, "zz", "e4", Null);
             assert !result.ok;
             assert result.message == "Invalid square format";
         }
@@ -96,18 +96,18 @@ module ChessGameInitTest {
         @Test
         void shouldRejectMoveWhenGameIsAlreadyFinished() {
             // Create a game record with Checkmate status
-            GameRecord finished = new GameRecord(
+            val finished = new GameRecord(
                 ChessLogic.defaultBoard(), Color.White, GameStatus.Checkmate, Null,
                 0, 0, new CastlingRights(), Null, [], Null, 0);
-            MoveOutcome result = ChessLogic.applyHumanMove(finished, "e2", "e4", Null);
+            val result = ChessLogic.applyHumanMove(finished, "e2", "e4", Null);
             assert !result.ok;
             assert result.message == "Game already finished";
 
             // Same for Stalemate
-            GameRecord stale = new GameRecord(
+            val stale = new GameRecord(
                 ChessLogic.defaultBoard(), Color.White, GameStatus.Stalemate, Null,
                 0, 0, new CastlingRights(), Null, [], Null, 0);
-            MoveOutcome staleResult = ChessLogic.applyHumanMove(stale, "e2", "e4", Null);
+            val staleResult = ChessLogic.applyHumanMove(stale, "e2", "e4", Null);
             assert !staleResult.ok;
             assert staleResult.message == "Game already finished";
         }
@@ -115,7 +115,7 @@ module ChessGameInitTest {
         @Test
         void shouldFormatMoveNotation() {
             assert ChessLogic.createMoveNotation('P', 52, 36, False, Null, False, False, Null) == "e4";
-            assert ChessLogic.createMoveNotation('N', 62, 45, False, Null, True, False, Null) == "Ne3+";
+            assert ChessLogic.createMoveNotation('N', 62, 45, False, Null, True, False, Null) == "Nf3+";
             assert ChessLogic.createMoveNotation('K', 60, 62, False, Null, False, False, "O-O") == "O-O";
             assert ChessLogic.createMoveNotation('p', 8, 0, False, 'Q', False, True, Null) == "a8=Q#";
         }
@@ -125,7 +125,7 @@ module ChessGameInitTest {
             // Pawn capture
             assert ChessLogic.createMoveNotation('P', 52, 43, True, Null, False, False, Null) == "xd3";
             // Knight capture with check
-            assert ChessLogic.createMoveNotation('N', 62, 45, True, Null, True, False, Null) == "Nxe3+";
+            assert ChessLogic.createMoveNotation('N', 62, 45, True, Null, True, False, Null) == "Nxf3+";
             // Queen capture with checkmate
             assert ChessLogic.createMoveNotation('Q', 59, 4, True, Null, False, True, Null) == "Qxe8#";
         }
@@ -143,7 +143,7 @@ module ChessGameInitTest {
         @Test
         void shouldDetectMissingKingAsCheckmate() {
             // Board with no black king
-            String noBlackKing = "rnbq.bnr" +
+            val noBlackKing = "rnbq.bnr" +
                                  "pppppppp" +
                                  "........" +
                                  "........" +
@@ -156,7 +156,7 @@ module ChessGameInitTest {
 
         @Test
         void shouldDetectLoneKingsAsStalemate() {
-            String loneKings = "....k..." +
+            val loneKings = "....k..." +
                                "........" +
                                "........" +
                                "........" +

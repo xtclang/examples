@@ -19,7 +19,7 @@ module ChessPieceValidatorTest {
         @Disabled("PieceValidator.isValidRookMove(63, 55) returns True but test expects False — chess-logic bug")
         @Test
         void shouldValidateBasicPieceMovement() {
-            Char[] board = BoardUtils.cloneBoard(ChessLogic.defaultBoard());
+            val board = BoardUtils.cloneBoard(ChessLogic.defaultBoard());
 
             assert PieceValidator.isValidPawnMove('P', 52, 36, board, Null);
             assert PieceValidator.isValidKnightMove(62, 45);
@@ -31,7 +31,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldValidatePawnCaptureAndEnPassant() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[28] = 'P'; // e5
             board[27] = 'p'; // d5
             assert PieceValidator.isValidPawnMove('P', 28, 19, board, "d6");
@@ -40,7 +40,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldValidateCastlingRules() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -48,14 +48,14 @@ module ChessPieceValidatorTest {
                                                 "........" +
                                                 "........" +
                                                 "R...K..R");
-            CastlingRights rights = new CastlingRights(True, True, True, True);
+            val rights = new CastlingRights(True, True, True, True);
             assert PieceValidator.isValidCastling(Color.White, 60, 62, board, rights);
             assert PieceValidator.isValidCastling(Color.Black, 4, 6, board, rights);
         }
 
         @Test
         void shouldRejectIllegalPieceMoves() {
-            Char[] board = BoardUtils.cloneBoard(ChessLogic.defaultBoard());
+            val board = BoardUtils.cloneBoard(ChessLogic.defaultBoard());
             assert !PieceValidator.isLegal('P', 52, 53, board, new CastlingRights(), Null);
             assert !PieceValidator.isLegal('B', 58, 50, board, new CastlingRights(), Null);
             assert !PieceValidator.isLegal('K', 60, 44, board, new CastlingRights(), Null);
@@ -63,7 +63,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldValidateBishopDiagonalOnOpenBoard() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[0] = 'k';
             board[63] = 'K';
             board[35] = 'B'; // d4
@@ -77,7 +77,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldValidateRookStraightMovesOnOpenBoard() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[0] = 'k';
             board[63] = 'K';
             board[35] = 'R'; // d4
@@ -92,7 +92,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldValidateQueenCombinedMovement() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[0] = 'k';
             board[63] = 'K';
             board[35] = 'Q'; // d4
@@ -122,7 +122,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldRejectCastlingWhenPathIsBlocked() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -130,7 +130,7 @@ module ChessPieceValidatorTest {
                                                 "........" +
                                                 "........" +
                                                 "R..QK..R");
-            CastlingRights rights = new CastlingRights(True, True, True, True);
+            val rights = new CastlingRights(True, True, True, True);
             // White queenside blocked by queen on d1
             assert !PieceValidator.isValidCastling(Color.White, 60, 58, board, rights);
             // White kingside should still work
@@ -139,7 +139,7 @@ module ChessPieceValidatorTest {
 
         @Test
         void shouldRejectCastlingWithoutRights() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -147,14 +147,14 @@ module ChessPieceValidatorTest {
                                                 "........" +
                                                 "........" +
                                                 "R...K..R");
-            CastlingRights noRights = new CastlingRights(False, False, False, False);
+            val noRights = new CastlingRights(False, False, False, False);
             assert !PieceValidator.isValidCastling(Color.White, 60, 62, board, noRights);
             assert !PieceValidator.isValidCastling(Color.Black, 4, 6, board, noRights);
         }
 
         @Test
         void shouldRejectPawnMoveBackward() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[0] = 'k';
             board[63] = 'K';
             board[36] = 'P'; // White pawn on e4

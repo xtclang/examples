@@ -19,20 +19,20 @@ module ChessGamePlayTest {
         @Test
         void shouldReachScholarsMate() {
             // Scholar's mate: 1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6?? 4. Qxf7#
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome e4   = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val game = ChessLogic.defaultGame();
+            val e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert e4.ok;
-            MoveOutcome e5   = ChessLogic.applyHumanMove(e4.record, "e7", "e5", Null);
+            val e5 = ChessLogic.applyHumanMove(e4.record, "e7", "e5", Null);
             assert e5.ok;
-            MoveOutcome bc4  = ChessLogic.applyHumanMove(e5.record, "f1", "c4", Null);
+            val bc4 = ChessLogic.applyHumanMove(e5.record, "f1", "c4", Null);
             assert bc4.ok;
-            MoveOutcome nc6  = ChessLogic.applyHumanMove(bc4.record, "b8", "c6", Null);
+            val nc6 = ChessLogic.applyHumanMove(bc4.record, "b8", "c6", Null);
             assert nc6.ok;
-            MoveOutcome qh5  = ChessLogic.applyHumanMove(nc6.record, "d1", "h5", Null);
+            val qh5 = ChessLogic.applyHumanMove(nc6.record, "d1", "h5", Null);
             assert qh5.ok;
-            MoveOutcome nf6  = ChessLogic.applyHumanMove(qh5.record, "g8", "f6", Null);
+            val nf6 = ChessLogic.applyHumanMove(qh5.record, "g8", "f6", Null);
             assert nf6.ok;
-            MoveOutcome qxf7 = ChessLogic.applyHumanMove(nf6.record, "h5", "f7", Null);
+            val qxf7 = ChessLogic.applyHumanMove(nf6.record, "h5", "f7", Null);
             assert qxf7.ok;
             assert qxf7.record.status == GameStatus.Checkmate;
             assert qxf7.record.turn == Color.Black;
@@ -40,31 +40,31 @@ module ChessGamePlayTest {
 
         @Test
         void shouldTrackHalfMoveClockForFiftyMoveRule() {
-            GameRecord game = ChessLogic.defaultGame();
+            val game = ChessLogic.defaultGame();
             assert game.halfMoveClock == 0;
             // Pawn move resets clock
-            MoveOutcome e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert e4.record.halfMoveClock == 0;
             // Knight move increments clock
-            MoveOutcome nc6 = ChessLogic.applyHumanMove(e4.record, "b8", "c6", Null);
+            val nc6 = ChessLogic.applyHumanMove(e4.record, "b8", "c6", Null);
             assert nc6.record.halfMoveClock == 1;
         }
 
         @Test
         void shouldUpdateScoresOnCapture() {
             // Set up a position where White can capture
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome e4  = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
-            MoveOutcome d5  = ChessLogic.applyHumanMove(e4.record, "d7", "d5", Null);
-            MoveOutcome exd = ChessLogic.applyHumanMove(d5.record, "e4", "d5", Null);
+            val game = ChessLogic.defaultGame();
+            val e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val d5 = ChessLogic.applyHumanMove(e4.record, "d7", "d5", Null);
+            val exd = ChessLogic.applyHumanMove(d5.record, "e4", "d5", Null);
             assert exd.ok;
             assert exd.record.playerScore == 1;
         }
 
         @Test
         void shouldBuildMoveHistoryCorrectly() {
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val game = ChessLogic.defaultGame();
+            val e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert e4.record.moveHistory.size == 1;
             MoveHistoryEntry entry = e4.record.moveHistory[0];
             assert entry.moveNumber == 1;
@@ -74,7 +74,7 @@ module ChessGamePlayTest {
             assert entry.piece == 'P';
             assert entry.capturedPiece == Null;
 
-            MoveOutcome e5 = ChessLogic.applyHumanMove(e4.record, "e7", "e5", Null);
+            val e5 = ChessLogic.applyHumanMove(e4.record, "e7", "e5", Null);
             assert e5.record.moveHistory.size == 2;
             MoveHistoryEntry entry2 = e5.record.moveHistory[1];
             assert entry2.color == Color.Black;
@@ -87,28 +87,28 @@ module ChessGamePlayTest {
     class AutoMoveTests {
         @Test
         void shouldRejectAutoMoveWhenNotBlacksTurn() {
-            GameRecord game = ChessLogic.defaultGame(); // White's turn
-            AutoResponse result = ChessLogic.autoMove(game, 12, 28, Null);
+            val game = ChessLogic.defaultGame(); // White's turn
+            val result = ChessLogic.autoMove(game, 12, 28, Null);
             assert !result.moved;
             assert result.message == "Ready for a move";
         }
 
         @Test
         void shouldRejectAutoMoveWhenGameIsOver() {
-            GameRecord finished = new GameRecord(
+            val finished = new GameRecord(
                 ChessLogic.defaultBoard(), Color.Black, GameStatus.Checkmate, Null,
                 0, 0, new CastlingRights(), Null, [], Null, 0);
-            AutoResponse result = ChessLogic.autoMove(finished, 12, 28, Null);
+            val result = ChessLogic.autoMove(finished, 12, 28, Null);
             assert !result.moved;
         }
 
         @Test
         void shouldApplyAutoMoveWhenBlacksTurn() {
             // After e4, it's Black's turn
-            GameRecord afterE4 = ChessLogic.applyHumanMove(ChessLogic.defaultGame(), "e2", "e4", Null).record;
+            val afterE4 = ChessLogic.applyHumanMove(ChessLogic.defaultGame(), "e2", "e4", Null).record;
             assert afterE4.turn == Color.Black;
             // Apply a valid Black move (e7-e5 = indices 12 -> 28)
-            AutoResponse result = ChessLogic.autoMove(afterE4, 12, 28, Null);
+            val result = ChessLogic.autoMove(afterE4, 12, 28, Null);
             assert result.moved;
             assert result.record.turn == Color.White;
             assert result.record.board[28] == 'p';
@@ -117,8 +117,8 @@ module ChessGamePlayTest {
         @Test
         void shouldHandleNoLegalMovesInAutoMove() {
             // After e4, it's Black's turn - pass invalid indices to signal no legal moves
-            GameRecord afterE4 = ChessLogic.applyHumanMove(ChessLogic.defaultGame(), "e2", "e4", Null).record;
-            AutoResponse result = ChessLogic.autoMove(afterE4, -1, -1, Null);
+            val afterE4 = ChessLogic.applyHumanMove(ChessLogic.defaultGame(), "e2", "e4", Null).record;
+            val result = ChessLogic.autoMove(afterE4, -1, -1, Null);
             assert !result.moved;
             assert result.message == "No legal moves";
         }

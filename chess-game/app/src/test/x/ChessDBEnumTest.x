@@ -27,7 +27,7 @@ module ChessDBEnumTest {
 
         @Test
         void shouldConstructCastlingRightsWithDefaults() {
-            CastlingRights rights = new CastlingRights();
+            val rights = new CastlingRights();
             assert rights.whiteKingside;
             assert rights.whiteQueenside;
             assert rights.blackKingside;
@@ -37,20 +37,20 @@ module ChessDBEnumTest {
 
         @Test
         void shouldConstructCastlingRightsWithCustomValues() {
-            CastlingRights noWhite = new CastlingRights(False, False, True, True);
+            val noWhite = new CastlingRights(False, False, True, True);
             assert !noWhite.whiteKingside;
             assert !noWhite.whiteQueenside;
             assert noWhite.blackKingside;
             assert noWhite.blackQueenside;
 
-            CastlingRights none = new CastlingRights(False, False, False, False);
+            val none = new CastlingRights(False, False, False, False);
             assert !none.whiteKingside;
             assert !none.blackQueenside;
         }
 
         @Test
         void shouldConstructTimeControl() {
-            TimeControl tc = new TimeControl(60000, 59000, 1000, 12345);
+            val tc = new TimeControl(60000, 59000, 1000, 12345);
             assert tc.whiteTimeMs == 60000;
             assert tc.blackTimeMs == 59000;
             assert tc.incrementMs == 1000;
@@ -100,14 +100,14 @@ module ChessDBEnumTest {
     class GameRecordTests {
         @Test
         void shouldRoundTripGameAndOnlineGameRecords() {
-            GameRecord record = ChessLogic.defaultGame();
+            val record = ChessLogic.defaultGame();
             assert record.board == ChessLogic.defaultBoard();
             assert record.turn == Color.White;
             assert record.status == GameStatus.Ongoing;
             assert record.castlingRights.whiteKingside;
             assert record.moveHistory.empty;
 
-            OnlineGame online = OnlineGame.fromGameRecord(record, "ROOM01", "white-1", Null, GameMode.Multiplayer);
+            val online = OnlineGame.fromGameRecord(record, "ROOM01", "white-1", Null, GameMode.Multiplayer);
             assert online.roomCode == "ROOM01";
             assert online.whitePlayerId == "white-1";
             assert online.blackPlayerId == Null;
@@ -122,15 +122,15 @@ module ChessDBEnumTest {
             assert joined.isFull();
             assert joined.getPlayerColor(blackId) == Color.Black;
 
-            GameRecord backToRecord = joined.toGameRecord();
+            val backToRecord = joined.toGameRecord();
             assert backToRecord.board == record.board;
             assert backToRecord.turn == record.turn;
         }
 
         @Test
         void shouldCreateOnlineGameFromRecord() {
-            GameRecord record = ChessLogic.defaultGame();
-            OnlineGame online = OnlineGame.fromGameRecord(record, "TEST01", "w1", "b1", GameMode.Multiplayer);
+            val record = ChessLogic.defaultGame();
+            val online = OnlineGame.fromGameRecord(record, "TEST01", "w1", "b1", GameMode.Multiplayer);
             assert online.roomCode == "TEST01";
             assert online.whitePlayerId == "w1";
             assert online.blackPlayerId == "b1";
@@ -140,16 +140,16 @@ module ChessDBEnumTest {
 
         @Test
         void shouldDetectWaitingForOpponent() {
-            GameRecord record = ChessLogic.defaultGame();
-            OnlineGame waiting = OnlineGame.fromGameRecord(record, "W01", "w1", Null, GameMode.Multiplayer);
+            val record = ChessLogic.defaultGame();
+            val waiting = OnlineGame.fromGameRecord(record, "W01", "w1", Null, GameMode.Multiplayer);
             assert waiting.isWaitingForOpponent();
             assert !waiting.isFull();
         }
 
         @Test
         void shouldDetectPlayerPresence() {
-            GameRecord record = ChessLogic.defaultGame();
-            OnlineGame game = OnlineGame.fromGameRecord(record, "PLAYER01", "w1", "b1", GameMode.Multiplayer);
+            val record = ChessLogic.defaultGame();
+            val game = OnlineGame.fromGameRecord(record, "PLAYER01", "w1", "b1", GameMode.Multiplayer);
             assert game.hasPlayer("w1");
             assert game.hasPlayer("b1");
             assert !game.hasPlayer("unknown");

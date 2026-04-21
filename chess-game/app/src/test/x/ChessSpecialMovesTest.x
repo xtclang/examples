@@ -17,7 +17,7 @@ module ChessSpecialMovesTest {
     class SpecialMovesTests {
         @Test
         void shouldApplyKingsideCastling() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -25,10 +25,10 @@ module ChessSpecialMovesTest {
                                                 "........" +
                                                 "........" +
                                                 "R...K..R");
-            GameRecord record = new GameRecord(
+            val record = new GameRecord(
                 new String(board), Color.White, GameStatus.Ongoing, Null,
                 0, 0, new CastlingRights(True, True, True, True), Null, [], Null, 0);
-            GameRecord castled = ChessLogic.applyMove(record, board, 60, 62, Null);
+            val castled = ChessLogic.applyMove(record, board, 60, 62, Null);
             assert castled.board[62] == 'K';
             assert castled.board[61] == 'R';
             assert castled.board[63] == '.';
@@ -38,7 +38,7 @@ module ChessSpecialMovesTest {
 
         @Test
         void shouldApplyQueensideCastling() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -46,10 +46,10 @@ module ChessSpecialMovesTest {
                                                 "........" +
                                                 "........" +
                                                 "R...K..R");
-            GameRecord record = new GameRecord(
+            val record = new GameRecord(
                 new String(board), Color.White, GameStatus.Ongoing, Null,
                 0, 0, new CastlingRights(True, True, True, True), Null, [], Null, 0);
-            GameRecord castled = ChessLogic.applyMove(record, board, 60, 58, Null);
+            val castled = ChessLogic.applyMove(record, board, 60, 58, Null);
             assert castled.board[58] == 'K';
             assert castled.board[59] == 'R';
             assert castled.board[56] == '.';
@@ -59,29 +59,29 @@ module ChessSpecialMovesTest {
 
         @Test
         void shouldApplyPawnPromotion() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[0] = 'k';
             board[63] = 'K';
             board[8] = 'P';
-            GameRecord record = new GameRecord(
+            val record = new GameRecord(
                 new String(board), Color.White, GameStatus.Ongoing, Null,
                 0, 0, new CastlingRights(False, False, False, False), Null, [], Null, 0);
-            GameRecord promoted = ChessLogic.applyMove(record, board, 8, 0, Null);
+            val promoted = ChessLogic.applyMove(record, board, 8, 0, Null);
             assert promoted.board[0] == 'Q';
             assert promoted.board[8] == '.';
         }
 
         @Test
         void shouldApplyEnPassantCapture() {
-            Char[] board = new Char[64](i -> '.');
+            val board = new Char[64](i -> '.');
             board[7] = 'k';
             board[63] = 'K';
             board[28] = 'P';
             board[27] = 'p';
-            GameRecord record = new GameRecord(
+            val record = new GameRecord(
                 new String(board), Color.White, GameStatus.Ongoing, Null,
                 0, 0, new CastlingRights(False, False, False, False), "d6", [], Null, 0);
-            GameRecord enPassant = ChessLogic.applyMove(record, board, 28, 19, Null);
+            val enPassant = ChessLogic.applyMove(record, board, 28, 19, Null);
             assert enPassant.board[19] == 'P';
             assert enPassant.board[27] == '.';
             assert enPassant.board[28] == '.';
@@ -90,29 +90,29 @@ module ChessSpecialMovesTest {
 
         @Test
         void shouldSetEnPassantTargetAfterDoublePawnPush() {
-            GameRecord game = ChessLogic.defaultGame();
-            MoveOutcome result = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val game = ChessLogic.defaultGame();
+            val result = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert result.ok;
             assert result.record.enPassantTarget == "e3";
         }
 
         @Test
         void shouldClearEnPassantTargetAfterNonDoublePush() {
-            GameRecord game = ChessLogic.defaultGame();
+            val game = ChessLogic.defaultGame();
             // White plays e4 (sets en passant target)
-            MoveOutcome e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
+            val e4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null);
             assert e4.record.enPassantTarget == "e3";
             // Black plays d5 (sets new en passant target, clears old)
-            MoveOutcome d5 = ChessLogic.applyHumanMove(e4.record, "d7", "d5", Null);
+            val d5 = ChessLogic.applyHumanMove(e4.record, "d7", "d5", Null);
             assert d5.record.enPassantTarget == "d6";
             // White plays Nf3 (no double push, en passant should be cleared)
-            MoveOutcome nf3 = ChessLogic.applyHumanMove(d5.record, "g1", "f3", Null);
+            val nf3 = ChessLogic.applyHumanMove(d5.record, "g1", "f3", Null);
             assert nf3.record.enPassantTarget == Null;
         }
 
         @Test
         void shouldRevokeCastlingRightsAfterKingMoves() {
-            Char[] board = BoardUtils.cloneBoard("r...k..r" +
+            val board = BoardUtils.cloneBoard("r...k..r" +
                                                 "........" +
                                                 "........" +
                                                 "........" +
@@ -120,11 +120,11 @@ module ChessSpecialMovesTest {
                                                 "........" +
                                                 "........" +
                                                 "R...K..R");
-            GameRecord record = new GameRecord(
+            val record = new GameRecord(
                 new String(board), Color.White, GameStatus.Ongoing, Null,
                 0, 0, new CastlingRights(True, True, True, True), Null, [], Null, 0);
             // Move white king one square (not castling)
-            GameRecord moved = ChessLogic.applyMove(record, board, 60, 61, Null);
+            val moved = ChessLogic.applyMove(record, board, 60, 61, Null);
             assert !moved.castlingRights.whiteKingside;
             assert !moved.castlingRights.whiteQueenside;
             // Black castling rights should remain

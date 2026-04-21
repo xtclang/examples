@@ -13,15 +13,15 @@
       fetch("/api/user")
           .then(response => response.text(),
                 err      => user.innerHTML = err.message)
-          .then(text     => user.innerHTML = text == '' ? 'anonymous' : text);
+          .then(text     => user.innerHTML = text === '' ? 'anonymous' : text);
 
       fetch("/api/count")
           .then(response => response.json(),
                 err      => count.innerHTML = err.message)
           .then(cnt      => count.innerHTML =
-                cnt == 1 ? 'first'  :
-                cnt == 2 ? 'second' :
-                cnt == 3 ? 'third'  :
+                cnt === 1 ? 'first'  :
+                cnt === 2 ? 'second' :
+                cnt === 3 ? 'third'  :
                            '' + cnt + '-th');
       };
 

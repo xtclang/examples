@@ -5,12 +5,22 @@ class App extends Component {
 
     constructor() {
       super();
-      this.state = {seconds: 0, name: "", count: ""};
+      this.state = {seconds: 0, name: "", city: "", count: ""};
       this.handleClick = this.handleClick.bind(this);
 
       fetch('/welcome/org')
         .then(response => response.json())
         .then(name => this.setState(state => ({name: name})));
+
+      fetch('/welcome/info')
+        .then(response => response.json())
+        .then(info => {
+            if (info["status"] === "fail") {
+                this.setState(state => ({city: "your city"}));
+            } else {
+                this.setState(state => ({city: info["city"]}));
+            }
+        })
 
       fetch('/welcome/count')
         .then(response => response.json())
@@ -44,6 +54,8 @@ class App extends Component {
       return (
         <div>
           Welcome to {this.state.name}! This is your {this.state.count} visit to our site!
+          <p/>
+          How's the weather in {this.state.city}?
           <p/>
           <button onClick={this.handleClick}>Reset timer</button>
           <p/>

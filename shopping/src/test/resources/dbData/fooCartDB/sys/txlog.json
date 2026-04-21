@@ -1,0 +1,5 @@
+[
+{"_op":"created", "_ts":"2026-03-31T12:06:10.261Z", "_prev_v":0, "safepoint":0},
+{"_v":1, "_tx":2, "_name":"autocommit", "_ts":"2026-03-31T12:06:10.636Z", "carts":[{"k":"foo", "v":{"customerId":"foo","items":[]}}]},
+{"_op":"closed", "_ts":"2026-03-31T12:06:12.78Z", "safepoint":1}
+]

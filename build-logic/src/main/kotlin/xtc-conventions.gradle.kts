@@ -27,3 +27,11 @@ java {
 dependencies {
     xdkDistribution(xdk)
 }
+
+// Make `testXtc` fail the build when any xunit test fails. The plugin default
+// is to only log failures and exit 0, which hides real regressions. The flag
+// lives on the task itself; setting it on the xtcTest extension alone does
+// not propagate, so configure every XtcTestTask directly.
+tasks.withType<org.xtclang.plugin.tasks.XtcTestTask>().configureEach {
+    failOnTestFailure.set(true)
+}

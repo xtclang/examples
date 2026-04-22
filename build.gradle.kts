@@ -20,7 +20,14 @@ dependencies {
     xtcModule(projects.welcome)
     xtcModule(projects.banking)
     xtcModule(projects.counter)
-    xtcModule(projects.chessGame)
+
+    // Chess-game is an included composite build. Gradle's composite-build
+    // dependency substitution routes these coordinate-based deps to the
+    // matching subprojects (org.xtclang.examples:app -> :chess-game:app,
+    // :db -> :chess-game:db). That brings chess.xtc and chessDB.xtc into
+    // the root's xtcModule configuration so installDist picks them up.
+    xtcModule("org.xtclang.examples:app")
+    xtcModule("org.xtclang.examples:db")
 }
 
 /**
@@ -37,4 +44,18 @@ val installDist by tasks.registering(Copy::class) {
     description = "Install all example modules to build/install/examples/lib"
     from(configurations.xtcModule)
     into(layout.buildDirectory.dir("install/examples/lib"))
+}
+
+/*
+ * Attach the chess-game composite build to the root lifecycle so that
+ * `./gradlew clean`, `./gradlew build`, and `./gradlew check` at the root
+ * reach into it. Without this, included builds aren't joined to the root's
+ * lifecycle tasks (see AGENTS.md: attachment is controlled separately from
+ * inclusion).
+ */
+val chessGame = gradle.includedBuild("chess-game")
+listOf("clean", "build", "check").forEach { name ->
+    tasks.named(name) {
+        dependsOn(chessGame.task(":$name"))
+    }
 }

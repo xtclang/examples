@@ -1,11 +1,16 @@
-/**
- * Root settings for examples repository.
+/*
+ * Settings for the chess-game composite build.
  *
- * Multi-project composite build following XTC Gradle plugin conventions.
+ * Contains two XTC modules compiled as separate subprojects:
+ *   :db  → chessDB.xtc (database schema, compiled first)
+ *   :app → chess.xtc   (web application, depends on :db)
+ *
+ * Kept as its own included build so the root settings don't have to enumerate
+ * chess-game's internal subprojects.
  */
 
 pluginManagement {
-    includeBuild("build-logic")
+    includeBuild("../build-logic")
 
     repositories {
         // Uncomment for local XDK development:
@@ -19,10 +24,6 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-}
-
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -39,12 +40,14 @@ dependencyResolutionManagement {
         }
         mavenCentral()
     }
+    versionCatalogs {
+        create("libs") {
+            from(files("../gradle/libs.versions.toml"))
+        }
+    }
 }
 
-rootProject.name = "examples"
+rootProject.name = "chess-game"
 
-// Include all example projects
-include(":welcome")
-include(":banking")
-include(":counter")
-includeBuild("chess-game")
+include(":db")
+include(":app")

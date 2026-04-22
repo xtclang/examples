@@ -26,6 +26,22 @@ service ChessLogic {
     }
 
     /**
+     * Apply a move with pre-computed square indices. Delegates to ChessGame.applyMove.
+     */
+    static GameRecord applyMove(GameRecord record, Char[] board, Int from, Int to, String? promotion) {
+        return ChessGame.applyMove(record, board, from, to, promotion);
+    }
+
+    /**
+     * Build SAN-style notation for a move. Delegates to ChessGame.createMoveNotation.
+     */
+    static String createMoveNotation(Char piece, Int from, Int to, Boolean isCapture,
+                                     Char? promotedTo, Boolean givesCheck, Boolean isCheckmate,
+                                     String? castleType) {
+        return ChessGame.createMoveNotation(piece, from, to, isCapture, promotedTo, givesCheck, isCheckmate, castleType);
+    }
+
+    /**
      * Apply an AI opponent move with pre-computed from/to squares.
      */
     static AutoResponse autoMove(GameRecord record, Int from, Int to, String? promotion) = ChessGame.autoMove(record, from, to, promotion);

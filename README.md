@@ -59,12 +59,17 @@ examples/
 
 - **Java 21+** on your PATH — needed to bootstrap the Gradle wrapper
   (`./gradlew`). The Gradle *daemon* itself is auto-provisioned as JDK 25
-  via Foojay (configured in `gradle/gradle-daemon-jvm.properties` — required
+  from per-platform URLs in `gradle/gradle-daemon-jvm.properties` (required
   because the XTC plugin publishes with JVM-version 25 variant metadata),
   and Gradle additionally auto-provisions the JDK 25 *compile toolchain*
-  for XTC sources. You do not need to install JDK 25 manually.
+  for XTC sources via Foojay. You do not need to install JDK 25 manually.
   Install a bootstrap JDK via [SDKMAN](https://sdkman.io/) (`sdk install java`),
   [Adoptium](https://adoptium.net/), or your system package manager.
+
+  > To bump the daemon JDK version (or change vendor), regenerate the URLs:
+  > `./gradlew updateDaemonJvm --jvm-version=<NN> [--jvm-vendor=ADOPTIUM]`.
+  > The task uses Foojay to write fresh per-platform download URLs into
+  > `gradle/gradle-daemon-jvm.properties`. Commit the result.
 - **XDK** — resolved automatically from Maven repositories
 - **Node.js** — only needed for the `welcome` example (auto-downloaded by default)
 

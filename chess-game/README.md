@@ -25,75 +25,71 @@ This project demonstrates a complete web application using the XTC platform:
 
 ## Prerequisites
 
-- **Java JDK 11 or higher** - Required to run the Gradle build system and XTC runtime
-- **XTC Platform** - The XTC language runtime and libraries (included via Gradle dependencies)
+- A JDK on your PATH new enough to run Gradle 9 (JDK 17+) — only used to
+  bootstrap `./gradlew`. The actual XTC compile toolchain (JDK 25, per
+  `gradle/libs.versions.toml`) is auto-downloaded by Gradle via Foojay.
+- **XDK** is resolved automatically from Maven repositories.
+
+This project is part of the outer `examples` composite build — see the
+top-level [README](../README.md) for full prerequisites and setup.
 
 ## Project Structure
 
+`chess-game/` is itself a Gradle composite build that produces two XTC
+modules: `chess.xtc` (the `@WebApp` server) and `chessDB.xtc` (the OODB
+schema). The `app` subproject depends on `db`.
+
 ```
 chess-game/
-├── build.gradle.kts           # Root project configuration
-├── settings.gradle.kts         # Gradle settings and module definitions
-├── gradlew / gradlew.bat       # Gradle wrapper scripts
-├── server/                     # Backend module
-│   ├── build.gradle.kts        # Server build configuration
-│   └── chess/main/x/           # XTC source code
-│       ├── chess.x             # Main module definition
-│       └── chess/
-│           ├── ChessApi.x      # REST API endpoints
-│           ├── ChessGame.x     # Core game state management
-│           ├── ChessLogic.x    # Move execution logic
-│           ├── ChessAPIClient.x # AI opponent via Stockfish Online API
-│           ├── PieceValidator.x # Move validation
-│           ├── CheckDetection.x # Check/checkmate detection
-│           ├── BoardUtils.x    # Board utilities
-│           ├── ValidMovesHelper.x # Valid move calculation
-│           ├── OnlineChessApi.x # Multiplayer API
-│           ├── OnlineChessLogic.x # Multiplayer logic
-│           ├── ChatApi.x       # Chat functionality
-│           └── TimeControlService.x # Chess clock
-├── chessDB/main/x/
-│   └── chessDB.x               # Database schema
-└── webapp/                     # Frontend module
-    ├── build.gradle.kts        # Webapp build configuration
-    └── public/
-        ├── index.html          # Main HTML page
-        └── static/
-            ├── app.js          # JavaScript application
-            └── styles.css      # Modern CSS styling
+├── build.gradle.kts            # Composite root (lifecycle aggregator)
+├── settings.gradle.kts
+│
+├── app/                        # :app subproject — produces chess.xtc
+│   ├── build.gradle.kts
+│   ├── src/main/x/
+│   │   ├── chess.x             # @WebApp module entry point
+│   │   └── chess/
+│   │       ├── ai/             # AIMoveSelector, AIOpeningBook, ChessAI, …
+│   │       ├── api/            # ChessApi, OnlineChessApi, ChatApi
+│   │       ├── config/         # CastlingManager, MoveContext, MoveStrategy
+│   │       ├── core/           # ChessGame, ChessLogic, OnlineChessLogic
+│   │       ├── services/       # TimeControlService
+│   │       ├── utils/          # BoardOperations, BoardUtils, …
+│   │       └── validation/     # CheckDetection, MoveValidator, PieceValidator, …
+│   ├── src/test/x/             # 16 xunit test modules
+│   ├── cli/                    # @TerminalApp REST-API CLI (not yet on a source set)
+│   └── webapp/public/          # Static client (HTML / JS / CSS)
+│
+└── db/                         # :db subproject — produces chessDB.xtc
+    ├── build.gradle.kts
+    └── src/main/x/
+        ├── chessDB.x           # @Database schema entry point
+        └── chessDB/
+            ├── base/           # Piece base type
+            ├── factory/        # PieceFactory
+            ├── models/         # CastlingRights, GameRecord, OnlineGame, …
+            ├── pieces/         # Bishop, King, Knight, Pawn, Queen, Rook
+            └── types/          # PieceType
 ```
 
 ## Quick Start
 
-### 1. Clone the Repository
+Build and run from the `examples/` root (one level up):
 
 ```bash
-cd chess-game
+# Compile chess.xtc and chessDB.xtc, run all 16 chess test modules
+./gradlew :chess-game:build
+
+# Stage all examples (including chess.xtc + chessDB.xtc) into one lib dir
+./gradlew installDist
+ls build/install/examples/lib/   # → chess.xtc, chessDB.xtc, …
 ```
 
-### 2. Build the Project
-
-```bash
-./gradlew build
-```
-
-This will compile the XTC code and prepare all dependencies.
-
-### 3. Run the Server
-
-```bash
-./gradlew run
-```
-
-### 4. Open the Game
-
-Open your web browser and navigate to:
-
-```
-http://localhost:8080
-```
-
-You should see the chess board and be ready to play!
+`chess.examples.org` is an `@WebApp` and currently requires the XQIZ.IT
+platform to be hosted (a standalone `xtc run` of an `@WebApp` is not
+supported — `xenia.createServer(...)` from a `void run()` would be needed
+to bootstrap one without the platform). Once hosted, the static client
+served at `/` provides the UI in a browser.
 
 ## Game Modes
 
@@ -256,17 +252,20 @@ The AI opponent uses sophisticated move selection:
 
 ### Running in Development Mode
 
+Use Gradle's `--continuous` flag to re-run a task whenever source files change:
+
 ```bash
-./gradlew :server:run --continuous
+./gradlew :chess-game:build --continuous
 ```
 
-This will automatically rebuild and restart the server when files change.
+This recompiles the chess modules on every save. (The `chess.examples.org`
+@WebApp itself still needs the XQIZ.IT platform to be hosted; `--continuous`
+only handles the build/test loop.)
 
 ### Building for Production
 
-```bash
-./gradlew build -Pproduction
-```
+There is no separate production build profile — the same `./gradlew build`
+produces the deployable `chess.xtc` and `chessDB.xtc` modules.
 
 ### Project Architecture
 
@@ -284,45 +283,53 @@ The server uses a modular architecture:
 
 The game uses XTC's OODB (Object-Oriented Database) for state persistence:
 
-- **Database file**: `server/build/chessDB.xtc`
-- **Schema**: Defined in `chessDB/main/x/chessDB.x`
-- **Storage**: 
+- **Compiled module**: `chess-game/db/build/xtc/main/lib/chessDB.xtc`
+- **Schema**: Defined in `db/src/main/x/chessDB.x`
+- **Storage**:
   - Single-player games in `singlePlayerGames` map (keyed by session ID)
   - Online games in `onlineGames` map (keyed by game code)
 
-The database automatically persists game state, allowing you to close and restart the server without losing progress.
+The database persists game state across server restarts.
 
 ## Troubleshooting
 
 ### Port Already in Use
 
-```bash
-# Find the process
-lsof -i :8080
+If something is already listening on port 8080:
 
-# Kill it (replace PID with actual process ID)
-kill -9 PID
+```bash
+lsof -i :8080
+kill -9 <PID>
 ```
 
 ### Build Failures
 
-Ensure you have Java 11+ installed:
+Ensure the JDK on your PATH is new enough to run Gradle 9 (JDK 17+):
+
 ```bash
 java -version
 ```
 
-Clear the Gradle cache if needed:
+The XTC toolchain itself runs on JDK 25 and is auto-downloaded by Gradle
+the first time you build — you do **not** need to install JDK 25 yourself.
+
+If you suspect a stale Gradle cache, clean and rebuild — but run `clean`
+on its own (the outer `examples` build aggregator forbids combining it
+with other tasks):
+
 ```bash
-./gradlew clean build
+./gradlew clean
+./gradlew build
 ```
 
 ### Game State Issues
 
 If the game gets into a bad state:
-1. Click the **Reset Game** button in the UI
-2. Open a new browser tab for a fresh game
-3. Delete the database file: `rm server/build/chessDB.xtc`
-4. Restart the server
+1. Click **Reset Game** in the UI.
+2. Open a new browser tab for a fresh single-player session.
+3. Delete the on-disk database directory under the server's working dir
+   (search for the `chessDB` jsondb folder created at runtime by the
+   hosting platform) and restart the server.
 
 ## Learn More
 

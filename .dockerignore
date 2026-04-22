@@ -1,0 +1,34 @@
+# Git, CI, editor, OS metadata — not needed inside the image
+.git
+.github
+.gitignore
+.idea
+.vscode
+.claude
+.DS_Store
+
+# Build outputs (regenerated inside the container)
+**/build/
+**/.gradle/
+**/.kotlin/
+out/
+bin/
+target/
+
+# Webapp deps (npm reinstalls inside the container)
+**/node_modules/
+**/npm-debug.log*
+
+# Local jsondb / xunit runtime artefacts
+data/
+**/test-output/
+xunit/
+
+# Examples not in the composite build / not referenced by the Dockerfile
+CardGame/
+shopping/
+
+# The Dockerfile itself doesn't need to be inside the image
+Dockerfile
+.dockerignore
+README.md

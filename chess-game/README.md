@@ -25,9 +25,10 @@ This project demonstrates a complete web application using the XTC platform:
 
 ## Prerequisites
 
-- A JDK on your PATH new enough to run Gradle 9 (JDK 17+) — only used to
-  bootstrap `./gradlew`. The actual XTC compile toolchain (JDK 25, per
-  `gradle/libs.versions.toml`) is auto-downloaded by Gradle via Foojay.
+- **JDK 21+** on your PATH to bootstrap `./gradlew`. The Gradle daemon and
+  the XTC compile toolchain both run on JDK 25 (required by the XTC
+  plugin); Gradle auto-provisions those via Foojay — see
+  `gradle/gradle-daemon-jvm.properties` at the repo root.
 - **XDK** is resolved automatically from Maven repositories.
 
 This project is part of the outer `examples` composite build — see the
@@ -304,14 +305,17 @@ kill -9 <PID>
 
 ### Build Failures
 
-Ensure the JDK on your PATH is new enough to run Gradle 9 (JDK 17+):
+Ensure the JDK on your PATH is at least JDK 21 (to launch `./gradlew`):
 
 ```bash
 java -version
 ```
 
-The XTC toolchain itself runs on JDK 25 and is auto-downloaded by Gradle
-the first time you build — you do **not** need to install JDK 25 yourself.
+If you see `Dependency requires at least JVM runtime version 25. This build
+uses a Java NN JVM.`, the Gradle daemon was started on a JVM older than 25
+and couldn't load the XTC plugin. `gradle/gradle-daemon-jvm.properties` at
+the repo root tells Gradle to auto-provision JDK 25 for the daemon via
+Foojay — if you removed or modified that file, restore it.
 
 If you suspect a stale Gradle cache, clean and rebuild — but run `clean`
 on its own (the outer `examples` build aggregator forbids combining it

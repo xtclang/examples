@@ -1,4 +1,4 @@
-# XTC Examples
+# Ecstasy Examples
 
 Example applications built with [Ecstasy](https://xtclang.org/) for deployment
 on the XQIZ.IT hosting platform.
@@ -19,7 +19,7 @@ examples/
 │
 ├── welcome/                      # Web app with React frontend
 │   ├── build.gradle.kts
-│   ├── src/main/x/               # XTC source modules
+│   ├── src/main/x/               # Ecstasy source modules
 │   │   ├── welcome.x             # Main @WebApp module
 │   │   ├── welcomeDB.x           # Database schema
 │   │   ├── welcomeCLI.x          # CLI tool
@@ -62,7 +62,7 @@ examples/
   from per-platform URLs in `gradle/gradle-daemon-jvm.properties` (required
   because the XTC plugin publishes with JVM-version 25 variant metadata),
   and Gradle additionally auto-provisions the JDK 25 *compile toolchain*
-  for XTC sources via Foojay. You do not need to install JDK 25 manually.
+  for Ecstasy sources via Foojay. You do not need to install JDK 25 manually.
   Install a bootstrap JDK via [SDKMAN](https://sdkman.io/) (`sdk install java`),
   [Adoptium](https://adoptium.net/), or your system package manager.
 

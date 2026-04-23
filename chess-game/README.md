@@ -1,11 +1,11 @@
 # Chess Game Example
 
-A full-stack web-based chess game built with the XTC language, featuring both single-player mode with an intelligent AI opponent and online multiplayer with real-time chat.
+A full-stack web-based chess game built with the Ecstasy language, featuring both single-player mode with an intelligent AI opponent and online multiplayer with real-time chat.
 
 ## Overview
 
-This project demonstrates a complete web application using the XTC platform:
-- **Server**: RESTful API built with XTC web framework and OODB (Object-Oriented Database)
+This project demonstrates a complete web application using the Ecstasy platform:
+- **Server**: RESTful API built with the Ecstasy web framework and OODB (Object-Oriented Database)
 - **Client**: Single-page application with vanilla JavaScript and modern CSS
 - **Game Logic**: Complete chess rule implementation including castling and en passant
 - **AI Opponent**: Diverse, randomized AI with opening book and heuristic evaluation
@@ -282,7 +282,7 @@ The server uses a modular architecture:
 
 ## Database
 
-The game uses XTC's OODB (Object-Oriented Database) for state persistence:
+The game uses Ecstasy's OODB (Object-Oriented Database) for state persistence:
 
 - **Compiled module**: `chess-game/db/build/xtc/main/lib/chessDB.xtc`
 - **Schema**: Defined in `db/src/main/x/chessDB.x`
@@ -337,6 +337,6 @@ If the game gets into a bad state:
 
 ## Learn More
 
-- **XTC Language**: [Link to XTC documentation]
+- **Ecstasy Language**: [xtclang.org](https://xtclang.org/)
 - **Chess Rules**: [Wikipedia - Chess](https://en.wikipedia.org/wiki/Chess)
 - **Algebraic Notation**: [Wikipedia - Algebraic notation (chess)](https://en.wikipedia.org/wiki/Algebraic_notation_(chess))

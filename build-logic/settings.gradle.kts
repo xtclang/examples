@@ -1,5 +1,11 @@
 rootProject.name = "build-logic"
 
+gradle.beforeProject {
+    if (version == Project.DEFAULT_VERSION) {
+        version = "0.1.0"
+    }
+}
+
 dependencyResolutionManagement {
     repositories {
         // Uncomment for local XDK development:

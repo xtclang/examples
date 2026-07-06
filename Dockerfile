@@ -8,6 +8,7 @@ COPY gradle/ gradle/
 COPY build-logic/ build-logic/
 COPY banking/build.gradle.kts banking/build.gradle.kts
 COPY counter/build.gradle.kts counter/build.gradle.kts
+COPY card-game/build.gradle.kts card-game/build.gradle.kts
 COPY chess-game/settings.gradle.kts chess-game/build.gradle.kts chess-game/
 COPY chess-game/app/build.gradle.kts chess-game/app/
 COPY chess-game/db/build.gradle.kts chess-game/db/
@@ -17,6 +18,7 @@ RUN gradle dependencies --no-daemon 2>/dev/null || true
 # Layer 2: Source code — only this layer rebuilds when sources change
 COPY banking/ banking/
 COPY counter/ counter/
+COPY card-game/ card-game/
 COPY chess-game/ chess-game/
 COPY welcome/ welcome/
 

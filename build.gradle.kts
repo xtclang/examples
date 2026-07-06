@@ -20,6 +20,7 @@ dependencies {
     xtcModule(projects.welcome)
     xtcModule(projects.banking)
     xtcModule(projects.counter)
+    xtcModule(projects.cardGame)
 
     // Chess-game is an included composite build. Gradle's composite-build
     // dependency substitution routes these coordinate-based deps to the

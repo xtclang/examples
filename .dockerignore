@@ -25,7 +25,6 @@ data/
 xunit/
 
 # Examples not in the composite build / not referenced by the Dockerfile
-CardGame/
 shopping/
 
 # The Dockerfile itself doesn't need to be inside the image

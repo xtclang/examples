@@ -20,6 +20,7 @@ dependencies {
     xtcModule(projects.welcome)
     xtcModule(projects.banking)
     xtcModule(projects.counter)
+    xtcModule(projects.cardGame)
 
     // Chess-game is an included composite build. Gradle's composite-build
     // dependency substitution routes these coordinate-based deps to the
@@ -39,7 +40,7 @@ dependencies {
  * You can then run any example with:
  *   xtc run -L build/install/examples/lib <moduleName>
  */
-val installDist by tasks.registering(Copy::class) {
+val installDist = tasks.register<Copy>("installDist") {
     group = "distribution"
     description = "Install all example modules to build/install/examples/lib"
     from(configurations.xtcModule)

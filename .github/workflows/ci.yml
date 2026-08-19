@@ -5,12 +5,6 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
-    inputs:
-      publish_docker:
-        description: "Publish Docker image to GHCR using branch and SHA tags"
-        required: false
-        default: false
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -57,52 +51,19 @@ jobs:
           if-no-files-found: ignore
 
   docker:
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_docker
     name: Docker image build
-    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v6
 
       - uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute Docker tags
-        id: docker-tags
-        shell: bash
-        run: |
-          set -euo pipefail
-          image="ghcr.io/${GITHUB_REPOSITORY,,}"
-          safe_ref="$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+|-+$//g')"
-
-          {
-            echo "tags<<EOF"
-            echo "${image}:sha-${GITHUB_SHA}"
-            if [ "${GITHUB_REF_NAME}" = "master" ]; then
-              echo "${image}:latest"
-              echo "${image}:master"
-            else
-              echo "${image}:${safe_ref}"
-            fi
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Build and publish Dockerfile
+      - name: Build Dockerfile
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: true
+          push: false
           load: false
-          tags: ${{ steps.docker-tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

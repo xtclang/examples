@@ -29,8 +29,10 @@ jobs:
         with:
           validate-wrappers: true
 
+      # The XTC xunit engine currently uses a shared /tmp/xunit scratch directory.
+      # Keep test execution serialized until xtclang/xvm isolates that directory per invocation.
       - name: Build (compile + run all tests)
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build --stacktrace --max-workers=1
 
       - name: Assemble installDist
         run: ./gradlew installDist --stacktrace

@@ -8,4 +8,9 @@ export default defineConfig({
   build: {
     outDir: 'build',
   },
+  // Keep the Create React App dev-server defaults (port 3000, open a browser) for `npm start`.
+  server: {
+    port: 3000,
+    open: true,
+  },
 });

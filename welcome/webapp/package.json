@@ -12,8 +12,11 @@
     "vite": "^8.3.1"
   },
   "scripts": {
+    "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "echo \"No frontend tests: the Create React App boilerplate test was removed in the move to Vite.\" && exit 1",
+    "eject": "echo \"Nothing to eject: the Vite build configuration is already in vite.config.js.\""
   }
 }

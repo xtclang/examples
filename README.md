@@ -169,7 +169,7 @@ xtc build -o out chess-game/db/src/main/x/chessDB.x
 xtc build -o out -L out -r chess-game/app/webapp chess-game/app/src/main/x/chess.x
 # chess.examples.org is @WebApp — needs the XQIZ.IT platform to host
 
-# Welcome (requires npm build in welcome/webapp/ first)
+# Welcome (build the React frontend first: cd welcome/webapp && npm install && npm run build)
 xtc build -o out -r welcome/webapp welcome/src/main/x/*.x
 xtc run -L out welcomeTest                 # standalone DB console app
 # welcome.examples.org / welcomeCLI.examples.org are @WebApp — need the XQIZ.IT platform
@@ -250,6 +250,10 @@ xtc build -o out -L out -r chess-game/app/webapp chess-game/app/src/main/x/chess
 ### welcome
 A "hello world" web application with a React frontend. Demonstrates `@WebApp`,
 database integration (`oodb`), static content serving, and a CLI management tool.
+
+The frontend in `welcome/webapp` is built with Vite (Node.js 20.19+ or 22.12+ when not using the
+Gradle-downloaded Node). `npm start` (or `npm run dev`) serves it on http://localhost:3000 with hot
+reload; the `/welcome/*` API calls need the backend hosted on the XQIZ.IT platform.
 
 The `welcomeTest` module is a standalone console app that exercises the database
 layer directly. It opens a `jsondb` connection to the `welcomeDB` schema, looks

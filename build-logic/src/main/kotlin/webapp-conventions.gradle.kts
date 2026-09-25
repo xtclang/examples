@@ -63,6 +63,8 @@ if (file("webapp/package.json").exists()) {
 
         inputs.dir("webapp/src")
         inputs.dir("webapp/public")
+        inputs.file("webapp/index.html")
+        inputs.file("webapp/vite.config.js")
         inputs.file("webapp/package.json")
         inputs.file("webapp/package-lock.json")
 

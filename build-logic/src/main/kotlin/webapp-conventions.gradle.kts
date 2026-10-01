@@ -40,8 +40,9 @@ sourceSets.named("main") {
 // of webapp/package.json and wires up the Node/npm build:
 //   1. Configure Node.js to auto-download and point at the webapp/ directory
 //   2. Register a buildWebapp task that runs `npm run build` with proper caching
-//   3. Make processResources depend on buildWebapp so the compiled webapp output
-//      is available as XTC module resources (used by @StaticContent annotations)
+//   3. Make processResources and processXtcResources depend on buildWebapp so the
+//      compiled webapp output is available as XTC module resources (used by
+//      @StaticContent annotations). Both tasks copy the webapp/ resource srcDir.
 //
 // Projects with only static HTML in webapp/public/ (banking, counter, chess-game)
 // skip this block entirely — their content is picked up directly by the srcDir above.
@@ -55,6 +56,7 @@ if (file("webapp/package.json").exists()) {
 
     val npmInstall = tasks.named("npmInstall")
     val processResources = tasks.named("processResources")
+    val processXtcResources = tasks.named("processXtcResources")
 
     val buildWebapp = tasks.register<NpmTask>("buildWebapp") {
         args.set(listOf("run", "build"))
@@ -73,6 +75,10 @@ if (file("webapp/package.json").exists()) {
     }
 
     processResources {
+        dependsOn(buildWebapp)
+    }
+
+    processXtcResources {
         dependsOn(buildWebapp)
     }
 }

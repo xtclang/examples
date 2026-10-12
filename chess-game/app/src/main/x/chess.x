@@ -9,6 +9,7 @@ import config.CastlingManager;
 import core.ChessLogic;
 import core.OnlineChessLogic;
 import ai.ChessAPIClient;
+import ai.StockfishApi;
 /**
  * Chess Game Server Module
  * 
@@ -18,10 +19,13 @@ import ai.ChessAPIClient;
  * 
  * Key features:
  * - Turn-based chess gameplay with simplified rules (no castling, en-passant, or check detection)
- * - Single-player mode with automated opponent (Black player) with AI-driven move selection
+ * - Single-player mode whose opponent (Black) plays the moves returned by the Stockfish Online
+ *   engine API; no move is chosen locally except as an offline fallback
  * - Online multiplayer mode with room-based matchmaking
  * - Game state persistence using the chess database schema
  * - RESTful API endpoints for moves, game state, room management, and game reset
+ * - An engine proxy (/api/engine) so the web client can read the same evaluations the
+ *   computer plays by
  * - Static content serving for the web client interface
  */
 @WebApp
@@ -44,18 +48,9 @@ module chess.examples.org {
     /**
      * Home Service
      * 
-     * Serves the static web client (HTML, CSS, JavaScript) for the chess game.
-     * All requests to the root path "/" are served with the index.html file
-     * from the public directory.
+     * Serves the React/Vite web client for the chess game. The built output
+     * (webapp/build) is served from the root path "/".
      */
-    @StaticContent("/", /public/index.html)
+    @StaticContent("/", /build)
     service Home {}
-
-    /**
-     * Static Content Service
-     * 
-     * Serves static files (CSS, JS) from the /static path
-     */
-    @StaticContent("/static", /public/static/)
-    service StaticFiles {}
 }

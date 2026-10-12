@@ -1,10 +1,14 @@
 /**
  * Chess AI public entrypoint.
  *
- * Responsibilities are split into dedicated services:
- * - AIPositionEvaluator: board/position scoring
- * - AISearchEngine: minimax + alpha-beta
- * - AIOpeningBook: opening move suggestions
+ * Computer gameplay comes from the Stockfish Online API via [StockfishApi]; this service does
+ * not choose moves of its own. The local evaluation and search services remain available to
+ * callers that want a score for a position, and a random legal move is the only fallback when
+ * the engine cannot be reached:
+ * - StockfishApi: the engine that plays the computer's moves
+ * - AIPositionEvaluator: board/position scoring, for reporting scores
+ * - AISearchEngine: minimax + alpha-beta, for callers that ask for it explicitly
+ * - AIOpeningBook: opening move suggestions, for callers that ask for it explicitly
  * - AIMoveSelector: legal move collection + ordering
  * - AIUtility: randomness, fallback move, FEN conversion
  */
@@ -13,6 +17,15 @@ service ChessAPIClient {
     static Int MIN_SCORE       = -1000000;
     static Int MAX_SCORE       =  1000000;
     static Int CHECKMATE_SCORE =  100000;
+
+    /**
+     * Search depth asked of the engine for computer moves. Deeper play costs response time, and
+     * the upstream API rejects anything over 15.
+     */
+    static Int SEARCH_DEPTH = 12;
+
+    // The engine that plays every computer move
+    StockfishApi engine = new StockfishApi();
 
     static Int getPieceValue(Char piece) {
         return AIPositionEvaluator.getPieceValue(piece);
@@ -57,64 +70,51 @@ service ChessAPIClient {
 
     /**
      * Main AI move selection entrypoint used by game logic.
+     *
+     * The move comes from the engine. It is still checked against this board's rules before
+     * being returned, because the game uses a simplified rule set and cannot always play what
+     * a full engine suggests (castling, for instance). An unusable or missing answer falls back
+     * to a random legal move so that the game never stalls when the engine is unreachable.
      */
     (Int, Int, String?) findBestMove(GameRecord record) {
-        Int moveCount = record.moveHistory.size;
+        String fen = AIUtility.boardToFen(record);
+        StockfishApi.EngineMove move = engine.bestMove(fen, SEARCH_DEPTH);
 
-        (Int openFrom, Int openTo) = AIOpeningBook.getOpeningMove(record);
-        if (openFrom >= 0 && openTo >= 0) {
-            if (AIUtility.hashRandom(moveCount, 1) % 100 < 70) {
-                return (openFrom, openTo, Null);
-            }
+        if (move.usable && isPlayable(record, move.fromIndex, move.toIndex)) {
+            return (move.fromIndex, move.toIndex, move.promotion);
+        }
+
+        return AIUtility.findRandomLegalMove(record);
+    }
+
+    /**
+     * Whether the side to move can legally play from one square to another under this game's
+     * rules, and without leaving its own king in check.
+     */
+    private static Boolean isPlayable(GameRecord record, Int from, Int to) {
+        if (!BoardUtils.isValidSquare(from) || !BoardUtils.isValidSquare(to) || from == to) {
+            return False;
         }
 
         Char[] board = BoardUtils.cloneBoard(record.board);
-        Boolean endgame = AIPositionEvaluator.isEndgame(board);
-        Int depth = endgame ? 3 : 2;
-
-        (Int[] moveFroms, Int[] moveTos, Int[] moveScores) = AIMoveSelector.collectOrderedLegalMoves(record, board);
-        if (moveFroms.empty) {
-            return (-1, -1, Null);
+        Char   piece = board[from];
+        if (piece == '.' || BoardUtils.colorOf(piece) != record.turn) {
+            return False;
         }
 
-        Int bestScore = MIN_SCORE;
-        Int bestFrom  = moveFroms[0];
-        Int bestTo    = moveTos[0];
-        String? bestPromotion = Null;
-        Int alpha = MIN_SCORE;
-        Int beta  = MAX_SCORE;
-
-        for (Int i : 0 ..< moveFroms.size) {
-            Int from = moveFroms[i];
-            Int to   = moveTos[i];
-            Char piece = board[from];
-
-            Char[] newBoard = BoardUtils.cloneBoard(record.board);
-            newBoard[to] = piece;
-            newBoard[from] = '.';
-            String? promo = Null;
-            if (piece == 'p' && BoardUtils.getRank(to) == 7) {
-                newBoard[to] = 'q';
-                promo = "q";
-            }
-
-            Int score = AISearchEngine.minimax(newBoard, record, depth - 1, alpha, beta, False);
-
-            Int variety = AIUtility.hashRandom(from * 64 + to, moveCount + i) % 5;
-            score += variety;
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestFrom  = from;
-                bestTo    = to;
-                bestPromotion = promo;
-            }
-            if (score > alpha) {
-                alpha = score;
-            }
+        Char target = board[to];
+        if (target != '.' && BoardUtils.colorOf(target) == record.turn) {
+            return False;
+        }
+        if (!PieceValidator.isLegal(piece, from, to, board,
+                record.castlingRights, record.enPassantTarget)) {
+            return False;
         }
 
-        return (bestFrom, bestTo, bestPromotion);
+        Char[] tested = BoardUtils.cloneBoard(board);
+        tested[to]   = piece;
+        tested[from] = '.';
+        return !CheckDetection.isInCheck(tested.freeze(), record.turn);
     }
 
     /**

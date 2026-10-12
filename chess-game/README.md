@@ -43,7 +43,9 @@ chess-game/
 │           ├── ChessApi.x      # REST API endpoints
 │           ├── ChessGame.x     # Core game state management
 │           ├── ChessLogic.x    # Move execution logic
-│           ├── ChessAPIClient.x # AI opponent via Stockfish Online API
+│           ├── ChessAPIClient.x # AI opponent entrypoint (delegates to StockfishApi)
+│           ├── StockfishApi.x  # Stockfish Online engine client
+│           ├── EngineApi.x     # /api/engine proxy for the web client
 │           ├── PieceValidator.x # Move validation
 │           ├── CheckDetection.x # Check/checkmate detection
 │           ├── BoardUtils.x    # Board utilities
@@ -99,16 +101,21 @@ You should see the chess board and be ready to play!
 
 ### Single Player (vs AI)
 
-Play against an intelligent AI opponent that uses:
-- **Opening Book**: Recognizes common chess openings and responds with strong moves
-- **Randomized Selection**: Chooses from top-scoring moves for unpredictable gameplay
-- **Positional Evaluation**: Uses piece-square tables for strategic positioning
-- **Tactical Awareness**: Evaluates captures, checks, and material balance
+Every move the computer plays comes from the [Stockfish Online](https://stockfish.online) engine
+API, reached through `StockfishApi.x`. Nothing picks the computer's moves locally:
 
-The AI adds variety by:
-- Randomly selecting from multiple strong opening responses
-- Choosing from top moves within a score threshold (not always the "best" move)
-- Different play styles in opening, middle, and endgame phases
+- **Real engine play**: the position is sent as FEN and the engine's `bestmove` is played back
+- **Rule check**: the engine's move is validated against this game's simplified rules before it
+  is applied, since a full engine can suggest moves the simplified rule set cannot play
+- **Offline fallback**: if the engine cannot be reached, a random legal move is played so the
+  game never stalls
+
+The local evaluation and search services (`AIPositionEvaluator`, `AISearchEngine`,
+`AIOpeningBook`) remain in the module for callers that want a score for a position, but they no
+longer choose the computer's moves.
+
+The same engine is exposed to the web client at `/api/engine/analyse`, which is where the
+analysis panel's evaluation graph and centipawn-loss figures come from.
 
 **Session Isolation**: Each browser tab gets its own independent game. You can play multiple games simultaneously in different tabs without interference.
 

@@ -22,7 +22,8 @@ import core.OnlineChessLogic;
 @WebService("/api/chat")
 service ChatApi {
     // Injected dependencies
-    @Inject ChessSchema schema;
+    // Database access; see the Database service in chess.x
+    @Lazy ChessSchema schema.calc() = Database.connect();
     @Inject Clock       clock;
 
     /**

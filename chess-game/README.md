@@ -87,15 +87,62 @@ This will compile the XTC code and prepare all dependencies.
 ./gradlew run
 ```
 
+The `chess` module has a `run()` entry point that starts the [xenia](https://github.com/xtclang/xvm)
+HTTP server, so the compiled module can also be run directly without Gradle:
+
+```bash
+xec -L <module path> chess.xtc                      # localhost, ports 8080 / 8090
+xec -L <module path> chess.xtc localhost:3000/3001  # different ports
+```
+
+`<module path>` is a directory holding the XDK libraries and the compiled `chessDB.xtc`.
+
+The first argument is the address clients use — it is matched against the `Host` header and is
+the name the TLS certificate is issued for. A second argument gives the socket to bind, for when
+the two differ. To reach the server from another machine, bind to all interfaces and route by
+the machine's host name:
+
+```bash
+xec -L build chess.xtc my-laptop.local:8080/8090 0.0.0.0:8080/8090
+xec -L build chess.xtc example.com:80/443       0.0.0.0:8080/8090   # behind a proxy
+```
+
+The route must be a host **name**, not an IP address, for HTTPS to work: the server picks its
+certificate by the server name the client sends in the TLS handshake, and a client connecting to
+a bare IP sends none, so the handshake fails. Plain HTTP over an IP is fine.
+
+The server writes its database to `data/chessDB/` and the generated database host module to
+`build/db/`, both relative to the working directory. It also generates a self-signed certificate
+on first run and caches it in the system temp directory as `chess.examples.org.p12`; that cache
+is keyed by application name, not by route, so after changing the route host you need to delete
+it to get a certificate for the new name.
+
 ### 4. Open the Game
 
 Open your web browser and navigate to:
 
 ```
-http://localhost:8080
+https://localhost:8090
 ```
 
+Use the **HTTPS** port: every web service is `@HttpsRequired`, so the HTTP port answers an API
+call with a redirect instead of data. The certificate is self-signed, so the browser asks you to
+accept it once.
+
 You should see the chess board and be ready to play!
+
+### Running the web client in dev mode
+
+To work on the React client with hot reload, leave the XTC server running and start Vite in
+another terminal:
+
+```bash
+cd app/webapp
+npm install
+npm run dev
+```
+
+Vite proxies `/api` to `https://localhost:8090`, so the client talks to the real backend.
 
 ## Game Modes
 

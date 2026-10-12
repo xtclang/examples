@@ -10,6 +10,30 @@ async function get(path, params) {
   return body;
 }
 
+async function post(path, body) {
+  const res = await fetch(`/api/${path}`, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const reply = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(reply.message || `Request failed (${res.status})`);
+  return reply;
+}
+
+// ----- playing a game against the computer (see ChessApi.x) -----
+
+const session = (id) => encodeURIComponent(id);
+const square = (name) => encodeURIComponent(name);
+
+export const getGameState = (id) => get(`state/${session(id)}`);
+export const resetGame = (id, timeControlMs = 0, incrementMs = 0) =>
+  post(`reset/${session(id)}`, timeControlMs > 0 ? { timeControlMs, incrementMs } : undefined);
+export const playMove = (id, from, to) => post(`move/${session(id)}/${square(from)}/${square(to)}`);
+export const getValidMoves = (id, from) => get(`validmoves/${session(id)}/${square(from)}`);
+
+// ----- reviewing games from chess.com (see ChessComApi.x) -----
+
 export const getPlayer = (name) => get(`chesscom/player/${encodeURIComponent(name)}`);
 export const getArchives = (name) => get(`chesscom/archives/${encodeURIComponent(name)}`);
 export const getDailyPuzzle = () => get('chesscom/puzzle');

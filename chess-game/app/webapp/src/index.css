@@ -29,6 +29,8 @@
   --board-light: #eeeed2;
   --board-dark: #769656;
   --board-hl: rgba(246, 246, 105, 0.62);
+  --board-sel: rgba(246, 246, 105, 0.45);
+  --board-mark: rgba(20, 30, 20, 0.28);
   --piece-white: #f8f8f6;
   --piece-black: #262421;
 
@@ -81,6 +83,12 @@ button, input, select { font: inherit; font-family: var(--sans); color: inherit;
   max-width: min(42vw, 26rem); padding: .375rem .5rem;
   border: 1px solid var(--hairline); border-radius: 7px; background: var(--surface);
 }
+.modes { display: flex; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
+.modes button {
+  padding: .375rem .75rem; border: 0; background: var(--surface); cursor: pointer;
+  color: var(--ink-2);
+}
+.modes button.on { background: var(--surface-sunken); color: var(--ink); font-weight: 600; }
 .topbar .who { color: var(--ink-2); font-weight: 600; }
 .topbar .status { color: var(--negative); }
 
@@ -120,6 +128,21 @@ button, input, select { font: inherit; font-family: var(--sans); color: inherit;
 .square.light { background: var(--board-light); }
 .square.dark { background: var(--board-dark); }
 .square.hl { box-shadow: inset 0 0 0 100vmax var(--board-hl); }
+
+/* playing */
+.board.playable .square { cursor: pointer; }
+.board.playable .square:focus-visible { outline: 2px solid var(--series-1); outline-offset: -3px; }
+.square.sel { box-shadow: inset 0 0 0 100vmax var(--board-sel); }
+
+/* where the piece in hand can go: a dot on an empty square, a ring on one it can take */
+.target {
+  position: absolute; pointer-events: none; border-radius: 50%;
+  width: 30%; height: 30%; background: var(--board-mark);
+}
+.target.capture {
+  width: 86%; height: 86%; background: none;
+  border: 7cqh solid var(--board-mark); box-sizing: border-box;
+}
 
 .coord {
   position: absolute; font-size: 9cqh; font-weight: 600; line-height: 1;
@@ -165,6 +188,43 @@ button, input, select { font: inherit; font-family: var(--sans); color: inherit;
 .moves .no { color: var(--ink-muted); margin-right: .1875rem; }
 
 .outlink { display: inline-block; margin-top: 1rem; color: var(--series-1); }
+
+/* ----------------------------------------------------------------- play */
+
+.play { max-width: 860px; }
+.play-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: .625rem;
+}
+.play-head .board-title { margin: 0; }
+.clocks { display: flex; gap: .5rem; font-variant-numeric: tabular-nums; color: var(--ink-muted); }
+.clocks .on {
+  color: var(--ink); font-weight: 600;
+  background: var(--surface-sunken); border-radius: 6px; padding: 0 .375rem;
+}
+
+.play-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap; margin: .75rem 0; color: var(--ink-2);
+}
+.play-bar .thinking { color: var(--series-2); font-weight: 600; }
+.play-bar .taken { color: var(--ink-muted); }
+
+.new-game { display: flex; align-items: center; gap: .375rem; flex-wrap: wrap; color: var(--ink-2); }
+.new-game button {
+  padding: .3125rem .625rem; border: 1px solid var(--hairline); border-radius: 7px;
+  background: var(--surface); cursor: pointer;
+}
+.new-game button:hover { background: var(--surface-sunken); }
+.new-game button:disabled { opacity: .5; cursor: default; }
+
+.scoresheet {
+  list-style: none; padding: 0; margin: 1rem 0 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.scoresheet li { display: grid; grid-template-columns: 2rem 1fr 1fr; gap: .375rem; }
+.scoresheet .no { color: var(--ink-muted); }
 
 /* ------------------------------------------------------------- analysis */
 

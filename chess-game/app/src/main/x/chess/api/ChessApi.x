@@ -8,6 +8,7 @@ import db.models.MoveHistoryEntry;
 import services.TimeControlService;
 import validation.ValidMovesHelper;
 import core.ChessLogic;
+import ai.AIUtility;
 /**
  * ChessApi Service
  *
@@ -27,7 +28,8 @@ import core.ChessLogic;
 @WebService("/api")
 service ChessApi {
     // Injected dependencies for database access and time tracking
-    @Inject ChessSchema schema;  // Database schema for game persistence
+    // Database access; see the Database service in chess.x
+    @Lazy ChessSchema schema.calc() = Database.connect();
     @Inject Clock         clock; // System clock for timing opponent moves
     TimeControlService timeControlService = new TimeControlService();
     ChessAPIClient apiClient = new ChessAPIClient();
@@ -206,7 +208,8 @@ service ChessApi {
                    Boolean opponentPending,
                    TimeControl? timeControl = Null,
                    MoveHistoryEntry[] moveHistory = [],
-                   String sessionId = "");
+                   String sessionId = "",
+                   String fen = "");
 
 
     // ----- Helper Methods ------------------------------------------------------
@@ -291,7 +294,8 @@ service ChessApi {
                 pending,                              // Is opponent thinking?
                 adjustedTc,                           // Time control with current remaining time
                 record.moveHistory,                   // Complete move history
-                sessionId);                           // Echo sessionId for client sanity-check
+                sessionId,                            // Echo sessionId for client sanity-check
+                AIUtility.boardToFen(record));        // The position, for the client's analysis
     }
 
     /**

@@ -1,9 +1,10 @@
-FROM gradle:9.8.0-jdk25 AS builder
+# The wrapper selects Gradle, so builds do not depend on matching Gradle image tags.
+FROM eclipse-temurin:25-jdk AS builder
 
 WORKDIR /workspace
 
 # Layer 1: Build config and dependency resolution — cached until build files change
-COPY settings.gradle.kts build.gradle.kts gradle.properties ./
+COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle/ gradle/
 COPY build-logic/ build-logic/
 COPY banking/build.gradle.kts banking/build.gradle.kts
@@ -13,7 +14,7 @@ COPY chess-game/settings.gradle.kts chess-game/build.gradle.kts chess-game/
 COPY chess-game/app/build.gradle.kts chess-game/app/
 COPY chess-game/db/build.gradle.kts chess-game/db/
 COPY welcome/build.gradle.kts welcome/build.gradle.kts
-RUN gradle dependencies --no-daemon 2>/dev/null || true
+RUN ./gradlew dependencies --no-daemon 2>/dev/null || true
 
 # Layer 2: Source code — only this layer rebuilds when sources change
 COPY banking/ banking/
@@ -26,7 +27,7 @@ COPY welcome/ welcome/
 # build's job is packaging only — `installDist` covers compile + assemble +
 # stage. The final-stage `RUN xtc run ... welcomeTest` below provides a
 # runtime smoke check on the produced image.
-RUN gradle installDist --no-daemon
+RUN ./gradlew installDist --no-daemon
 
 # Stage 2: Grab the XVM runtime from its official image
 FROM ghcr.io/xtclang/xvm:latest AS xvm

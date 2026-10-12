@@ -1,7 +1,159 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { analysePosition } from '../api.js';
 
-/** A mate score shown on the evaluation scale, in pawns. */
+// ---------------------------------------------------------------------------- the scheduler
+//
+// Every engine number comes from Stockfish Online, one request per position, through the
+// server's /api/engine proxy. The free endpoint is rate limited: measured against it, one
+// request every 1.5s runs clean, while 0.9s draws HTTP 429 on roughly half. So requests are
+// never fired in parallel. They queue here, leave one at a time at that pace, and the position
+// the player is looking at always goes first.
+
+/** Minimum gap between two requests leaving for the engine. */
+const MIN_INTERVAL_MS = 1500;
+
+/** Waits before a second and third attempt at a position the limiter turned away. */
+const BACKOFF_MS = [3000, 8000];
+
+/** Evaluations are kept between visits: a position's evaluation never changes. */
+const CACHE_KEY = 'chess-engine-cache-v1';
+const CACHE_LIMIT = 3000;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const cache = loadCache();
+let saveTimer = 0;
+
+function loadCache() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(CACHE_KEY) ?? '[]');
+    return new Map(Array.isArray(stored) ? stored : []);
+  } catch {
+    return new Map();
+  }
+}
+
+function remember(key, value) {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify([...cache]));
+    } catch {
+      // Storage full or blocked: the in-memory cache still serves this visit.
+    }
+  }, 500);
+}
+
+const queue = [];
+const inFlight = new Map();
+let focus = null;
+let pumping = false;
+let lastSent = 0;
+
+/** The position the player is looking at jumps the queue. */
+export function setEngineFocus(fen) {
+  focus = fen ?? null;
+}
+
+// The computer opponent asks the same engine for its move, from the server, under the same
+// rate limit. If the analysis is mid-stream when the computer thinks, the computer's request is
+// the one turned away -- and it falls back to a random move. So while it is the computer's turn
+// the queue holds, and once it resumes it leaves a full gap after the computer's request.
+let held = false;
+let release = null;
+
+export function holdEngine(hold) {
+  if (hold === held) return;
+  held = hold;
+  if (!hold) {
+    lastSent = Date.now();
+    release?.();
+    release = null;
+  }
+}
+
+/**
+ * The engine's reply for one position, from the cache when it has been asked before.
+ * Identical requests in flight share one answer.
+ */
+export function requestEvaluation(fen, depth, { priority = 0, signal } = {}) {
+  const key = `${depth}|${fen}`;
+  if (cache.has(key)) return Promise.resolve(cache.get(key));
+  if (inFlight.has(key)) return inFlight.get(key);
+
+  const promise = new Promise((resolve, reject) => {
+    queue.push({ key, fen, depth, priority, signal, resolve, reject });
+  }).finally(() => inFlight.delete(key));
+
+  inFlight.set(key, promise);
+  pump();
+  return promise;
+}
+
+function nextJob() {
+  for (let i = queue.length - 1; i >= 0; i--) {
+    if (queue[i].signal?.aborted) {
+      queue[i].reject(new DOMException('Aborted', 'AbortError'));
+      queue.splice(i, 1);
+    }
+  }
+  if (!queue.length) return null;
+  let best = queue.findIndex((job) => job.fen === focus);
+  if (best < 0) {
+    best = 0;
+    for (let i = 1; i < queue.length; i++) {
+      if (queue[i].priority < queue[best].priority) best = i;
+    }
+  }
+  return queue.splice(best, 1)[0];
+}
+
+async function pump() {
+  if (pumping) return;
+  pumping = true;
+  try {
+    for (let job = nextJob(); job; job = nextJob()) {
+      while (held) await new Promise((resolve) => (release = resolve));
+      const gap = lastSent + MIN_INTERVAL_MS - Date.now();
+      if (gap > 0) await wait(gap);
+      if (held) {
+        queue.unshift(job);
+        continue;
+      }
+
+      let reply = null;
+      let failure = null;
+      for (let attempt = 0; attempt <= BACKOFF_MS.length && !reply; attempt++) {
+        if (attempt) await wait(BACKOFF_MS[attempt - 1]);
+        while (held) await new Promise((resolve) => (release = resolve));
+        if (job.signal?.aborted) break;
+        lastSent = Date.now();
+        try {
+          reply = await analysePosition(job.fen, job.depth);
+        } catch (e) {
+          failure = e;
+        }
+      }
+
+      if (reply) {
+        remember(job.key, reply);
+        job.resolve(reply);
+      } else {
+        job.reject(failure ?? new DOMException('Aborted', 'AbortError'));
+      }
+    }
+  } finally {
+    pumping = false;
+  }
+}
+
+// ---------------------------------------------------------------------------- reading a reply
+
+/** A mate is shown on the evaluation scale as this many pawns. */
 const MATE_PAWNS = 12;
 
 /**
@@ -15,140 +167,108 @@ export function toWhitePawns({ evaluation, mate }, turn) {
     const n = Number(mate);
     if (Number.isFinite(n) && n !== 0) return side * Math.sign(n) * MATE_PAWNS;
   }
-  const cp = Number(evaluation);
-  return Number.isFinite(cp) ? cp : null;
+  const pawns = Number(evaluation);
+  return Number.isFinite(pawns) ? pawns : null;
 }
 
-const IDLE = {
-  points: [], done: 0, total: 0, failed: 0, phase: 'idle', error: null, secondsLeft: 0,
-};
-
 /**
- * Minimum gap between requests. The engine is a free service behind a rate limiter: measured
- * against it, one request every 1.5s runs clean, while 0.9s draws HTTP 429 on roughly half.
- * So the pass is deliberately serial and paced rather than parallel and retried.
- */
-const MIN_INTERVAL_MS = 1500;
-
-/** Waits before a second and third attempt at a position the limiter turned away. */
-const BACKOFF_MS = [3000, 8000];
-
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * The order to evaluate positions in: both ends first, then repeatedly the midpoint of the
- * widest remaining gap. The curve takes its rough shape within a few seconds and sharpens as
- * the pass goes on, instead of creeping along the first few moves.
+ * The order to evaluate a game's positions in: both ends first, then repeatedly the midpoint of
+ * the widest remaining gap. The curve takes its rough shape within seconds and sharpens as the
+ * queue drains, instead of creeping along from the first move.
  */
 export function refinementOrder(n) {
   if (n <= 2) return [...Array(n).keys()];
   const order = [0, n - 1];
   const seen = new Set(order);
-  const queue = [[0, n - 1]];
-  while (queue.length) {
-    const [lo, hi] = queue.shift();
+  const pending = [[0, n - 1]];
+  while (pending.length) {
+    const [lo, hi] = pending.shift();
     const mid = (lo + hi) >> 1;
     if (mid > lo && mid < hi && !seen.has(mid)) {
       seen.add(mid);
       order.push(mid);
-      queue.push([lo, mid], [mid, hi]);
+      pending.push([lo, mid], [mid, hi]);
     }
   }
   for (let i = 0; i < n; i++) if (!seen.has(i)) order.push(i);
   return order;
 }
 
+// ---------------------------------------------------------------------------- the hook
+
 /**
- * Asks the engine to evaluate every position of a game, one at a time.
+ * Engine evaluations for every position of a game, filled in live.
  *
- * One request per position is the only way to get real engine numbers, and the free endpoint
- * will not take them any faster than this, so the results stream in: the graphs fill as the
- * answers arrive. Positions the engine never answers stay null and the charts skip them.
+ * Each position is its own query, keyed by FEN, and an evaluation never goes stale. When a game
+ * grows by a move, only the new position is requested; when the same position shows up in
+ * another game, it is already known.
  *
- * @param positions  one entry per position, `{ fen, turn }`
+ * @param positions  `{ fen, turn }` per position
+ * @param current    index of the position on the board, which is evaluated first
  */
-export function useEngineCurve(positions, { depth = 11, enabled = true } = {}) {
-  const [state, setState] = useState(IDLE);
+export function useEngineEvaluations(positions, { depth = 11, enabled = true, current = null } = {}) {
+  const rank = useMemo(() => {
+    const ranks = new Array(positions.length);
+    refinementOrder(positions.length).forEach((index, order) => (ranks[index] = order + 1));
+    return ranks;
+  }, [positions.length]);
 
-  useEffect(() => {
-    if (!enabled || positions.length === 0) {
-      setState({ ...IDLE, total: positions.length });
-      return;
-    }
+  const focusFen = current !== null ? positions[current]?.fen : null;
+  useEffect(() => setEngineFocus(focusFen), [focusFen]);
 
-    let cancelled = false;
-    const total = positions.length;
-    const points = new Array(total).fill(null);
-    let done = 0;
-    let failed = 0;
-
-    const publish = (phase) =>
-      setState({
-        points: [...points],
+  const combine = useCallback(
+    (results) => {
+      const points = results.map((r, i) =>
+        r.data
+          ? {
+              pawns: toWhitePawns(r.data, positions[i].turn),
+              mate: r.data.mate === null ? null : Number(r.data.mate),
+              best: r.data.bestmove ?? null,
+              line: r.data.continuation ?? null,
+            }
+          : null
+      );
+      const done = results.filter((r) => r.isSuccess || r.isError).length;
+      const failed = results.filter((r) => r.isError).length;
+      return {
+        points,
         done,
         failed,
-        total,
-        phase,
-        error: phase === 'unavailable' ? 'Engine unreachable' : null,
-        secondsLeft: Math.round(((total - done) * MIN_INTERVAL_MS) / 1000),
-      });
+        total: results.length,
+        running: enabled && done < results.length,
+        unavailable: results.length > 0 && failed === results.length,
+        secondsLeft: Math.round(((results.length - done) * MIN_INTERVAL_MS) / 1000),
+      };
+    },
+    [positions, enabled]
+  );
 
-    publish('running');
-
-    (async () => {
-      for (const index of refinementOrder(total)) {
-        if (cancelled) return;
-
-        for (let attempt = 0; attempt <= BACKOFF_MS.length; attempt++) {
-          if (cancelled) return;
-          try {
-            const reply = await analysePosition(positions[index].fen, depth);
-            points[index] = {
-              pawns: toWhitePawns(reply, positions[index].turn),
-              mate: reply.mate === null ? null : Number(reply.mate),
-              best: reply.bestmove ?? null,
-              line: reply.continuation ?? null,
-            };
-            break;
-          } catch {
-            if (attempt === BACKOFF_MS.length) failed++;
-            else await wait(BACKOFF_MS[attempt]);
-          }
-        }
-
-        done++;
-        if (cancelled) return;
-        publish('running');
-        if (done < total) await wait(MIN_INTERVAL_MS);
-      }
-
-      if (!cancelled) publish(failed === total ? 'unavailable' : 'done');
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [positions, depth, enabled]);
-
-  return state;
+  return useQueries({
+    queries: positions.map((p, i) => ({
+      queryKey: ['engine', depth, p.fen],
+      queryFn: ({ signal }) => requestEvaluation(p.fen, depth, { priority: rank[i], signal }),
+      enabled,
+      staleTime: Infinity,
+      gcTime: 60 * 60_000,
+      retry: false,
+    })),
+    combine,
+  });
 }
 
 /**
- * Ordinary least squares of `y` on `x` over the pairs where both are present:
+ * Least squares of y on x over the pairs where both are present: y ≈ a + b·x.
  *
- *     y ≈ a + b·x
- *
- * Used to calibrate the local value function against the engine's own evaluations, which says
- * how much of the engine's judgement the simple linear model actually captures.
+ * Used to calibrate the local value function against the engine, which says how much of the
+ * engine's judgement the simple linear model captures.
  */
 export function leastSquares(pairs) {
   const rows = pairs.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y));
   const n = rows.length;
   if (n < 3) return null;
 
-  const mean = (f) => rows.reduce((acc, r) => acc + f(r), 0) / n;
-  const mx = mean(([x]) => x);
-  const my = mean(([, y]) => y);
+  const mx = rows.reduce((a, [x]) => a + x, 0) / n;
+  const my = rows.reduce((a, [, y]) => a + y, 0) / n;
   let sxx = 0;
   let syy = 0;
   let sxy = 0;
@@ -162,13 +282,6 @@ export function leastSquares(pairs) {
   const slope = sxy / sxx;
   const intercept = my - slope * mx;
   const r = sxy / Math.sqrt(sxx * syy);
-  const rmse = Math.sqrt(
-    rows.reduce((acc, [x, y]) => acc + (y - (intercept + slope * x)) ** 2, 0) / n
-  );
+  const rmse = Math.sqrt(rows.reduce((a, [x, y]) => a + (y - (intercept + slope * x)) ** 2, 0) / n);
   return { n, slope, intercept, r, r2: r * r, rmse };
-}
-
-/** Memoises the `{ fen, turn }` list the engine pass walks. */
-export function usePositionList(fens) {
-  return useMemo(() => fens ?? [], [fens]);
 }

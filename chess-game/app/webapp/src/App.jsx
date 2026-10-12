@@ -1,22 +1,71 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import Play from './components/Play.jsx';
 import Replay from './components/Replay.jsx';
-import Analysis from './components/Analysis.jsx';
-import { useGame } from './lib/analyse.js';
+import { Skeleton, usePersistentState } from './components/ui.jsx';
+import { START_FEN, useGame } from './lib/analyse.js';
 import { usePlay } from './lib/play.js';
-import { getPlayer, getArchives, getGamesFromArchive, getDailyPuzzle } from './api.js';
+import { holdEngine } from './lib/engine.js';
+import { getArchives, getDailyPuzzle, getGamesFromArchive, getPlayer } from './api.js';
 
-const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+// The charts (and d3 beneath them) and the guide load after the board, so play starts at once.
+const MetricsPanel = lazy(() => import('./components/MetricsPanel.jsx').then((m) => ({ default: m.MetricsPanel })));
+const Guide = lazy(() => import('./components/Guide.jsx'));
 
-function describe(game) {
-  return `${game.white.username} vs ${game.black.username} · ${game.time_class} · ${game.white.result}/${game.black.result}`;
+function PanelSkeleton() {
+  return (
+    <div className="metrics" aria-busy="true">
+      <Skeleton width="8rem" height="1.4rem" />
+      <Skeleton width="100%" height="9rem" radius={16} />
+      <Skeleton width="100%" height="5rem" radius={16} />
+      <Skeleton width="100%" height="14rem" radius={16} />
+    </div>
+  );
+}
+
+const describe = (g) =>
+  `${g.white.username} vs ${g.black.username} · ${g.time_class} · ${g.white.result}/${g.black.result}`;
+
+const TITLES = { play: 'Play', review: 'Review', guide: 'Guide' };
+
+/** The theme lives on <html> as a class; index.html applies the saved one before first paint. */
+function useTheme() {
+  const [theme, setTheme] = usePersistentState('theme', 'dark');
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
+}
+
+function Footer({ theme, onToggleTheme }) {
+  return (
+    <footer className="site-foot">
+      <button className="btn" onClick={onToggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+        {theme === 'dark' ? 'light' : 'dark'}
+      </button>
+      <p className="credits">
+        Built with <a href="https://github.com/xtclang/xvm" target="_blank" rel="noreferrer">XTC</a>
+        <span aria-hidden="true">·</span>
+        Engine by <a href="https://stockfish.online" target="_blank" rel="noreferrer">Stockfish Online</a>
+        <span aria-hidden="true">·</span>
+        Development build
+      </p>
+    </footer>
+  );
 }
 
 export default function App() {
-  const [mode, setMode] = useState('play');
+  const [view, setView] = usePersistentState('view', 'play');
+  const [insightsOpen, setInsightsOpen] = usePersistentState('insights-open', true);
+  const [theme, toggleTheme] = useTheme();
 
   // Playing against the engine
   const play = usePlay();
+  const [viewing, setViewing] = useState(null);
+  const liveIndex = Math.max(0, play.frames.positions.length - 1);
+  useEffect(() => setViewing(null), [play.state?.moveHistory?.length]);
+
+  // Leave the engine to the computer while it is choosing its move; see holdEngine.
+  useEffect(() => holdEngine(play.thinking), [play.thinking]);
 
   // Reviewing games from chess.com
   const [username, setUsername] = useState('');
@@ -24,24 +73,10 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [games, setGames] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [puzzle, setPuzzle] = useState(null);
-  const [view, setView] = useState({ fen: START_FEN, title: 'Starting position' });
+  const [source, setSource] = useState({ fen: START_FEN, title: 'Starting position' });
   const [ply, setPly] = useState(0);
-
-  const reviewed = useGame(view);
-
-  // A new game or puzzle starts at its first frame.
-  useEffect(() => setPly(0), [view]);
-
-  // The live position, held steady while it does not change, so that polling for the engine's
-  // reply does not restart the analysis of a position it has already evaluated.
-  const livePositions = useMemo(
-    () =>
-      play.state?.fen
-        ? [{ fen: play.state.fen, turn: play.state.turn === 'White' ? 'w' : 'b' }]
-        : [],
-    [play.state?.fen, play.state?.turn]
-  );
+  const reviewed = useGame(source);
+  useEffect(() => setPly(0), [source]);
 
   async function run(label, fn) {
     setStatus(label);
@@ -57,7 +92,7 @@ export default function App() {
     e.preventDefault();
     const name = username.trim();
     if (!name) return;
-    run('Loading player…', async () => {
+    run('loading…', async () => {
       const [p, archives] = await Promise.all([getPlayer(name), getArchives(name)]);
       const latest = archives.archives?.at(-1);
       setProfile(p);
@@ -68,8 +103,7 @@ export default function App() {
 
   const pick = (g) => {
     setSelected(g);
-    setPuzzle(null);
-    setView({
+    setSource({
       pgn: g.pgn,
       title: describe(g),
       flipped: g.black.username.toLowerCase() === profile.username.toLowerCase(),
@@ -78,104 +112,128 @@ export default function App() {
   };
 
   const loadPuzzle = () =>
-    run('Loading puzzle…', async () => {
+    run('loading…', async () => {
       const p = await getDailyPuzzle();
-      setPuzzle(p);
       setSelected(null);
-      setView({ fen: p.fen, title: `Daily puzzle · ${p.title}` });
+      setSource({ fen: p.fen, title: `Daily puzzle · ${p.title}` });
     });
 
-  const playing = mode === 'play';
+  const playing = view === 'play';
+  const panel = playing
+    ? {
+        mode: 'play',
+        positions: play.frames.positions,
+        moves: play.frames.moves,
+        current: viewing ?? liveIndex,
+        onSeek: (k) => setViewing(k >= liveIndex ? null : k),
+      }
+    : {
+        mode: 'review',
+        positions: reviewed.positions,
+        moves: reviewed.moves,
+        current: Math.min(ply, Math.max(0, reviewed.positions.length - 1)),
+        names: source.names,
+        onSeek: setPly,
+      };
+
+  const navTo = (target) => (
+    <button key={target} className={`btn btn-nav${view === target ? ' on' : ''}`} onClick={() => setView(target)}>
+      {target === 'guide' ? 'Guide →' : target}
+    </button>
+  );
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <h1>Chess Playground</h1>
-        <nav className="modes" role="group" aria-label="Mode">
-          <button className={playing ? 'on' : ''} onClick={() => setMode('play')}>Play</button>
-          <button className={playing ? '' : 'on'} onClick={() => setMode('review')}>Review</button>
+      <header className="site-head">
+        <div className="head-left">
+          {!playing && (
+            <button className="btn btn-nav" onClick={() => setView('play')}>← Play</button>
+          )}
+        </div>
+        <div className="head-center">
+          <h1 className="page-title">{TITLES[view]}</h1>
+        </div>
+        <nav className="head-right" aria-label="Pages">
+          {['review', 'guide'].filter((v) => v !== view).map(navTo)}
+          {!playing && (
+            <button className="btn btn-nav" onClick={toggleTheme}>
+              {theme === 'dark' ? 'light' : 'dark'}
+            </button>
+          )}
         </nav>
-
-        {!playing && (
-          <>
-            <form onSubmit={loadPlayer}>
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="chess.com username"
-                aria-label="chess.com username"
-              />
-              <button type="submit">Load games</button>
-            </form>
-            <button onClick={loadPuzzle}>Daily puzzle</button>
-            {games.length > 0 && (
-              <label className="game-picker">
-                <span className="sr-only">Game</span>
-                <select
-                  value={selected ? selected.url : ''}
-                  onChange={(e) => pick(games.find((g) => g.url === e.target.value))}
-                >
-                  <option value="" disabled>
-                    {games.length} games this month…
-                  </option>
-                  {games.map((g) => (
-                    <option key={g.url} value={g.url}>
-                      {describe(g)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {profile && <span className="who">{profile.username}</span>}
-            {status && <span className="status">{status}</span>}
-          </>
-        )}
       </header>
 
-      <main className="split">
-        <section className="pane board-pane">
-          {playing ? (
-            <Play play={play} />
-          ) : (
-            <>
+      {view === 'review' && (
+        <div className="toolbar">
+          <form className="search" onSubmit={loadPlayer}>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="chess.com username"
+              aria-label="chess.com username"
+            />
+            <button className="chip" type="submit">load games</button>
+          </form>
+          <button className="chip" onClick={loadPuzzle}>daily puzzle</button>
+          {games.length > 0 && (
+            <select
+              className="game-picker"
+              aria-label="Game"
+              value={selected ? selected.url : ''}
+              onChange={(e) => pick(games.find((g) => g.url === e.target.value))}
+            >
+              <option value="" disabled>{games.length} games this month…</option>
+              {games.map((g) => (
+                <option key={g.url} value={g.url}>{describe(g)}</option>
+              ))}
+            </select>
+          )}
+          {status && <span className="toolbar-status">{status}</span>}
+        </div>
+      )}
+
+      {view === 'guide' ? (
+        <main className="page">
+          <Suspense fallback={<Skeleton width="100%" height="12rem" radius={16} />}>
+            <Guide onPlay={() => setView('play')} />
+          </Suspense>
+          <Footer theme={theme} onToggleTheme={toggleTheme} />
+        </main>
+      ) : (
+        <main className={insightsOpen ? 'split' : 'split split-focus'}>
+          <section className="pane board-pane">
+            {playing ? (
+              <Play play={play} viewing={viewing} onView={(k) => setViewing(k === null || k >= liveIndex ? null : k)} />
+            ) : (
               <Replay
                 positions={reviewed.positions}
                 moves={reviewed.moves}
                 error={reviewed.error}
-                title={view.title}
-                flipped={view.flipped}
+                title={source.title}
+                flipped={source.flipped}
                 ply={ply}
                 setPly={setPly}
               />
-              {puzzle && (
-                <a className="outlink" href={puzzle.url} target="_blank" rel="noreferrer">
-                  Solve on chess.com ↗
-                </a>
-              )}
-            </>
+            )}
+            <Footer theme={theme} onToggleTheme={toggleTheme} />
+            {!insightsOpen && (
+              <button className="btn btn-solid insights-reopen" onClick={() => setInsightsOpen(true)}>
+                ← Insights
+              </button>
+            )}
+          </section>
+          {insightsOpen && (
+            <section className="pane analysis-pane">
+              <div className="panel">
+                <Suspense fallback={<PanelSkeleton />}>
+                  <MetricsPanel {...panel} onCollapse={() => setInsightsOpen(false)} onGuide={() => setView('guide')} />
+                </Suspense>
+              </div>
+            </section>
           )}
-        </section>
+        </main>
+      )}
 
-        <section className="pane analysis-pane">
-          {playing ? (
-            <Analysis
-              fen={play.state?.fen}
-              positions={livePositions}
-              ply={0}
-              setPly={() => {}}
-            />
-          ) : (
-            <Analysis
-              pgn={view.pgn}
-              fen={view.fen}
-              positions={reviewed.positions}
-              ply={ply}
-              setPly={setPly}
-              names={view.names}
-            />
-          )}
-        </section>
-      </main>
     </div>
   );
 }

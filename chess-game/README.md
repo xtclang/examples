@@ -1,140 +1,135 @@
-# Chess Game Example
+# Chess Playground
 
-A full-stack web-based chess game built with the XTC language, featuring both single-player mode with an intelligent AI opponent and online multiplayer with real-time chat.
+A full-stack chess game written in XTC (Ecstasy) with a React client. Play Stockfish, then see
+how you played and how you think: live engine evaluations, accuracy, mistakes, and a fitted model
+of your decision-making, all drawn as interactive charts.
 
 ## Overview
 
-This project demonstrates a complete web application using the XTC platform:
-- **Server**: RESTful API built with XTC web framework and OODB (Object-Oriented Database)
-- **Client**: Single-page application with vanilla JavaScript and modern CSS
-- **Game Logic**: Complete chess rule implementation including castling and en passant
-- **AI Opponent**: Diverse, randomized AI with opening book and heuristic evaluation
-- **Online Multiplayer**: Play against others with game codes and real-time chat
-
-### Key Features
-
-- ♟️ **Two Game Modes**: Single-player vs AI or online multiplayer
-- 🎮 **Complete Chess Rules**: Full implementation including castling, en passant, and pawn promotion
-- 🤖 **Intelligent & Diverse AI**: Randomized move selection with opening book for varied gameplay
-- 🌐 **Online Multiplayer**: Create or join games with unique game codes
-- 💬 **Real-time Chat**: Modern chat interface for online games
-- 💾 **Session Isolation**: Each browser tab has its own independent game
-- 🎨 **Modern UI**: Responsive design with smooth animations and gradients
-- ⚡ **Real-time Updates**: Auto-refresh during opponent's turn
-- ⏱️ **Time Controls**: Optional chess clocks for competitive play
+- **Server** — an XTC `@WebApp` module hosted by xenia: REST services, a jsondb database, and
+  proxies for the Stockfish Online engine and chess.com.
+- **Client** — React with TanStack Query (live data), TanStack Charts (charts) and TanStack Table
+  (the sortable move list), built with Vite and compiled into the server module.
+- **Computer opponent** — every move comes from Stockfish Online; nothing picks moves locally.
+- **Insights** — engine evaluation, win chance, accuracy, centipawn loss, mistake counts, and a
+  softmax model of your choices fitted to the moves you play. The in-app **Guide** explains each.
+- **Online multiplayer** with room codes, chat, and optional clocks.
 
 ## Prerequisites
 
-- **Java JDK 11 or higher** - Required to run the Gradle build system and XTC runtime
-- **XTC Platform** - The XTC language runtime and libraries (included via Gradle dependencies)
+| Tool | Why |
+| --- | --- |
+| **JDK** supported by your XDK (21+) | runs the XTC toolchain; set `JAVA_HOME` |
+| **XDK** with `xtc` on your `PATH` | compiles, runs and tests the modules |
+| **Node.js 18+** and npm | builds the React client |
+
+Gradle (`./gradlew build`, `./gradlew run`) works too where the XTC Gradle plugin resolves; the
+scripts below need only the three tools above.
 
 ## Project Structure
 
 ```
 chess-game/
-├── build.gradle.kts           # Root project configuration
-├── settings.gradle.kts         # Gradle settings and module definitions
-├── gradlew / gradlew.bat       # Gradle wrapper scripts
-├── server/                     # Backend module
-│   ├── build.gradle.kts        # Server build configuration
-│   └── chess/main/x/           # XTC source code
-│       ├── chess.x             # Main module definition
-│       └── chess/
-│           ├── ChessApi.x      # REST API endpoints
-│           ├── ChessGame.x     # Core game state management
-│           ├── ChessLogic.x    # Move execution logic
-│           ├── ChessAPIClient.x # AI opponent entrypoint (delegates to StockfishApi)
-│           ├── StockfishApi.x  # Stockfish Online engine client
-│           ├── EngineApi.x     # /api/engine proxy for the web client
-│           ├── PieceValidator.x # Move validation
-│           ├── CheckDetection.x # Check/checkmate detection
-│           ├── BoardUtils.x    # Board utilities
-│           ├── ValidMovesHelper.x # Valid move calculation
-│           ├── OnlineChessApi.x # Multiplayer API
-│           ├── OnlineChessLogic.x # Multiplayer logic
-│           ├── ChatApi.x       # Chat functionality
-│           └── TimeControlService.x # Chess clock
-├── chessDB/main/x/
-│   └── chessDB.x               # Database schema
-└── webapp/                     # Frontend module
-    ├── build.gradle.kts        # Webapp build configuration
-    └── public/
-        ├── index.html          # Main HTML page
-        └── static/
-            ├── app.js          # JavaScript application
-            └── styles.css      # Modern CSS styling
+├── scripts/
+│   ├── build.sh               # web client + chessDB + chess, into build/xtc/main/lib
+│   ├── run.sh                 # build, then start the server
+│   └── test.sh                # run every test suite, each in a fresh directory
+├── db/src/main/x/
+│   └── chessDB.x              # database schema (@oodb.Database)
+└── app/
+    ├── src/main/x/
+    │   ├── chess.x            # the @WebApp module: run(), Database, static content
+    │   └── chess/
+    │       ├── api/           # web services: ChessApi, OnlineChessApi, ChatApi,
+    │       │                  #   EngineApi (/api/engine), ChessComApi (/api/chesscom)
+    │       ├── ai/            # StockfishApi (engine client), ChessAPIClient (computer moves)
+    │       ├── core/          # game logic, single-player and online
+    │       ├── validation/    # move legality, check detection
+    │       └── services/      # time controls
+    ├── src/test/x/            # one xunit suite per service, plus the logic suites
+    └── webapp/                # React client (Vite)
+        └── src/
+            ├── lib/           # engine scheduler, local model, insights, play state
+            └── components/    # board, charts, insights panel, guide, logo
 ```
 
 ## Quick Start
 
-### 1. Clone the Repository
+### Run the server
 
 ```bash
-cd chess-game
+scripts/run.sh
 ```
 
-### 2. Build the Project
-
-```bash
-./gradlew build
-```
-
-This will compile the XTC code and prepare all dependencies.
-
-### 3. Run the Server
-
-```bash
-./gradlew run
-```
-
-The `chess` module has a `run()` entry point that starts the [xenia](https://github.com/xtclang/xvm)
-HTTP server, so the compiled module can also be run directly without Gradle:
-
-```bash
-xec -L <module path> chess.xtc                      # localhost, ports 8080 / 8090
-xec -L <module path> chess.xtc localhost:3000/3001  # different ports
-```
-
-`<module path>` is a directory holding the XDK libraries and the compiled `chessDB.xtc`.
-
-The first argument is the address clients use — it is matched against the `Host` header and is
-the name the TLS certificate is issued for. A second argument gives the socket to bind, for when
-the two differ. To reach the server from another machine, bind to all interfaces and route by
-the machine's host name:
-
-```bash
-xec -L build chess.xtc my-laptop.local:8080/8090 0.0.0.0:8080/8090
-xec -L build chess.xtc example.com:80/443       0.0.0.0:8080/8090   # behind a proxy
-```
-
-The route must be a host **name**, not an IP address, for HTTPS to work: the server picks its
-certificate by the server name the client sends in the TLS handshake, and a client connecting to
-a bare IP sends none, so the handshake fails. Plain HTTP over an IP is fine.
-
-The server writes its database to `data/chessDB/` and the generated database host module to
-`build/db/`, both relative to the working directory. It also generates a self-signed certificate
-on first run and caches it in the system temp directory as `chess.examples.org.p12`; that cache
-is keyed by application name, not by route, so after changing the route host you need to delete
-it to get a certificate for the new name.
-
-### 4. Open the Game
-
-Open your web browser and navigate to:
-
-```
-https://localhost:8090
-```
+This builds the web client and both modules into `build/xtc/main/lib`, then starts the server.
+Open **https://localhost:8090** and accept the self-signed certificate (once).
 
 Use the **HTTPS** port: every web service is `@HttpsRequired`, so the HTTP port answers an API
-call with a redirect instead of data. The certificate is self-signed, so the browser asks you to
-accept it once.
+call with a redirect instead of data.
 
-You should see the chess board and be ready to play!
+Other addresses:
 
-### Running the web client in dev mode
+```bash
+scripts/run.sh localhost:3000/3001                         # different ports
+scripts/run.sh my-laptop.local:8080/8090 0.0.0.0:8080/8090 # reachable on your network
+scripts/run.sh --no-build                                  # start the last build as is
+```
 
-To work on the React client with hot reload, leave the XTC server running and start Vite in
-another terminal:
+The first address is what clients use — it is matched against the `Host` header and is the name
+the TLS certificate is issued for. The second is the socket to bind. For HTTPS from another
+machine the route must be a host **name**, not an IP address: the server chooses its certificate
+by the name the client sends during the TLS handshake, and a client connecting to a bare IP sends
+none.
+
+Without the script, the compiled module runs directly:
+
+```bash
+xtc run -L build/xtc/main/lib build/xtc/main/lib/chess.xtc [route] [bind]
+```
+
+**Files the server writes**, relative to the working directory (both git-ignored):
+`data/chessDB/` holds the database and `build/db/` the generated jsondb host module. The
+self-signed keystore is cached in the system temp directory as `chess.examples.org.p12`; it is
+keyed by application name, not route, so **delete it after changing the route host**, or the old
+certificate is served and every TLS handshake fails.
+
+### Run the tests
+
+```bash
+scripts/test.sh                 # all suites except the live network suite
+scripts/test.sh ChessApiTest    # one or more named suites
+scripts/test.sh --live          # also ChessLiveApiTest: real Stockfish and chess.com calls
+scripts/test.sh --no-build      # skip recompiling first
+```
+
+Each suite runs from its own fresh temporary directory, so its database never leaks into another
+suite or into the repository. The script prints a table of passed, failed and skipped tests per
+suite and exits non-zero on any failure.
+
+| Suite | Covers |
+| --- | --- |
+| `ChessApiTest` | `/api` — state, legal and illegal moves, valid moves, reset, clocks, session isolation |
+| `OnlineChessApiTest` | `/api/online` — rooms, seating, turn order, moves, valid moves, reset, leaving |
+| `ChatApiTest` | `/api/chat` — sending, validation, room membership, history, polling |
+| `EngineApiTest` | `/api/engine` — FEN validation before any upstream call, JSON encoding |
+| `ChessComApiTest` | `/api/chesscom` — username and date validation before any upstream call |
+| `ChessEngineApiTest` | `StockfishApi` — reading engine replies, UCI moves, URL encoding |
+| `ChessLiveApiTest` | live: engine analysis, chess.com, and a real computer reply (opt-in) |
+| the rest | game logic, validation, board utilities, time controls, the database models |
+
+The live suite needs internet and respects the engine's rate limit (about one request per 1.5
+seconds); expect it to take around half a minute. `ChessAIMoveSelectionTest` in the default run
+also reaches the engine once, through the computer-move path.
+
+A single suite can also be run by hand from any scratch directory:
+
+```bash
+xtc test -L build/xtc/main/lib app/src/test/x/ChessApiTest.x
+```
+
+### Work on the web client
+
+Leave the server running and start Vite with hot reload in another terminal:
 
 ```bash
 cd app/webapp
@@ -143,6 +138,8 @@ npm run dev
 ```
 
 Vite proxies `/api` to `https://localhost:8090`, so the client talks to the real backend.
+`npm run build` writes the production client to `app/webapp/build`, which `chess.x` serves as
+static content; rebuild the module afterwards (`scripts/build.sh`) to ship it.
 
 ## Game Modes
 
@@ -290,56 +287,44 @@ Index: 56-63   = Rank 1 (a1-h1) - White's back rank
 
 ### AI Strategy
 
-The AI opponent uses sophisticated move selection:
-
-1. **Opening Book**: Collection of strong opening responses (Sicilian, French, Caro-Kann, etc.)
-2. **Piece Values**: Pawn=100, Knight=320, Bishop=330, Rook=500, Queen=900
-3. **Piece-Square Tables**: Positional bonuses for optimal piece placement
-4. **Mobility**: Bonus for having more available moves
-5. **Tactical Evaluation**: Check bonuses, development bonuses, center control
-6. **Randomization**: Selects from top moves within 15% of best score for variety
+The computer plays whatever Stockfish Online returns for the position (depth 12), after checking
+the move against this game's rules. If the engine cannot be reached, it plays a random legal move
+so the game never stalls. See *Single Player (vs AI)* above.
 
 ### Session Management
 
-- Single-player games use `sessionStorage` for browser tab isolation
-- Each tab generates a unique session ID on first load
-- Game state is persisted per-session in the database
-- Refreshing the page restores your game; opening a new tab starts fresh
+- Each browser keeps one single-player game, under a session id stored in `localStorage`
+- Reloading the page, or closing and reopening the browser, returns you to the same game
+- Clearing the site's storage starts a fresh session
+- Game state is persisted per session in the database
 
 ## Development
 
-### Running in Development Mode
-
-```bash
-./gradlew :server:run --continuous
-```
-
-This will automatically rebuild and restart the server when files change.
-
-### Building for Production
-
-```bash
-./gradlew build -Pproduction
-```
-
 ### Project Architecture
 
-The server uses a modular architecture:
-- **ChessApi**: Routes HTTP requests to appropriate handlers
-- **ChessGame**: Manages game state and coordinates logic
-- **ChessAPIClient**: AI move selection via the Stockfish Online API
-- **ChessLogic**: Executes moves and updates state
-- **PieceValidator**: Validates move legality per piece type
-- **CheckDetection**: Determines check, checkmate, and stalemate
-- **OnlineChessApi/Logic**: Handles multiplayer game sessions
-- **ChatApi**: Real-time chat for online games
+- **ChessApi** (`/api`): single-player games, one per browser session
+- **OnlineChessApi** (`/api/online`): rooms for two players
+- **ChatApi** (`/api/chat`): chat inside online rooms
+- **EngineApi** (`/api/engine`): the web client's route to Stockfish Online
+- **ChessComApi** (`/api/chesscom`): read-only proxy for chess.com's public data
+- **StockfishApi**: the engine client; **ChessAPIClient** plays its moves for the computer
+- **ChessLogic / ChessGame**: execute moves and update state
+- **PieceValidator / CheckDetection**: legality, check, checkmate, stalemate
+- **Database** (in `chess.x`): hands each service its own connection — injected by a host when
+  there is one, otherwise opened over jsondb in the working directory
+
+The client keeps two kinds of live data in TanStack Query. The game is one query per session,
+polled only while the computer is thinking. Engine evaluations are one query per position, cached
+for good (in memory and in local storage), and fed through a scheduler that sends one request
+per 1.5 seconds, serves the position on the board first, and pauses while the computer chooses
+its move so the two never compete for the engine's rate limit.
 
 ## Database
 
 The game uses XTC's OODB (Object-Oriented Database) for state persistence:
 
-- **Database file**: `server/build/chessDB.xtc`
-- **Schema**: Defined in `chessDB/main/x/chessDB.x`
+- **Data**: `data/chessDB/`, relative to the server's working directory
+- **Schema**: defined in `db/src/main/x/chessDB.x`
 - **Storage**: 
   - Single-player games in `singlePlayerGames` map (keyed by session ID)
   - Online games in `onlineGames` map (keyed by game code)
@@ -360,23 +345,27 @@ kill -9 PID
 
 ### Build Failures
 
-Ensure you have Java 11+ installed:
+Check the toolchain the scripts use:
 ```bash
-java -version
+java -version      # a JDK your XDK supports
+xtc --version      # the XDK is on PATH (or set XTC=/path/to/xtc)
+node --version     # 18 or later
 ```
 
-Clear the Gradle cache if needed:
-```bash
-./gradlew clean build
-```
+### The page loads but nothing else does
+
+You are probably on the HTTP port. Open **https://localhost:8090**: the API is HTTPS-only.
+
+### HTTPS fails after changing the address
+
+Delete the cached keystore (`$TMPDIR/chess.examples.org.p12`) and restart; see *Run the server*.
 
 ### Game State Issues
 
 If the game gets into a bad state:
-1. Click the **Reset Game** button in the UI
-2. Open a new browser tab for a fresh game
-3. Delete the database file: `rm server/build/chessDB.xtc`
-4. Restart the server
+1. Start a **New game** under the board
+2. Clear the site's storage in the browser for a fresh session
+3. Stop the server, delete `data/chessDB/`, and start it again
 
 ## Learn More
 

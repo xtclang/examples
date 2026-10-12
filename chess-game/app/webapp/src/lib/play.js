@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Chess } from 'chess.js';
 import { getGameState, getValidMoves, playMove, resetGame } from '../api.js';
+import { replayHistory } from './analyse.js';
 
 const SESSION_KEY = 'chess-session';
 
@@ -17,7 +20,6 @@ export function ensureSession() {
     }
     return id;
   } catch {
-    // Private windows and blocked site data: play this session without remembering it.
     return fresh();
   }
 }
@@ -31,122 +33,170 @@ export function toMatrix(rows = []) {
   );
 }
 
-/** "e2e4" → ["e2", "e4"], for highlighting the move just played. */
+/** The inverse, for applying a move locally before the server has confirmed it. */
+function toRows(board) {
+  return board.map((rank) =>
+    rank.map((cell) => (cell ? (cell.color === 'w' ? cell.type.toUpperCase() : cell.type) : '.')).join('')
+  );
+}
+
 export function moveSquares(lastMove) {
   return typeof lastMove === 'string' && lastMove.length >= 4
     ? [lastMove.slice(0, 2), lastMove.slice(2, 4)]
     : [];
 }
 
-const POLL_MS = 1200;
+/** While the computer is thinking, how often to ask whether its move has landed. */
+const POLL_MS = 900;
 
 /**
  * Plays one game against the computer.
  *
- * The opponent's reply is not pushed: the server applies it on the first request that arrives
- * after its thinking delay, so while `opponentPending` is set this polls until the move lands.
+ * TanStack Query owns the game: one query per session, polled only while the computer is
+ * thinking -- the server applies its reply on the first request after the thinking delay, so
+ * polling is what makes the reply appear. Moves are applied optimistically, so a piece moves the
+ * instant it is put down, and rolled back if the server refuses.
  */
 export function usePlay() {
   const [sessionId] = useState(ensureSession);
-  const [state, setState] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [targets, setTargets] = useState([]);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const live = useRef(true);
+  const client = useQueryClient();
+  const key = useMemo(() => ['game', sessionId], [sessionId]);
 
-  useEffect(() => {
-    live.current = true;
-    return () => {
-      live.current = false;
-    };
+  const game = useQuery({
+    queryKey: key,
+    queryFn: () => getGameState(sessionId),
+    refetchInterval: (query) => (query.state.data?.opponentPending ? POLL_MS : false),
+    refetchOnWindowFocus: true,
+  });
+  const state = game.data ?? null;
+
+  const [selected, setSelectedState] = useState(null);
+  const [targets, setTargets] = useState([]);
+  // The selection as of now, for async work that finishes after the user has moved on.
+  const selectedRef = useRef(null);
+  const setSelected = useCallback((square) => {
+    selectedRef.current = square;
+    setSelectedState(square);
   }, []);
 
-  const apply = useCallback((next) => {
-    if (!live.current) return;
-    setState(next);
+  const clearSelection = useCallback(() => {
     setSelected(null);
     setTargets([]);
-  }, []);
+  }, [setSelected]);
 
-  const run = useCallback(
-    async (fn) => {
-      setBusy(true);
-      try {
-        apply(await fn());
-        setError('');
-      } catch (e) {
-        if (live.current) setError(e.message);
-      } finally {
-        if (live.current) setBusy(false);
+  const move = useMutation({
+    mutationFn: ({ from, to }) => playMove(sessionId, from, to),
+    onMutate: async ({ from, to }) => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData(key);
+      if (previous?.fen) {
+        try {
+          const local = new Chess(previous.fen);
+          const piece = local.get(from);
+          const promoting = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
+          const made = local.move({ from, to, promotion: promoting ? 'q' : undefined });
+          client.setQueryData(key, {
+            ...previous,
+            board: toRows(local.board()),
+            fen: local.fen(),
+            turn: 'Black',
+            lastMove: `${from}${to}`,
+            opponentPending: true,
+            message: `You moved ${made.san}.`,
+            moveHistory: [
+              ...previous.moveHistory,
+              { color: 'White', fromSquare: from, toSquare: to, promotion: made.promotion ?? null, notation: made.san },
+            ],
+          });
+        } catch {
+          // Not legal by chess.js either; let the server answer and say why.
+        }
       }
+      return { previous };
     },
-    [apply]
-  );
+    onError: (_error, _move, context) => {
+      if (context?.previous) client.setQueryData(key, context.previous);
+    },
+    onSuccess: (next) => client.setQueryData(key, next),
+  });
 
-  // Load the game this session left off at.
-  useEffect(() => {
-    run(() => getGameState(sessionId));
-  }, [sessionId, run]);
+  const restart = useMutation({
+    mutationFn: ({ timeControlMs = 0, incrementMs = 0 } = {}) =>
+      resetGame(sessionId, timeControlMs, incrementMs),
+    onSuccess: (next) => {
+      clearSelection();
+      client.setQueryData(key, next);
+    },
+  });
 
-  // While the computer is thinking, ask again until its move appears.
-  useEffect(() => {
-    if (!state?.opponentPending) return;
-    const timer = setTimeout(async () => {
-      try {
-        const next = await getGameState(sessionId);
-        if (live.current) setState(next);
-      } catch {
-        // A failed poll is not worth reporting; the next one will tell the same story.
-      }
-    }, POLL_MS);
-    return () => clearTimeout(timer);
-  }, [state, sessionId]);
-
-  const playable = state?.status === 'Ongoing' && state?.turn === 'White' && !state?.opponentPending;
+  const playable =
+    state?.status === 'Ongoing' && state?.turn === 'White' && !state?.opponentPending && !move.isPending;
 
   /** Click a square: pick up a piece, put it down, or switch to another piece. */
   const touch = useCallback(
-    async (name) => {
-      if (!playable || busy) return;
+    async (square) => {
+      if (!playable || !state) return;
 
-      if (selected === name) {
-        setSelected(null);
-        setTargets([]);
+      if (selected === square) {
+        clearSelection();
         return;
       }
-
-      if (selected && targets.includes(name)) {
+      if (selected && targets.includes(square)) {
         const from = selected;
-        setSelected(null);
-        setTargets([]);
-        await run(() => playMove(sessionId, from, name));
+        clearSelection();
+        move.mutate({ from, to: square });
         return;
       }
+
+      // Show the moves at once from the local rules, then confirm them with the server, which
+      // has the final say.
+      let local = [];
+      try {
+        local = new Chess(state.fen).moves({ square, verbose: true }).map((m) => m.to);
+      } catch {
+        local = [];
+      }
+      if (!local.length) {
+        clearSelection();
+        return;
+      }
+      setSelected(square);
+      setTargets([...new Set(local)]);
 
       try {
-        const reply = await getValidMoves(sessionId, name);
-        if (!live.current) return;
-        if (reply.success && reply.validMoves?.length) {
-          setSelected(name);
-          setTargets(reply.validMoves);
-          setError('');
-        } else {
-          setSelected(null);
-          setTargets([]);
+        const reply = await client.fetchQuery({
+          queryKey: ['valid-moves', sessionId, state.fen, square],
+          queryFn: () => getValidMoves(sessionId, square),
+          staleTime: Infinity,
+        });
+        if (selectedRef.current === square) {
+          setTargets(reply.success ? reply.validMoves ?? [] : []);
         }
-      } catch (e) {
-        if (live.current) setError(e.message);
+      } catch {
+        // Keep the local answer; the server still validates the move itself.
       }
     },
-    [playable, busy, selected, targets, sessionId, run]
+    [playable, state, selected, targets, setSelected, clearSelection, move, client, sessionId]
   );
 
-  const restart = useCallback(
-    (timeControlMs = 0, incrementMs = 0) =>
-      run(() => resetGame(sessionId, timeControlMs, incrementMs)),
-    [run, sessionId]
+  const frames = useMemo(
+    () => replayHistory(state?.moveHistory ?? [], state?.fen ?? null),
+    [state?.moveHistory, state?.fen]
   );
 
-  return { sessionId, state, selected, targets, error, busy, playable, touch, restart };
+  return {
+    sessionId,
+    state,
+    frames,
+    loading: game.isPending,
+    error: game.error?.message ?? move.error?.message ?? restart.error?.message ?? '',
+    thinking: Boolean(state?.opponentPending),
+    playable,
+    selected,
+    targets,
+    touch,
+    clearSelection,
+    restart: (timeControlMs, incrementMs) => restart.mutate({ timeControlMs, incrementMs }),
+    restarting: restart.isPending,
+  };
 }

@@ -130,8 +130,28 @@ module chess.examples.org {
          * never sharing a transaction.
          */
         ChessSchema connect() {
-            @Inject ChessSchema? hosted;
-            return hosted ?: catalog.createConnection().as(ChessSchema);
+            if (ChessSchema hosted := hostedSchema()) {
+                return hosted;
+            }
+            return catalog.createConnection().as(ChessSchema);
+        }
+
+        /**
+         * The schema a host injects, under the name "schema" that the web services have always
+         * asked for.
+         *
+         * Containers disagree on how to report a resource they do not have: the top-level one
+         * `xec` creates yields Null for a nullable injection, while a nested one -- the test
+         * runner, or a platform hosting several apps -- throws. Both mean "not hosted".
+         */
+        private conditional ChessSchema hostedSchema() {
+            try {
+                @Inject(resourceName="schema") ChessSchema? schema;
+                if (schema != Null) {
+                    return True, schema;
+                }
+            } catch (Exception notHosted) {}
+            return False;
         }
     }
 

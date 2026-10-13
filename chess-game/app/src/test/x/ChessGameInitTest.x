@@ -4,13 +4,11 @@ module ChessGameInitTest {
 
     import chess.core.ChessLogic;
     import chess.core.ChessGame;
-    import chess.core.ChessGame.MoveOutcome;
 
     import db.models.Color;
     import db.models.CastlingRights;
     import db.models.GameRecord;
     import db.models.GameStatus;
-    import db.models.MoveHistoryEntry;
 
     /**
      * Tests for game initialization, default state and board setup.
@@ -114,20 +112,20 @@ module ChessGameInitTest {
 
         @Test
         void shouldFormatMoveNotation() {
-            assert ChessLogic.createMoveNotation('P', 52, 36, False, Null, False, False, Null) == "e4";
-            assert ChessLogic.createMoveNotation('N', 62, 45, False, Null, True, False, Null) == "Nf3+";
-            assert ChessLogic.createMoveNotation('K', 60, 62, False, Null, False, False, "O-O") == "O-O";
-            assert ChessLogic.createMoveNotation('p', 8, 0, False, 'Q', False, True, Null) == "a8=Q#";
+            assert ChessGame.createMoveNotation('P', 52, 36, False, Null, False, False, Null) == "e4";
+            assert ChessGame.createMoveNotation('N', 62, 45, False, Null, True, False, Null) == "Nf3+";
+            assert ChessGame.createMoveNotation('K', 60, 62, False, Null, False, False, "O-O") == "O-O";
+            assert ChessGame.createMoveNotation('p', 8, 0, False, 'Q', False, True, Null) == "a8=Q#";
         }
 
         @Test
         void shouldFormatCaptureNotation() {
             // Pawn capture
-            assert ChessLogic.createMoveNotation('P', 52, 43, True, Null, False, False, Null) == "xd3";
+            assert ChessGame.createMoveNotation('P', 52, 43, True, Null, False, False, Null) == "xd3";
             // Knight capture with check
-            assert ChessLogic.createMoveNotation('N', 62, 45, True, Null, True, False, Null) == "Nxf3+";
+            assert ChessGame.createMoveNotation('N', 62, 45, True, Null, True, False, Null) == "Nxf3+";
             // Queen capture with checkmate
-            assert ChessLogic.createMoveNotation('Q', 59, 4, True, Null, False, True, Null) == "Qxe8#";
+            assert ChessGame.createMoveNotation('Q', 59, 4, True, Null, False, True, Null) == "Qxe8#";
         }
     }
 

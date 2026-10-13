@@ -1,5 +1,3 @@
-import core.OnlineChessLogic.RoomCreated;
-import core.OnlineChessLogic.OnlineApiState;
 import core.ChessGame.MoveOutcome;
 import core.ChessGame.AutoResponse;
 import db.models.GameStatus;

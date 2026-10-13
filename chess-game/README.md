@@ -154,10 +154,6 @@ API, reached through `StockfishApi.x`. Nothing picks the computer's moves locall
 - **Offline fallback**: if the engine cannot be reached, a random legal move is played so the
   game never stalls
 
-The local evaluation and search services (`AIPositionEvaluator`, `AISearchEngine`,
-`AIOpeningBook`) remain in the module for callers that want a score for a position, but they no
-longer choose the computer's moves.
-
 The same engine is exposed to the web client at `/api/engine/analyse`, which is where the
 analysis panel's evaluation graph and centipawn-loss figures come from.
 

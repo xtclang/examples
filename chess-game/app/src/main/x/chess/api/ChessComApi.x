@@ -111,7 +111,7 @@ service ChessComApi {
      * chess.com usernames are 3-25 characters: letters, digits, '_' and '-'. Anything else is
      * rejected so the value can never alter the upstream URL path.
      */
-    private Boolean isValidUsername(String name) {
+    static Boolean isValidUsername(String name) {
         if (name.size < 3 || name.size > 25) {
             return False;
         }
@@ -123,7 +123,7 @@ service ChessComApi {
         return True;
     }
 
-    private Boolean isDigits(String text, Int length) {
+    static Boolean isDigits(String text, Int length) {
         if (text.size != length) {
             return False;
         }

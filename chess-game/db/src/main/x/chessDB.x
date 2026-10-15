@@ -6,10 +6,6 @@
  * 
  * All models have been organized into separate files for better maintainability:
  * - models/: Core data models (Color, GameStatus, GameMode, GameRecord, etc.)
- * - base/: Base piece class
- * - pieces/: Individual piece implementations (Pawn, Knight, Bishop, etc.)
- * - types/: Type definitions and enumerations (PieceType)
- * - factory/: Factory classes for creating pieces
  * 
  * The database stores game records indexed by integer IDs, along with
  * authentication information for web access control.
@@ -31,23 +27,6 @@ module chessDB.examples.org {
     import models.GameRecord;
     import models.OnlineGame;
     import models.ChatMessage;
-
-    // ===== Import Base Classes =====
-    import base.Piece;
-
-    // ===== Import Piece Implementations =====
-    import pieces.Pawn;
-    import pieces.Knight;
-    import pieces.Bishop;
-    import pieces.Rook;
-    import pieces.Queen;
-    import pieces.King;
-
-    // ===== Import Types =====
-    import types.PieceType;
-
-    // ===== Import Factory =====
-    import factory.PieceFactory;
 
     // ===== Database Schema =====
     /**

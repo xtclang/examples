@@ -1,1 +1,0 @@
-const Queen(Color color) extends Piece(color, 'q', 900);

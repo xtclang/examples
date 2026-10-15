@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.svg" />
     <title>Chess Playground</title>
+    <script>
+      // Apply the saved theme before the first paint, so a dark page never flashes white.
+      try {
+        if ((JSON.parse(localStorage.getItem('theme')) ?? 'dark') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -390,7 +390,7 @@ export function PolicyChart({ rows, height, accent = COLORS.white }) {
       ],
       scales: {
         x: { scale: scaleLinear().domain([0, peak * 1.22]), axis: false },
-        y: { scale: () => scaleBand().padding(0.3), axis: { line: false, ticks: { size: 0, size: 0 } } },
+        y: { scale: () => scaleBand().padding(0.3), axis: { line: false, ticks: { size: 0 } } },
       },
       theme: THEME,
       focus: 'nearest-y',

@@ -1,1 +1,0 @@
-const Bishop(Color color) extends Piece(color, 'b', 330);

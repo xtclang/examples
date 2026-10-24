@@ -3,8 +3,6 @@ module ChessGamePlayTest {
     package db import chessDB.examples.org;
 
     import chess.core.ChessLogic;
-    import chess.core.ChessGame.MoveOutcome;
-    import chess.core.ChessGame.AutoResponse;
 
     import db.models.Color;
     import db.models.CastlingRights;

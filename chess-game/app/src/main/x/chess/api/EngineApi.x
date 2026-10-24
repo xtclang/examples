@@ -114,7 +114,7 @@ service EngineApi {
      * Renders a value the engine sent as a number back as JSON: the digits as they arrived, or
      * `null`. Anything that is not a number is dropped rather than relayed.
      */
-    private static String jsonNumber(String? value) {
+    static String jsonNumber(String? value) {
         if (String text ?= value) {
             Boolean digits = False;
             for (Char ch : text) {
@@ -135,7 +135,7 @@ service EngineApi {
      * Renders a string as a JSON string literal, or `null`. The engine only ever sends plain
      * ASCII moves and notation, so anything outside that set is dropped.
      */
-    private static String jsonText(String? value) {
+    static String jsonText(String? value) {
         if (String text ?= value) {
             for (Char ch : text) {
                 if (!ch.ascii || ch == '"' || ch == '\\' || ch.codepoint < 0x20) {
@@ -150,7 +150,7 @@ service EngineApi {
     /**
      * Pulls the plain UCI move out of a "bestmove e7e5 ponder g1f3" line.
      */
-    private static String? uciOf(String? bestMoveLine) {
+    static String? uciOf(String? bestMoveLine) {
         if (String line ?= bestMoveLine) {
             for (String token : line.split(' ')) {
                 String trimmed = token.trim();
@@ -166,7 +166,7 @@ service EngineApi {
      * Cheap shape check so a malformed value is rejected here rather than upstream: a FEN is
      * ASCII, has a board field of eight '/'-separated ranks, and names the side to move.
      */
-    private static Boolean isPlausibleFen(String fen) {
+    static Boolean isPlausibleFen(String fen) {
         if (fen.size < 10 || fen.size > 120) {
             return False;
         }

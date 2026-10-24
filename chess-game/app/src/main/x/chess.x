@@ -13,7 +13,7 @@ import ai.StockfishApi;
 /**
  * Chess Game Server Module
  * 
- * This module implements a web-based chess game server using the XTC web framework.
+ * This module implements a web-based chess game server using the Ecstasy web framework.
  * It provides a RESTful API for managing chess games with both single-player (vs AI)
  * and online two-player multiplayer modes.
  * 

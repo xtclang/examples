@@ -1,14 +1,4 @@
-import utils.BoardUtils;
-import utils.BoardOperations;
-import utils.DirectionUtils;
 import utils.ChatAPIResponseTypes.*;
-import validation.PieceValidator;
-import validation.CheckDetection;
-import validation.MoveValidator;
-import validation.ValidMovesHelper;
-import config.CastlingManager;
-import core.ChessLogic;
-import core.OnlineChessLogic;
 /**
  * ChatApi Service
  *
@@ -22,7 +12,8 @@ import core.OnlineChessLogic;
 @WebService("/api/chat")
 service ChatApi {
     // Injected dependencies
-    @Inject ChessSchema schema;
+    // Database access; see the Database service in chess.x
+    @Lazy ChessSchema schema.calc() = Database.connect();
     @Inject Clock       clock;
 
     /**

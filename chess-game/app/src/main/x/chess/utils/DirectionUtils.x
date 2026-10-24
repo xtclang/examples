@@ -94,40 +94,4 @@ service DirectionUtils {
     static Boolean isStraightLine(Int from, Int to) {
         return (isSameFile(from, to) || isSameRank(from, to)) && from != to;
     }
-
-    /**
-     * Get all squares along a ray in a specific direction.
-     * Useful for sliding piece attack detection.
-     */
-    static Int[] getRaySquares(Int from, Int direction, Int maxDistance = 8) {
-        Int[] squares = new Int[];
-        Int current = from + direction;
-        Int distance = 0;
-
-        Loop:
-        while (BoardUtils.isValidSquare(current) && distance < maxDistance) {
-        // Check for wrapping (file overflow)
-                Int fromFile = BoardUtils.getFile(from);
-                Int currentFile = BoardUtils.getFile(current);
-
-                switch (direction) {
-                case EAST, NORTHEAST, SOUTHEAST:
-                    if (currentFile < fromFile) {
-                        break Loop;
-                    }
-                    break;
-
-                case WEST, NORTHWEST, SOUTHWEST:
-                    if (currentFile > fromFile) {
-                        break Loop;
-                    }
-                    break;
-                }
-
-                squares = squares.add(current);
-                current += direction;
-                distance++;
-        }
-        return squares;
-    }
 }

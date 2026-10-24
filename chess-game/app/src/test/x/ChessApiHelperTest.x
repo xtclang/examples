@@ -7,8 +7,6 @@ module ChessApiHelperTest {
     import chess.api.ChessApi;
     import chess.utils.ChatAPIResponseTypes.*;
 
-    import db.models.GameRecord;
-
     import xunit.annotations.Disabled;
 
     /**

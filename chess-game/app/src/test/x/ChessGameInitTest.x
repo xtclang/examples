@@ -130,7 +130,7 @@ module ChessGameInitTest {
     }
 
     /**
-     * Tests for legacy checkGameStatus method.
+     * Tests for checkGameStatus: checkmate, stalemate, and ongoing detection from board material.
      */
     class LegacyStatusTests {
         @Test

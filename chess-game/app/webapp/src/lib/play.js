@@ -62,10 +62,17 @@ export function usePlay() {
   const client = useQueryClient();
   const key = useMemo(() => ['game', sessionId], [sessionId]);
 
+  // While the move mutation is in flight, the optimistic update already marks the game as
+  // opponentPending -- which would otherwise make the poller fire a GET /state before the POST
+  // /move has landed. That GET still sees the pre-move position and overwrites the optimistic
+  // board with it, so the piece jumps back and then forward again once the real reply arrives:
+  // the move visibly "plays twice". Holding the poller off until the mutation settles avoids it.
+  const movingRef = useRef(false);
+
   const game = useQuery({
     queryKey: key,
     queryFn: () => getGameState(sessionId),
-    refetchInterval: (query) => (query.state.data?.opponentPending ? POLL_MS : false),
+    refetchInterval: (query) => (!movingRef.current && query.state.data?.opponentPending ? POLL_MS : false),
     refetchOnWindowFocus: true,
   });
   const state = game.data ?? null;
@@ -87,6 +94,7 @@ export function usePlay() {
   const move = useMutation({
     mutationFn: ({ from, to }) => playMove(sessionId, from, to),
     onMutate: async ({ from, to }) => {
+      movingRef.current = true;
       await client.cancelQueries({ queryKey: key });
       const previous = client.getQueryData(key);
       if (previous?.fen) {
@@ -118,6 +126,10 @@ export function usePlay() {
       if (context?.previous) client.setQueryData(key, context.previous);
     },
     onSuccess: (next) => client.setQueryData(key, next),
+    onSettled: () => {
+      movingRef.current = false;
+      client.invalidateQueries({ queryKey: key });
+    },
   });
 
   const restart = useMutation({

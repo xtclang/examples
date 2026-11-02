@@ -1,9 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import Play from './components/Play.jsx';
 import Replay from './components/Replay.jsx';
+import Room from './components/Room.jsx';
+import Puzzle from './components/Puzzle.jsx';
 import { Skeleton, usePersistentState } from './components/ui.jsx';
 import { START_FEN, useGame } from './lib/analyse.js';
 import { usePlay } from './lib/play.js';
+import { useOnlineGame } from './lib/online.js';
 import { holdEngine } from './lib/engine.js';
 import { getArchives, getDailyPuzzle, getGamesFromArchive, getPlayer } from './api.js';
 
@@ -25,7 +28,7 @@ function PanelSkeleton() {
 const describe = (g) =>
   `${g.white.username} vs ${g.black.username} · ${g.time_class} · ${g.white.result}/${g.black.result}`;
 
-const TITLES = { play: 'Play', review: 'Review', guide: 'Guide' };
+const TITLES = { play: 'Play', room: 'Room', review: 'Review', guide: 'Guide' };
 
 /** The theme lives on <html> as a class; index.html applies the saved one before first paint. */
 function useTheme() {
@@ -36,27 +39,17 @@ function useTheme() {
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
 }
 
-function Footer({ theme, onToggleTheme }) {
-  return (
-    <footer className="site-foot">
-      <button className="btn" onClick={onToggleTheme} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
-        {theme === 'dark' ? 'light' : 'dark'}
-      </button>
-      <p className="credits">
-        Built with <a href="https://github.com/xtclang/xvm" target="_blank" rel="noreferrer">XTC</a>
-        <span aria-hidden="true">·</span>
-        Engine by <a href="https://stockfish.online" target="_blank" rel="noreferrer">Stockfish Online</a>
-        <span aria-hidden="true">·</span>
-        Development build
-      </p>
-    </footer>
-  );
-}
-
 export default function App() {
   const [view, setView] = usePersistentState('view', 'play');
   const [insightsOpen, setInsightsOpen] = usePersistentState('insights-open', true);
   const [theme, toggleTheme] = useTheme();
+
+  // A link to a friend's room (?room=CODE) lands here on the Room view directly.
+  const [joinCode] = useState(() => new URLSearchParams(window.location.search).get('room'));
+  useEffect(() => {
+    if (joinCode) setView('room');
+  }, [joinCode, setView]);
+  const online = useOnlineGame();
 
   // Playing against the engine
   const play = usePlay();
@@ -74,6 +67,7 @@ export default function App() {
   const [games, setGames] = useState([]);
   const [selected, setSelected] = useState(null);
   const [source, setSource] = useState({ fen: START_FEN, title: 'Starting position' });
+  const [puzzle, setPuzzle] = useState(null);
   const [ply, setPly] = useState(0);
   const reviewed = useGame(source);
   useEffect(() => setPly(0), [source]);
@@ -103,6 +97,7 @@ export default function App() {
 
   const pick = (g) => {
     setSelected(g);
+    setPuzzle(null);
     setSource({
       pgn: g.pgn,
       title: describe(g),
@@ -115,7 +110,8 @@ export default function App() {
     run('loading…', async () => {
       const p = await getDailyPuzzle();
       setSelected(null);
-      setSource({ fen: p.fen, title: `Daily puzzle · ${p.title}` });
+      setSource({ fen: START_FEN, title: 'Starting position' });
+      setPuzzle(p);
     });
 
   const playing = view === 'play';
@@ -154,12 +150,30 @@ export default function App() {
           <h1 className="page-title">{TITLES[view]}</h1>
         </div>
         <nav className="head-right" aria-label="Pages">
-          {['review', 'guide'].filter((v) => v !== view).map(navTo)}
-          {!playing && (
-            <button className="btn btn-nav" onClick={toggleTheme}>
-              {theme === 'dark' ? 'light' : 'dark'}
-            </button>
-          )}
+          {['room', 'review', 'guide'].filter((v) => v !== view).map(navTo)}
+          <button
+            className="icon-btn theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? (
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"
+                  stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"
+                />
+                <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+                <path
+                  d="M13.5 9.7A5.8 5.8 0 0 1 6.3 2.5a5.8 5.8 0 1 0 7.2 7.2z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+          </button>
         </nav>
       </header>
 
@@ -197,13 +211,18 @@ export default function App() {
           <Suspense fallback={<Skeleton width="100%" height="12rem" radius={16} />}>
             <Guide onPlay={() => setView('play')} />
           </Suspense>
-          <Footer theme={theme} onToggleTheme={toggleTheme} />
+        </main>
+      ) : view === 'room' ? (
+        <main className="page">
+          <Room online={online} joinCode={joinCode} />
         </main>
       ) : (
         <main className={insightsOpen ? 'split' : 'split split-focus'}>
           <section className="pane board-pane">
             {playing ? (
               <Play play={play} viewing={viewing} onView={(k) => setViewing(k === null || k >= liveIndex ? null : k)} />
+            ) : puzzle ? (
+              <Puzzle puzzle={puzzle} onExit={() => setPuzzle(null)} />
             ) : (
               <Replay
                 positions={reviewed.positions}
@@ -215,7 +234,6 @@ export default function App() {
                 setPly={setPly}
               />
             )}
-            <Footer theme={theme} onToggleTheme={toggleTheme} />
             {!insightsOpen && (
               <button className="btn btn-solid insights-reopen" onClick={() => setInsightsOpen(true)}>
                 ← Insights

@@ -35,23 +35,15 @@ module chessDB.examples.org {
      * Extends the OODB RootSchema to provide typed access to stored data.
      * 
      * The schema maintains:
-     * - A map of game records indexed by integer game IDs (legacy single-player)
+     * - A map of single-player games indexed by browser session ID
      * - A map of online games indexed by room codes (multiplayer)
      * - Authentication data for web access control
-     * 
+     *
      * All database operations should be performed within transactions
      * to ensure data consistency.
      */
     interface ChessSchema
             extends oodb.RootSchema {
-        /**
-         * Stored Games Map (Legacy)
-         * 
-         * Database map containing all chess games, indexed by integer game ID.
-         * Used for backward compatibility with single-player mode.
-         */
-        @RO oodb.DBMap<Int, GameRecord> games;
-
         /**
          * Single Player Games Map
          * 

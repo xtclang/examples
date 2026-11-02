@@ -105,8 +105,6 @@ service StockfishApi {
         return new EngineMove(-1, -1);
     }
 
-    // ----- parsing -------------------------------------------------------------------------------
-
     /**
      * Pulls the move out of a UCI `bestmove` line, e.g. "bestmove e7e5 ponder g1f3" or
      * "bestmove a7a8q". A missing or malformed move yields an unusable [EngineMove].

@@ -87,6 +87,30 @@ export function replayHistory(history = [], liveFen = null) {
   return { positions, moves };
 }
 
+/**
+ * The move sequence a puzzle expects, as `{ from, to, promotion, san }` played in order from
+ * `fen`. Headers and move numbers are stripped from `pgn` and each token is replayed on a board
+ * seeded from `fen` directly, rather than trusting chess.js to parse an embedded `[FEN]` header --
+ * so this works the same whether or not the source PGN declares `[SetUp "1"]`.
+ */
+export function puzzleSolution(fen, pgn) {
+  const tokens = pgn
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\{[^}]*\}/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t && !/^\d+\.(\.\.)?$/.test(t) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t));
+
+  const game = new Chess(fen);
+  const moves = [];
+  for (const san of tokens) {
+    const made = game.move(san);
+    if (!made) break;
+    moves.push(moveOf(made));
+  }
+  return moves;
+}
+
 // ---------------------------------------------------------------------------- the local model
 
 const positionCache = new Map();

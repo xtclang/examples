@@ -287,6 +287,12 @@ export function MetricsPanel({ mode, positions, moves, current, names, onSeek, o
         )}
       </Section>
 
+      {hasMoves && (
+        <Section id="moves" title="Every move" meta={`${mine.length} by ${who === 'You' ? 'you' : who}`}>
+          <MovesTable rows={mine} current={current} onSeek={onSeek} />
+        </Section>
+      )}
+
       <Section
         id="thinking"
         title={playing ? 'How you think' : `How ${who} thinks`}
@@ -355,12 +361,6 @@ export function MetricsPanel({ mode, positions, moves, current, names, onSeek, o
           <Empty>{decision ? 'No legal moves — the game is over.' : 'Scoring the position…'}</Empty>
         )}
       </Section>
-
-      {hasMoves && (
-        <Section id="moves" title="Every move" meta={`${mine.length} by ${who === 'You' ? 'you' : who}`} defaultOpen={false}>
-          <MovesTable rows={mine} current={current} onSeek={onSeek} />
-        </Section>
-      )}
 
       {hasMoves && (
         <Section id="calibration" title="Model fit" meta={fit ? `r² = ${fmt(fit.r2, 2)}` : undefined} defaultOpen={false}>

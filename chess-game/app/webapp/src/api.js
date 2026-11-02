@@ -52,8 +52,13 @@ export async function getGamesFromArchive(name, archiveUrl) {
   return (await get(`chesscom/games/${encodeURIComponent(name)}/${year}/${month}`)).games ?? [];
 }
 
+
+
+
 /**
- * Engine evaluation of one position.
+ * Engine evaluation of one position, via the server's `/api/engine` proxy (see EngineApi.x). The
+ * browser never calls Stockfish directly: the upstream URL, user agent and depth limits all live
+ * server-side, same as the chess.com endpoints above.
  *
  * `evaluation` is in pawns from White's point of view and is null in a forced mate, where
  * `mate` carries the distance to mate for the side to move instead.
@@ -63,3 +68,19 @@ export async function analysePosition(fen, depth = 11) {
   if (!body.success) throw new Error(body.message || 'Engine unavailable');
   return body;
 }
+
+// ----- playing online with a friend (see OnlineChessApi.x) -----
+
+export const createRoom = (timeControlMs = 0, incrementMs = 0) =>
+  post('online/create', timeControlMs > 0 ? { timeControlMs, incrementMs } : undefined);
+export const joinRoom = (roomCode) => post(`online/join/${encodeURIComponent(roomCode)}`);
+export const getRoomState = (roomCode, playerId) =>
+  get(`online/state/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}`);
+export const playRoomMove = (roomCode, playerId, from, to) =>
+  post(`online/move/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}/${square(from)}/${square(to)}`);
+export const resetRoom = (roomCode, playerId) =>
+  post(`online/reset/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}`);
+export const leaveRoom = (roomCode, playerId) =>
+  post(`online/leave/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}`);
+export const getRoomValidMoves = (roomCode, playerId, from) =>
+  get(`online/validmoves/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}/${square(from)}`);

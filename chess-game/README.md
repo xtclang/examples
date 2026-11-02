@@ -1,8 +1,31 @@
 # Chess Playground
 
-A full-stack chess game written in XTC (Ecstasy) with a React client. Play Stockfish, then see
-how you played and how you think: live engine evaluations, accuracy, mistakes, and a fitted model
-of your decision-making, all drawn as interactive charts.
+A full-stack chess game written in XTC (Ecstasy) with a React client. Play Stockfish, play a
+friend over a shared room link, solve the chess.com daily puzzle, or review a chess.com game —
+then see how you played and how you think: live engine evaluations, accuracy, mistakes, and a
+fitted model of your decision-making, all drawn as interactive charts.
+
+## Contents
+
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Game Modes](#game-modes)
+  - [Single Player (vs AI)](#single-player-vs-ai)
+  - [Play a Friend (Rooms)](#play-a-friend-rooms)
+  - [Daily Puzzle](#daily-puzzle)
+  - [Review](#review)
+- [How to Play](#how-to-play)
+- [API](#api)
+  - [Single-Player Endpoints](#single-player-endpoints)
+  - [Room Endpoints](#room-endpoints)
+  - [Engine and chess.com Endpoints](#engine-and-chesscom-endpoints)
+- [Technical Details](#technical-details)
+- [Development](#development)
+- [Database](#database)
+- [Troubleshooting](#troubleshooting)
+- [Learn More](#learn-more)
 
 ## Overview
 
@@ -11,9 +34,12 @@ of your decision-making, all drawn as interactive charts.
 - **Client** — React with TanStack Query (live data), TanStack Charts (charts) and TanStack Table
   (the sortable move list), built with Vite and compiled into the server module.
 - **Computer opponent** — every move comes from Stockfish Online; nothing picks moves locally.
+- **Rooms** — play a friend over a shared link, with an optional clock. See
+  [Play a Friend (Rooms)](#play-a-friend-rooms).
+- **Daily puzzle** — the chess.com puzzle of the day, playable move by move with right/wrong
+  feedback, not just a static diagram. See [Daily Puzzle](#daily-puzzle).
 - **Insights** — engine evaluation, win chance, accuracy, centipawn loss, mistake counts, and a
   softmax model of your choices fitted to the moves you play. The in-app **Guide** explains each.
-- **Online multiplayer** with room codes and optional clocks.
 
 ## Prerequisites
 
@@ -144,14 +170,43 @@ API, reached through `StockfishApi.x`. Nothing picks the computer's moves locall
 The same engine is exposed to the web client at `/api/engine/analyse`, which is where the
 analysis panel's evaluation graph and centipawn-loss figures come from.
 
-**Session Isolation**: Each browser tab gets its own independent game. You can play multiple games simultaneously in different tabs without interference.
+**Session isolation**: each browser tab keeps its own game, under a session id in `localStorage`
+(see [Session Management](#session-management)). Multiple tabs play independent games.
 
-### Online Multiplayer
+### Play a Friend (Rooms)
 
-1. Click the **Online** tab
-2. Choose to **Create Game** (generates a unique code) or **Join Game** (enter a code)
-3. Share the game code with your opponent
-4. Play in real-time with automatic turn synchronization
+Two players share a room, identified by a 6-character code (`OnlineChessApi.x`, `/api/online`):
+
+1. On the **Room** tab, **Create room** — optionally with a clock. The creator plays White and
+   gets a room code plus an invite link (`?room=CODE`).
+2. **Copy invite link** and send it to a friend. Opening the link lands them directly on the Room
+   tab and attempts to join that room — no code to type. A code can also be entered by hand under
+   **Join a room**.
+3. The second player to join plays Black. Once both are seated, the room's state polls for each
+   player's turn — board, clocks, and move history all come from the server, so either side's
+   browser is simply a window onto the same `OnlineGame`.
+4. Either player can **Leave** at any time, which marks the room as abandoned for the other side.
+   When the game ends (checkmate, draw, or time out), **Rematch** resets the same room with both
+   players still seated.
+
+A room's seat (its room code and player id) is kept in `localStorage`, the same way a
+single-player session is — reloading the page returns you to the same seat in the same room.
+
+### Daily Puzzle
+
+The **daily puzzle** button (on the Review tab) loads chess.com's puzzle of the day and plays it
+out move by move, not as a static position: attempt the solving side's move, and the opponent's
+reply plays itself after a short pause if it's correct. A wrong attempt is rejected on the spot,
+with the board staying put and a prompt to try again. The solution comes from the puzzle's own
+PGN (`/api/chesscom/puzzle`), checked entirely in the browser — no server round-trip while
+solving. Solving the full sequence shows a "Solved!" state with a button to try it again.
+
+### Review
+
+Load any `chess.com` player's recent games (`/api/chesscom/*`) and step through them move by
+move, with the same engine-evaluation and accuracy panel used in single-player — useful for
+seeing how a finished game actually went, move by move, with the engine's own read on each
+position.
 
 ## How to Play
 
@@ -169,67 +224,57 @@ This implementation includes **complete chess rules**:
 
 ### Making Moves
 
-1. **Click a square** with your piece (you play as White in single-player)
-2. **Click the destination** square where you want to move
-3. The move will be validated by the server
-4. If legal, the opponent responds (AI instantly picks from good moves, online opponent when they move)
+1. **Click a square** with your piece (you play as White in single-player and as the room's
+   creator; Black otherwise)
+2. **Click a highlighted destination** square to move there
+3. The server validates and applies the move
+4. The opponent responds — the computer after a short pause, a room opponent whenever they move
 5. Continue playing until the game ends
 
 ### Game Controls
 
-- **Reset Game**: Start a new game with fresh board setup
-- **Sync**: Manually refresh the game state from the server
-- **Info**: View game status and rules
+- **Game** menu (single-player): pick a time control and start a **New game**
+- **Leave** / **Rematch** (rooms): leave the room, or reset it with both players still seated
+- **Insights** panel: collapse or reopen the engine-evaluation and accuracy panel beside the board
 
-## API Documentation
+## API
 
-The server exposes a RESTful API at `/api`:
+### Single-Player Endpoints
 
-### Single Player Endpoints
+`ChessApi.x`, under `/api`. Every endpoint includes the browser's session id for game isolation.
 
-All single-player endpoints include a session ID for game isolation:
+| Method | Path | Does |
+| --- | --- | --- |
+| GET | `/api/state/{sessionId}` | Current state of this session's game |
+| POST | `/api/move/{sessionId}/{from}/{target}` | Play a move, e.g. `e2`/`e4` |
+| POST | `/api/reset/{sessionId}` | Start a new game; JSON body `{timeControlMs, incrementMs}` for a clock |
+| GET | `/api/validmoves/{sessionId}/{square}` | Legal destination squares for the piece on `square` |
 
-#### Get Game State
-```http
-GET /api/state/{sessionId}
-```
+### Room Endpoints
 
-#### Make a Move
-```http
-POST /api/move/{sessionId}/{from}/{to}
-```
+`OnlineChessApi.x`, under `/api/online`. The room code identifies the game; the player id
+(returned by `create`/`join`) identifies which side of it this request is playing.
 
-#### Reset Game
-```http
-POST /api/reset/{sessionId}
-```
+| Method | Path | Does |
+| --- | --- | --- |
+| POST | `/api/online/create` | New room; optional JSON body `{timeControlMs, incrementMs}`. Returns `{roomCode, playerId}` |
+| POST | `/api/online/join/{roomCode}` | Join as the second player. Returns game state with a `playerId`, or an error message with none |
+| GET | `/api/online/state/{roomCode}/{playerId}` | Current state, from this player's point of view |
+| POST | `/api/online/move/{roomCode}/{playerId}/{from}/{target}` | Play a move |
+| POST | `/api/online/reset/{roomCode}/{playerId}` | Rematch: reset the board, keep both players seated |
+| POST | `/api/online/leave/{roomCode}/{playerId}` | Leave the room |
+| GET | `/api/online/validmoves/{roomCode}/{playerId}/{square}` | Legal destination squares for the piece on `square` |
 
-#### Get Valid Moves
-```http
-GET /api/validmoves/{sessionId}/{square}
-```
+### Engine and chess.com Endpoints
 
-### Online Multiplayer Endpoints
-
-#### Create Game
-```http
-POST /api/online/create
-```
-
-#### Join Game
-```http
-POST /api/online/join/{gameCode}?color={white|black}
-```
-
-#### Get Online Game State
-```http
-GET /api/online/state/{gameCode}?playerId={playerId}
-```
-
-#### Make Online Move
-```http
-POST /api/online/move/{gameCode}/{from}/{to}?playerId={playerId}
-```
+| Method | Path | Does |
+| --- | --- | --- |
+| GET | `/api/engine/analyse?fen=&depth=` | Stockfish Online's evaluation of a position |
+| GET | `/api/engine/bestmove?fen=&depth=` | The engine's move for a position |
+| GET | `/api/chesscom/player/{username}` | A chess.com player's public profile |
+| GET | `/api/chesscom/archives/{username}` | Monthly archive URLs for a player's games |
+| GET | `/api/chesscom/games/{username}/{year}/{month}` | One month's games, with PGN |
+| GET | `/api/chesscom/puzzle` | chess.com's daily puzzle: title, FEN, PGN solution |
 
 ## Technical Details
 

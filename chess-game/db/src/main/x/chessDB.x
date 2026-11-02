@@ -26,7 +26,6 @@ module chessDB.examples.org {
     import models.TimeControl;
     import models.GameRecord;
     import models.OnlineGame;
-    import models.ChatMessage;
 
     // ===== Database Schema =====
     /**
@@ -38,7 +37,6 @@ module chessDB.examples.org {
      * The schema maintains:
      * - A map of game records indexed by integer game IDs (legacy single-player)
      * - A map of online games indexed by room codes (multiplayer)
-     * - A list of chat messages for online games
      * - Authentication data for web access control
      * 
      * All database operations should be performed within transactions
@@ -69,14 +67,6 @@ module chessDB.examples.org {
          * Room codes are unique 6-character alphanumeric strings.
          */
         @RO oodb.DBMap<String, OnlineGame> onlineGames;
-
-        /**
-         * Chat Messages List
-         * 
-         * Database list containing all chat messages sent in online games.
-         * Messages are stored in chronological order.
-         */
-        @RO oodb.DBMap<String, ChatMessage> chatMessages;
 
         /**
          * Authentication Schema

@@ -5,7 +5,6 @@ module ChessApiHelperTest {
 
     import chess.core.ChessLogic;
     import chess.api.ChessApi;
-    import chess.utils.ChatAPIResponseTypes.*;
 
     import xunit.annotations.Disabled;
 
@@ -32,26 +31,6 @@ module ChessApiHelperTest {
         }
 
         @Test
-        void shouldBuildOnlineAndChatResponseTypes() {
-            val request = new SendMessageRequest(" hello chess ");
-            assert request.message == " hello chess ";
-
-            val message = new ChatMessageResponse("p1", "White", "hi", 123);
-            assert message.playerId == "p1";
-            assert message.playerColor == "White";
-            assert message.message == "hi";
-            assert message.timestamp == 123;
-
-            val history = new ChatHistoryResponse(True, Null, [message]);
-            assert history.success;
-            assert history.messages.size == 1;
-
-            val sent = new SendMessageResponse(True, Null, "Message sent successfully");
-            assert sent.success;
-            assert sent.message == "Message sent successfully";
-        }
-
-        @Test
         void shouldBuildApiStateWithCorrectBoardLayout() {
             val api = new ChessApi();
             val game = ChessLogic.defaultGame();
@@ -72,18 +51,6 @@ module ChessApiHelperTest {
             val afterE4 = ChessLogic.applyHumanMove(game, "e2", "e4", Null).record;
             // After Black responds (simulate via autoMove or manual), describe should include last move
             assert api.describeState(afterE4, False).indexOf("e2e4");
-        }
-
-        @Test
-        void shouldBuildFailedChatResponses() {
-            val failed = new ChatHistoryResponse(False, "Room not found", []);
-            assert !failed.success;
-            assert failed.error == "Room not found";
-            assert failed.messages.empty;
-
-            val failSend = new SendMessageResponse(False, "Not a player", Null);
-            assert !failSend.success;
-            assert failSend.error == "Not a player";
         }
     }
 }

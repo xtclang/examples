@@ -35,6 +35,6 @@ echo "==> chessDB"
 "$XTC" build -L "$LIB" -o "$LIB" "$ROOT/db/src/main/x/chessDB.x"
 
 echo "==> chess"
-"$XTC" build -L "$LIB" -r "$ROOT/app/webapp" -o "$LIB" "$ROOT/app/src/main/x/chess.x"
+"$XTC" build -L "$LIB" -r "$ROOT/app/webapp/build" -o "$LIB" "$ROOT/app/src/main/x/chess.x"
 
 echo "==> built into ${LIB#"$ROOT"/}"

@@ -6,14 +6,14 @@ of your decision-making, all drawn as interactive charts.
 
 ## Overview
 
-- **Server** — an XTC `@WebApp` module hosted by xenia: REST services, a jsondb database, and
-  proxies for the Stockfish Online engine and chess.com.
+- **Server** — an XTC `@WebApp` module hosted by the [XQIZ.IT platform](https://github.com/xtclang/platform):
+  REST services, a jsondb database, and proxies for the Stockfish Online engine and chess.com.
 - **Client** — React with TanStack Query (live data), TanStack Charts (charts) and TanStack Table
   (the sortable move list), built with Vite and compiled into the server module.
 - **Computer opponent** — every move comes from Stockfish Online; nothing picks moves locally.
 - **Insights** — engine evaluation, win chance, accuracy, centipawn loss, mistake counts, and a
   softmax model of your choices fitted to the moves you play. The in-app **Guide** explains each.
-- **Online multiplayer** with room codes, chat, and optional clocks.
+- **Online multiplayer** with room codes and optional clocks.
 
 ## Prerequisites
 
@@ -30,21 +30,21 @@ scripts below need only the three tools above.
 
 `chess-game/` is itself a Gradle composite build that produces two XTC
 modules: `chess.xtc` (the `@WebApp` server) and `chessDB.xtc` (the OODB
-schema). The `app` subproject depends on `db`.
+schema). The `app` subproject depends on `db`. Being `@WebApp`, `chess.xtc`
+needs the XQIZ.IT platform to host it — it has no standalone server of its own.
 
 ```
 chess-game/
 ├── scripts/
 │   ├── build.sh               # web client + chessDB + chess, into build/xtc/main/lib
-│   ├── run.sh                 # build, then start the server
 │   └── test.sh                # run every test suite, each in a fresh directory
 ├── db/src/main/x/
 │   └── chessDB.x              # database schema (@oodb.Database)
 └── app/
     ├── src/main/x/
-    │   ├── chess.x            # the @WebApp module: run(), Database, static content
+    │   ├── chess.x            # the @WebApp module: Database, static content
     │   └── chess/
-    │       ├── api/           # web services: ChessApi, OnlineChessApi, ChatApi,
+    │       ├── api/           # web services: ChessApi, OnlineChessApi,
     │       │                  #   EngineApi (/api/engine), ChessComApi (/api/chesscom)
     │       ├── ai/            # StockfishApi (engine client), ChessAPIClient (computer moves)
     │       ├── core/          # game logic, single-player and online
@@ -59,43 +59,26 @@ chess-game/
 
 ## Quick Start
 
-### Run the server
+### Build
 
 ```bash
-scripts/run.sh
+scripts/build.sh
 ```
 
-This builds the web client and both modules into `build/xtc/main/lib`, then starts the server.
-Open **https://localhost:8090** and accept the self-signed certificate (once).
+This builds the web client and both modules into `build/xtc/main/lib`: `chessDB.xtc` and
+`chess.xtc` (with the built web client bundled in as static content).
 
-Use the **HTTPS** port: every web service is `@HttpsRequired`, so the HTTP port answers an API
-call with a redirect instead of data.
+### Host it
 
-Other addresses:
+`chess.examples.org` is `@WebApp` — it has no standalone server of its own and needs the
+[XQIZ.IT platform](https://github.com/xtclang/platform) to host it (it supplies the `ChessSchema`
+by injection and serves the HTTP/HTTPS endpoints). Deploy `chessDB.xtc` and `chess.xtc` to a
+running platform instance per its own documentation.
 
-```bash
-scripts/run.sh localhost:3000/3001                         # different ports
-scripts/run.sh my-laptop.local:8080/8090 0.0.0.0:8080/8090 # reachable on your network
-scripts/run.sh --no-build                                  # start the last build as is
-```
-
-The first address is what clients use — it is matched against the `Host` header and is the name
-the TLS certificate is issued for. The second is the socket to bind. For HTTPS from another
-machine the route must be a host **name**, not an IP address: the server chooses its certificate
-by the name the client sends during the TLS handshake, and a client connecting to a bare IP sends
-none.
-
-Without the script, the compiled module runs directly:
-
-```bash
-xtc run -L build/xtc/main/lib build/xtc/main/lib/chess.xtc [route] [bind]
-```
-
-**Files the server writes**, relative to the working directory (both git-ignored):
-`data/chessDB/` holds the database and `build/db/` the generated jsondb host module. The
-self-signed keystore is cached in the system temp directory as `chess.examples.org.p12`; it is
-keyed by application name, not route, so **delete it after changing the route host**, or the old
-certificate is served and every TLS handshake fails.
+**Files the database writes**, relative to the working directory (both git-ignored):
+`data/chessDB/` holds the database and `build/db/` the generated jsondb host module. These are
+only used as a fallback when nothing injects a schema (e.g. tests calling a service directly) —
+see `Database` in `chess.x`.
 
 ### Run the tests
 
@@ -114,7 +97,6 @@ suite and exits non-zero on any failure.
 | --- | --- |
 | `ChessApiTest` | `/api` — state, legal and illegal moves, valid moves, reset, clocks, session isolation |
 | `OnlineChessApiTest` | `/api/online` — rooms, seating, turn order, moves, valid moves, reset, leaving |
-| `ChatApiTest` | `/api/chat` — sending, validation, room membership, history, polling |
 | `EngineApiTest` | `/api/engine` — FEN validation before any upstream call, JSON encoding |
 | `ChessComApiTest` | `/api/chesscom` — username and date validation before any upstream call |
 | `ChessEngineApiTest` | `StockfishApi` — reading engine replies, UCI moves, URL encoding |
@@ -133,7 +115,7 @@ xtc test -L build/xtc/main/lib app/src/test/x/ChessApiTest.x
 
 ### Work on the web client
 
-Leave the server running and start Vite with hot reload in another terminal:
+With the backend hosted on the XQIZ.IT platform, start Vite with hot reload in another terminal:
 
 ```bash
 cd app/webapp
@@ -141,9 +123,10 @@ npm install
 npm run dev
 ```
 
-Vite proxies `/api` to `https://localhost:8090`, so the client talks to the real backend.
-`npm run build` writes the production client to `app/webapp/build`, which `chess.x` serves as
-static content; rebuild the module afterwards (`scripts/build.sh`) to ship it.
+Point Vite's dev proxy at wherever the platform is hosting `chess.examples.org`, so the client
+talks to the real backend. `npm run build` writes the production client to `app/webapp/build`,
+which `chess.x` serves as static content; rebuild the module afterwards (`scripts/build.sh`) to
+ship it.
 
 ## Game Modes
 
@@ -169,7 +152,6 @@ analysis panel's evaluation graph and centipawn-loss figures come from.
 2. Choose to **Create Game** (generates a unique code) or **Join Game** (enter a code)
 3. Share the game code with your opponent
 4. Play in real-time with automatic turn synchronization
-5. Use the **Chat** feature to communicate during the game
 
 ## How to Play
 
@@ -198,7 +180,6 @@ This implementation includes **complete chess rules**:
 - **Reset Game**: Start a new game with fresh board setup
 - **Sync**: Manually refresh the game state from the server
 - **Info**: View game status and rules
-- **Chat**: Open chat panel (online mode)
 
 ## API Documentation
 
@@ -250,18 +231,6 @@ GET /api/online/state/{gameCode}?playerId={playerId}
 POST /api/online/move/{gameCode}/{from}/{to}?playerId={playerId}
 ```
 
-### Chat Endpoints
-
-#### Send Message
-```http
-POST /api/chat/{gameCode}/send?playerId={playerId}&message={message}
-```
-
-#### Get Messages
-```http
-GET /api/chat/{gameCode}/messages?since={timestamp}
-```
-
 ## Technical Details
 
 ### Board Representation
@@ -304,7 +273,6 @@ so the game never stalls. See *Single Player (vs AI)* above.
 
 - **ChessApi** (`/api`): single-player games, one per browser session
 - **OnlineChessApi** (`/api/online`): rooms for two players
-- **ChatApi** (`/api/chat`): chat inside online rooms
 - **EngineApi** (`/api/engine`): the web client's route to Stockfish Online
 - **ChessComApi** (`/api/chesscom`): read-only proxy for chess.com's public data
 - **StockfishApi**: the engine client; **ChessAPIClient** plays its moves for the computer
@@ -333,15 +301,6 @@ The database persists game state across server restarts.
 
 ## Troubleshooting
 
-### Port Already in Use
-
-If something is already listening on port 8080:
-
-```bash
-lsof -i :8080
-kill -9 <PID>
-```
-
 ### Build Failures
 
 Check the toolchain the scripts use:
@@ -351,20 +310,18 @@ xtc --version      # the XDK is on PATH (or set XTC=/path/to/xtc)
 node --version     # 18 or later
 ```
 
-### The page loads but nothing else does
+### Hosting Issues
 
-You are probably on the HTTP port. Open **https://localhost:8090**: the API is HTTPS-only.
-
-### HTTPS fails after changing the address
-
-Delete the cached keystore (`$TMPDIR/chess.examples.org.p12`) and restart; see *Run the server*.
+`chess.examples.org` is `@WebApp` and has no server of its own — connectivity, TLS, and port
+issues are a property of the XQIZ.IT platform instance hosting it, not of this module. See the
+[platform's docs](https://github.com/xtclang/platform) for deploying and troubleshooting there.
 
 ### Game State Issues
 
 If the game gets into a bad state:
 1. Start a **New game** under the board
 2. Clear the site's storage in the browser for a fresh session
-3. Stop the server, delete `data/chessDB/`, and start it again
+3. On the hosting platform, clear `chessDB`'s persisted data and restart the module
 
 ## Learn More
 

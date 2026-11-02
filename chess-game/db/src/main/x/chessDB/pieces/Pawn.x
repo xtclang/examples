@@ -1,1 +1,0 @@
-const Pawn(Color color) extends Piece(color, 'p', 100);

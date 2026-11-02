@@ -7,7 +7,6 @@ target/
 # Tests
 data/
 test-output/
-# TODO: Why is xunit writing stuff to the build root instead of its test output directory?
 xunit/
 
 # Gradle

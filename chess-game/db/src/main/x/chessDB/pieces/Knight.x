@@ -1,1 +1,0 @@
-const Knight(Color color) extends Piece(color, 'n', 320);

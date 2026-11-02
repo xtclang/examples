@@ -47,5 +47,4 @@ rootProject.name = "examples"
 include(":welcome")
 include(":banking")
 include(":counter")
-include(":card-game")
 includeBuild("chess-game")

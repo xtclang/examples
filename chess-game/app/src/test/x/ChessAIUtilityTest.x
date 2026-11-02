@@ -7,7 +7,6 @@ module ChessAIUtilityTest {
     import chess.utils.BoardUtils;
 
     import db.models.Color;
-    import db.models.GameRecord;
 
     /**
      * Tests for AI utility functions: hashing, FEN generation, random move finding.

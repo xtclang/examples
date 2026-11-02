@@ -12,7 +12,6 @@ module ChessDBEnumTest {
     import db.models.TimeControl;
     import db.models.GameRecord;
     import db.models.OnlineGame;
-    import db.models.ChatMessage;
 
     /**
      * Tests for core enum values, value objects, and record construction.
@@ -75,22 +74,6 @@ module ChessDBEnumTest {
             assert entry.fromSquare == "e7";
             assert entry.toSquare == "e5";
             assert entry.piece == 'p';
-        }
-
-        @Test
-        void shouldConstructChatMessage() {
-            ChatMessage message = new ChatMessage("ROOM01", "player-1", Color.Black, "hello", new Time(0));
-            assert message.roomCode == "ROOM01";
-            assert message.playerColor == Color.Black;
-            assert message.message == "hello";
-        }
-
-        @Test
-        void shouldConstructChatMessageForWhite() {
-            ChatMessage msg = new ChatMessage("ROOM02", "player-2", Color.White, "good game", new Time(0));
-            assert msg.roomCode == "ROOM02";
-            assert msg.playerColor == Color.White;
-            assert msg.message == "good game";
         }
     }
 

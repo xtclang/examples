@@ -11,10 +11,6 @@ service PieceValidator {
     // ----- Piece Type Detection -------------------------------------------------
 
     static Boolean isPawn(Char piece) = piece == 'p' || piece == 'P';
-    static Boolean isKnight(Char piece) = piece == 'n' || piece == 'N';
-    static Boolean isBishop(Char piece) = piece == 'b' || piece == 'B';
-    static Boolean isRook(Char piece) = piece == 'r' || piece == 'R';
-    static Boolean isQueen(Char piece) = piece == 'q' || piece == 'Q';
     static Boolean isKing(Char piece) = piece == 'k' || piece == 'K';
 
     // ----- Path Checking -------------------------------------------------

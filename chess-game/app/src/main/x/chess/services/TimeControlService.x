@@ -86,27 +86,4 @@ service TimeControlService {
             ? (tc.whiteTimeMs - elapsed).maxOf(0)
             : (tc.blackTimeMs - elapsed).maxOf(0);
     }
-
-    // -------------------------------------------------------------------------
-    // Common time control presets (FIDE standards, all values in milliseconds)
-    // -------------------------------------------------------------------------
-
-    // Bullet
-    TimeControl bullet()      = create(60_000,  0);       // 1 min
-    TimeControl bullet1plus1() = create(60_000,  1_000);  // 1+1
-    TimeControl bullet2plus1() = create(120_000, 1_000);  // 2+1
-
-    // Blitz
-    TimeControl blitz3()      = create(180_000, 0);       // 3 min
-    TimeControl blitz3plus2() = create(180_000, 2_000);   // 3+2
-    TimeControl blitz5()      = create(300_000, 0);       // 5 min
-    TimeControl blitz5plus3() = create(300_000, 3_000);   // 5+3
-
-    // Rapid
-    TimeControl rapid10()      = create(600_000,   0);      // 10 min
-    TimeControl rapid15plus10() = create(900_000,  10_000); // 15+10
-    TimeControl rapid30()      = create(1_800_000, 0);      // 30 min
-
-    // Classical
-    TimeControl classical() = create(5_400_000, 30_000);   // 90+30 (FIDE standard)
 }

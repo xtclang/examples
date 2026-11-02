@@ -9,7 +9,6 @@ module ChessOnlineLogicTest {
 
     import db.models.Color;
     import db.models.GameMode;
-    import db.models.GameRecord;
     import db.models.GameStatus;
     import db.models.TimeControl;
     import db.models.OnlineGame;

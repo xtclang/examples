@@ -37,6 +37,6 @@ module welcome.examples.org {
         }
     }
 
-    @StaticContent("/", /build)
+    @StaticContent("/", /)
     service Content {}
 }

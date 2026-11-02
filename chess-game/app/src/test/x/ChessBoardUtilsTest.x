@@ -85,11 +85,6 @@ module ChessBoardUtilsTest {
             board[40] = '.';
             board[48] = '.';
             assert DirectionUtils.isPathClear(0, 56, board);
-
-            val ray = DirectionUtils.getRaySquares(0, DirectionUtils.SOUTH, 3);
-            assert ray.size == 3;
-            assert ray[0] == 8;
-            assert ray[2] == 24;
         }
 
         @Test

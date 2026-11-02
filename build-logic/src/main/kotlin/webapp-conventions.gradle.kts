@@ -1,11 +1,15 @@
 /**
  * Convention plugin for XTC modules with webapp content.
  *
- * Adds the project's webapp/ directory as a resource source, so that
- * static content can be served at runtime.
+ * Adds the project's webapp content as a resource source, so that static
+ * content can be served at runtime via @StaticContent.
  *
  * If webapp/package.json exists, the Node/npm plugin builds the webapp
- * (e.g. React) automatically before resource processing.
+ * (e.g. React/Vite) automatically before resource processing, and only the
+ * build *output* (webapp/build) is exposed as a resource — not the npm
+ * project itself (node_modules, raw src, config files). Projects with only
+ * static HTML in webapp/public/ (banking, counter) expose the whole webapp/
+ * directory as-is, since there's no build step to separate out.
  */
 
 import com.github.gradle.node.npm.task.NpmTask
@@ -29,9 +33,14 @@ repositories {
     mavenCentral()
 }
 
+val hasNpmWebapp = file("webapp/package.json").exists()
+
 sourceSets.named("main") {
     resources {
-        srcDir("webapp")
+        // npm-based webapps (welcome, chess-game) only need their built
+        // output; the npm project itself (node_modules, src, configs) would
+        // otherwise get copied into the module's resources unnecessarily.
+        srcDir(if (hasNpmWebapp) "webapp/build" else "webapp")
     }
 }
 
@@ -42,11 +51,8 @@ sourceSets.named("main") {
 //   2. Register a buildWebapp task that runs `npm run build` with proper caching
 //   3. Make processResources and processXtcResources depend on buildWebapp so the
 //      compiled webapp output is available as XTC module resources (used by
-//      @StaticContent annotations). Both tasks copy the webapp/ resource srcDir.
-//
-// Projects with only static HTML in webapp/public/ (banking, counter, chess-game)
-// skip this block entirely — their content is picked up directly by the srcDir above.
-if (file("webapp/package.json").exists()) {
+//      @StaticContent annotations). Both tasks copy the webapp/build resource srcDir.
+if (hasNpmWebapp) {
     node {
         download.set(providers.gradleProperty("node.download")
             .map { it.toBoolean() }

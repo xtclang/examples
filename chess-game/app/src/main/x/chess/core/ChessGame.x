@@ -283,11 +283,10 @@ class ChessGame {
     // ----- Game Status Detection -------------------------------------------------
 
     /**
-     * Check if the game has ended (legacy method for backward compatibility).
+     * Determines game status from board material alone: checkmate when either king is missing,
+     * stalemate when only the two kings remain, ongoing otherwise.
      */
     static GameStatus checkGameStatus(String board, Color turn) {
-        // Use simplified legacy rules for backward compatibility
-        // Count pieces
         Int whitePieces = 0;
         Int blackPieces = 0;
         Boolean whiteKing = False;

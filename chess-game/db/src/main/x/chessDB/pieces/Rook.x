@@ -1,1 +1,0 @@
-const Rook(Color color) extends Piece(color, 'r', 500);

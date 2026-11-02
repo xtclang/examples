@@ -67,47 +67,4 @@ service CastlingManager {
 
         return new CastlingRights(whiteKingside, whiteQueenside, blackKingside, blackQueenside);
     }
-
-    /**
-     * Check if castling is available for a specific side.
-     */
-    static Boolean canCastle(CastlingRights rights, Color color, Boolean kingside) {
-            return color == White
-                    ? (kingside ? rights.whiteKingside : rights.whiteQueenside)
-                    : (kingside ? rights.blackKingside : rights.blackQueenside);
-    }
-
-    /**
-     * Create default castling rights (all castling available).
-     */
-    static CastlingRights defaultRights() {
-        return new CastlingRights(True, True, True, True);
-    }
-
-    /**
-     * Create castling rights with no castling available.
-     */
-    static CastlingRights noRights() {
-        return new CastlingRights(False, False, False, False);
-    }
-
-    /**
-     * Get a string representation of castling rights (FEN notation).
-     */
-    static String toFEN(CastlingRights rights) {
-        String fen = "";
-        if (rights.whiteKingside) {
-            fen += "K";
-        }
-        if (rights.whiteQueenside) {
-            fen += "Q";
-        }
-        if (rights.blackKingside) {
-            fen += "k";
-        }
-        if (rights.blackQueenside) {
-            fen += "q";
-        }
-        return fen.empty ? "-" : fen;
-    }
 }

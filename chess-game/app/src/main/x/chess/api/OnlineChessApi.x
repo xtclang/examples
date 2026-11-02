@@ -24,7 +24,8 @@ import core.ChessLogic;
 @WebService("/api/online")
 service OnlineChessApi {
     // Injected dependencies
-    @Inject ChessSchema schema;
+    // Database access; see the Database service in chess.x
+    @Lazy ChessSchema schema.calc() = Database.connect();
     @Inject Random      random;
     TimeControlService timeControlService = new TimeControlService();
 

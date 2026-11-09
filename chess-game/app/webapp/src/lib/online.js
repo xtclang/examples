@@ -9,8 +9,7 @@ import {
   playRoomMove,
   resetRoom,
 } from '../api.js';
-import { replayHistory } from './analyse.js';
-import { toMatrix } from './play.js';
+import { gameFrames } from './analyse.js';
 
 const ROOM_KEY = 'chess-room';
 
@@ -32,28 +31,6 @@ function writeRoom(room) {
   } catch {
     // Private window or storage blocked: the seat lasts for this visit only.
   }
-}
-
-/** Moves one piece in a board matrix without consulting chess rules -- the server is the judge;
- *  this only has to look right for the instant before its reply lands. */
-function movePiece(board, from, to) {
-  const files = 'abcdefgh';
-  const at = (sq) => ({ row: 8 - Number(sq[1]), col: files.indexOf(sq[0]) });
-  const f = at(from);
-  const t = at(to);
-  const piece = board[f.row]?.[f.col];
-  if (!piece) return board;
-  const promoting = piece.type === 'p' && (t.row === 0 || t.row === 7);
-  const next = board.map((row) => row.slice());
-  next[t.row][t.col] = promoting ? { type: 'q', color: piece.color } : piece;
-  next[f.row][f.col] = null;
-  return next;
-}
-
-function toRows(board) {
-  return board.map((rank) =>
-    rank.map((cell) => (cell ? (cell.color === 'w' ? cell.type.toUpperCase() : cell.type) : '.')).join('')
-  );
 }
 
 /** How often to ask the server for the opponent's move. */
@@ -124,20 +101,11 @@ export function useOnlineGame() {
 
   const move = useMutation({
     mutationFn: ({ from, to }) => playRoomMove(room.roomCode, room.playerId, from, to),
-    onMutate: async ({ from, to }) => {
+    // No optimistic board update: the server is the only thing that decides what a move does.
+    onMutate: async () => {
       movingRef.current = true;
       await client.cancelQueries({ queryKey: key });
-      const previous = client.getQueryData(key);
-      if (previous?.board) {
-        client.setQueryData(key, {
-          ...previous,
-          board: toRows(movePiece(toMatrix(previous.board), from, to)),
-          turn: previous.playerColor,
-          lastMove: `${from}${to}`,
-          isYourTurn: false,
-        });
-      }
-      return { previous };
+      return { previous: client.getQueryData(key) };
     },
     onError: (_error, _move, context) => {
       if (context?.previous) client.setQueryData(key, context.previous);
@@ -190,10 +158,7 @@ export function useOnlineGame() {
     [playable, room, selected, targets, setSelected, clearSelection, move]
   );
 
-  const frames = useMemo(
-    () => replayHistory(state?.moveHistory ?? [], state?.fen ?? null),
-    [state?.moveHistory, state?.fen]
-  );
+  const frames = useMemo(() => gameFrames(state?.moveHistory ?? []), [state?.moveHistory]);
 
   return {
     room,

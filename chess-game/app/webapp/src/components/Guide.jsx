@@ -296,9 +296,9 @@ export default function Guide({ onPlay }) {
           <section id="model">
             <h2>The model, in full</h2>
             <p>
-              The thinking model runs in your browser. It values a position with seven simple
-              features, then assumes you pick moves the way a person under time pressure does: usually
-              the best-looking one, sometimes another, in proportion to how good each looks.
+              The thinking model values a position with seven simple features, then assumes you
+              pick moves the way a person under time pressure does: usually the best-looking one,
+              sometimes another, in proportion to how good each looks.
             </p>
             <div className="formulas">
               <p className="formula">V(p) = Σᵢ wᵢ · φᵢ(p) — the value of a position, from the mover’s side</p>
@@ -354,7 +354,8 @@ export default function Guide({ onPlay }) {
                 locally.
               </li>
               <li>
-                <strong>The thinking model</strong> runs entirely in your browser.
+                <strong>The thinking model</strong> scores every legal move with the server's own
+                chess rules, through <code>/api/model</code>.
               </li>
               <li>
                 <strong>Win chance and accuracy</strong> use the formulas Lichess publishes, so they

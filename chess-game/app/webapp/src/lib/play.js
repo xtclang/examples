@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Chess } from 'chess.js';
 import { getGameState, getValidMoves, playMove, resetGame } from '../api.js';
-import { replayHistory } from './analyse.js';
+import { gameFrames } from './analyse.js';
 
 const SESSION_KEY = 'chess-session';
 
@@ -30,13 +29,6 @@ export function toMatrix(rows = []) {
     [...row].map((ch) =>
       ch === '.' ? null : { type: ch.toLowerCase(), color: ch === ch.toUpperCase() ? 'w' : 'b' }
     )
-  );
-}
-
-/** The inverse, for applying a move locally before the server has confirmed it. */
-function toRows(board) {
-  return board.map((rank) =>
-    rank.map((cell) => (cell ? (cell.color === 'w' ? cell.type.toUpperCase() : cell.type) : '.')).join('')
   );
 }
 
@@ -93,34 +85,13 @@ export function usePlay() {
 
   const move = useMutation({
     mutationFn: ({ from, to }) => playMove(sessionId, from, to),
-    onMutate: async ({ from, to }) => {
+    // No optimistic board update: the server is the only thing that decides what a move does
+    // (legality, captures, promotion, check). The piece appears once the server replies; until
+    // then `move.isPending` (via `playable`, below) keeps the board from accepting more input.
+    onMutate: async () => {
       movingRef.current = true;
       await client.cancelQueries({ queryKey: key });
-      const previous = client.getQueryData(key);
-      if (previous?.fen) {
-        try {
-          const local = new Chess(previous.fen);
-          const piece = local.get(from);
-          const promoting = piece?.type === 'p' && (to[1] === '8' || to[1] === '1');
-          const made = local.move({ from, to, promotion: promoting ? 'q' : undefined });
-          client.setQueryData(key, {
-            ...previous,
-            board: toRows(local.board()),
-            fen: local.fen(),
-            turn: 'Black',
-            lastMove: `${from}${to}`,
-            opponentPending: true,
-            message: `You moved ${made.san}.`,
-            moveHistory: [
-              ...previous.moveHistory,
-              { color: 'White', fromSquare: from, toSquare: to, promotion: made.promotion ?? null, notation: made.san },
-            ],
-          });
-        } catch {
-          // Not legal by chess.js either; let the server answer and say why.
-        }
-      }
-      return { previous };
+      return { previous: client.getQueryData(key) };
     },
     onError: (_error, _move, context) => {
       if (context?.previous) client.setQueryData(key, context.previous);
@@ -160,20 +131,9 @@ export function usePlay() {
         return;
       }
 
-      // Show the moves at once from the local rules, then confirm them with the server, which
-      // has the final say.
-      let local = [];
-      try {
-        local = new Chess(state.fen).moves({ square, verbose: true }).map((m) => m.to);
-      } catch {
-        local = [];
-      }
-      if (!local.length) {
-        clearSelection();
-        return;
-      }
+      // Legal targets come from the server; there is no local rule check here.
       setSelected(square);
-      setTargets([...new Set(local)]);
+      setTargets([]);
 
       try {
         const reply = await client.fetchQuery({
@@ -182,19 +142,21 @@ export function usePlay() {
           staleTime: Infinity,
         });
         if (selectedRef.current === square) {
-          setTargets(reply.success ? reply.validMoves ?? [] : []);
+          const valid = reply.success ? reply.validMoves ?? [] : [];
+          if (!valid.length) {
+            clearSelection();
+          } else {
+            setTargets(valid);
+          }
         }
       } catch {
-        // Keep the local answer; the server still validates the move itself.
+        if (selectedRef.current === square) clearSelection();
       }
     },
     [playable, state, selected, targets, setSelected, clearSelection, move, client, sessionId]
   );
 
-  const frames = useMemo(
-    () => replayHistory(state?.moveHistory ?? [], state?.fen ?? null),
-    [state?.moveHistory, state?.fen]
-  );
+  const frames = useMemo(() => gameFrames(state?.moveHistory ?? []), [state?.moveHistory]);
 
   return {
     sessionId,

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
+import { useEffect, useRef, useState } from 'react';
 import Board from './Board.jsx';
-import { puzzleSolution } from '../lib/analyse.js';
+import { useGame } from '../lib/analyse.js';
+import { getReplayValidMoves } from '../api.js';
 import './Puzzle.css';
 
 /** How long the opponent's reply waits before it plays, so it reads as a reply and not a jump. */
@@ -9,87 +9,100 @@ const REPLY_DELAY_MS = 500;
 /** How long the wrong-move shake stays on screen before the attempt is cleared. */
 const WRONG_FLASH_MS = 450;
 
-/** Replays the solution up to `ply` from `fen`, for the board shown and the targets offered. */
-function frameAt(fen, solution, ply) {
-  const game = new Chess(fen);
-  for (let i = 0; i < ply; i++) {
-    game.move({ from: solution[i].from, to: solution[i].to, promotion: solution[i].promotion ?? undefined });
-  }
-  return { board: game.board(), fen: game.fen(), lastMove: ply > 0 ? solution[ply - 1] : null };
-}
-
 /** One daily puzzle, played out move by move: the user attempts the solving side's moves, the
- *  other side's replies play themselves, and a wrong attempt is rejected on the spot. */
+ *  other side's replies play themselves, and a wrong attempt is rejected on the spot. The
+ *  solution's frames and legal moves come from the server (see PgnReplayApi.x) -- the puzzle's
+ *  FEN can start anywhere, and resolving its PGN solution needs the position's legal moves. */
 export default function Puzzle({ puzzle, onExit }) {
-  const solution = useMemo(() => puzzleSolution(puzzle.fen, puzzle.pgn), [puzzle.fen, puzzle.pgn]);
+  const solution = useGame({ fen: puzzle.fen, pgn: puzzle.pgn });
   const flipped = puzzle.fen.split(' ')[1] === 'b';
 
   const [ply, setPly] = useState(0);
   const [selected, setSelected] = useState(null);
+  const [targets, setTargets] = useState([]);
   const [wrong, setWrong] = useState(false);
+  const selectedRef = useRef(null);
   useEffect(() => {
     setPly(0);
     setSelected(null);
+    setTargets([]);
     setWrong(false);
   }, [puzzle.fen, puzzle.pgn]);
 
-  const solved = solution.length > 0 && ply >= solution.length;
+  const moves = solution.moves;
+  const loading = !solution.error && solution.positions.length === 0;
+  const solved = moves.length > 0 && ply >= moves.length;
   const solverTurn = ply % 2 === 0;
 
   // The side being replied to plays itself, the same way the computer's move lands in
   // single-player: a short pause, then the next ply.
   useEffect(() => {
-    if (solved || solverTurn) return;
+    if (loading || solved || solverTurn) return;
     const t = setTimeout(() => setPly((p) => p + 1), REPLY_DELAY_MS);
     return () => clearTimeout(t);
-  }, [ply, solved, solverTurn]);
+  }, [ply, loading, solved, solverTurn]);
 
-  const frame = useMemo(() => frameAt(puzzle.fen, solution, ply), [puzzle.fen, solution, ply]);
+  const frame = solution.positions[Math.min(ply, solution.positions.length - 1)] ?? null;
 
-  const targets = useMemo(() => {
-    if (!selected) return [];
-    try {
-      return new Chess(frame.fen).moves({ square: selected, verbose: true }).map((m) => m.to);
-    } catch {
-      return [];
-    }
-  }, [selected, frame.fen]);
+  useEffect(() => {
+    setSelected(null);
+    setTargets([]);
+  }, [ply]);
 
   const wrongTimer = useRef(0);
   const attempt = (from, to) => {
-    const expected = solution[ply];
+    const expected = moves[ply];
+    setSelected(null);
+    setTargets([]);
     if (expected && expected.from === from && expected.to === to) {
       setPly((p) => p + 1);
-      setSelected(null);
       setWrong(false);
       return;
     }
-    setSelected(null);
     setWrong(true);
     clearTimeout(wrongTimer.current);
     wrongTimer.current = setTimeout(() => setWrong(false), WRONG_FLASH_MS);
   };
 
-  const touch = (square) => {
-    if (!solverTurn || solved) return;
+  const touch = async (square) => {
+    if (!solverTurn || solved || !frame) return;
+
     if (selected === square) {
       setSelected(null);
+      setTargets([]);
       return;
     }
     if (selected && targets.includes(square)) {
       attempt(selected, square);
       return;
     }
+
     setSelected(square);
+    setTargets([]);
+    selectedRef.current = square;
+    try {
+      const reply = await getReplayValidMoves(frame.fen, square);
+      if (selectedRef.current === square) {
+        setTargets(reply.success ? reply.validMoves ?? [] : []);
+      }
+    } catch {
+      if (selectedRef.current === square) {
+        setSelected(null);
+      }
+    }
   };
 
-  if (solution.length === 0) {
+  if (solution.error || (!loading && moves.length === 0)) {
     return (
       <div className="puzzle">
         <p className="error">Couldn't read this puzzle's solution.</p>
         <button className="btn" onClick={onExit}>Back</button>
       </div>
     );
+  }
+
+  if (loading || !frame) {
+    return <div className="puzzle" aria-busy="true" />;
   }
 
   const status = solved
@@ -109,8 +122,8 @@ export default function Puzzle({ puzzle, onExit }) {
       </p>
       <div className={`board-wrap${wrong ? ' puzzle-wrong' : ''}`}>
         <Board
-          board={frame.board.map((rank) => rank.map((p) => (p ? { type: p.type, color: p.color } : null)))}
-          highlight={frame.lastMove ? [frame.lastMove.from, frame.lastMove.to] : []}
+          board={frame.board}
+          highlight={frame.squares}
           selected={selected}
           targets={targets}
           onSelect={solverTurn && !solved ? touch : null}
@@ -119,7 +132,7 @@ export default function Puzzle({ puzzle, onExit }) {
         />
       </div>
       {solved && (
-        <button className="btn btn-solid" onClick={() => { setPly(0); setSelected(null); }}>
+        <button className="btn btn-solid" onClick={() => { setPly(0); setSelected(null); setTargets([]); }}>
           Solve again
         </button>
       )}

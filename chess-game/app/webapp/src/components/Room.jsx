@@ -12,15 +12,6 @@ const TIME_CONTROLS = [
 ];
 const TIME_OPTIONS = TIME_CONTROLS.map((t) => ({ value: t.label, label: t.label }));
 
-const END_REASON = {
-  Checkmate: 'Checkmate',
-  Stalemate: 'Stalemate — draw',
-  FiftyMoveRule: 'Fifty-move rule — draw',
-  InsufficientMaterial: 'Insufficient material — draw',
-  ThreefoldRepetition: 'Threefold repetition — draw',
-  Timeout: 'Time out',
-};
-
 const clock = (ms) => {
   if (!Number.isFinite(ms)) return '—';
   const total = Math.max(0, Math.round(ms / 1000));
@@ -225,7 +216,7 @@ export default function Room({ online, joinCode }) {
           : playable
             ? 'Click a piece, then a highlighted square.'
             : over
-              ? END_REASON[state.status] ?? 'Game over.'
+              ? state.message
               : 'Hold on for your opponent’s move.'}
       </p>
 

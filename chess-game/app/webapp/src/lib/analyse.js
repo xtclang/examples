@@ -1,10 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
-import { entropyBits, evaluate, fitBeta, softmax } from './model.js';
-
-const LOG2 = Math.log(2);
-const log2 = (x) => Math.log(x) / LOG2;
-const DEFAULT_BETA = 2;
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { analyseMoveChoices, replayPgn } from '../api.js';
+import { toMatrix } from './play.js';
 
 export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -14,239 +11,137 @@ export const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 // and the moves between them, `{ from, to, promotion, san, color, uci }`. Everything downstream
 // -- the board, the engine, the model, the charts -- reads only that.
 
-function frame(game, squares = []) {
-  return { board: game.board(), fen: game.fen(), turn: game.turn(), squares };
+/** Expands a FEN board field's `/`-separated, digit-compressed ranks into 8 row strings. Pure
+ *  syntax decoding -- no chess rules -- the same as reading any other text format. */
+function fenBoardRows(fenBoardField) {
+  return fenBoardField.split('/').map((rank) =>
+    [...rank].map((ch) => (/[1-8]/.test(ch) ? '.'.repeat(Number(ch)) : ch)).join('')
+  );
 }
 
-function moveOf(m) {
+/** One static position, with no moves -- the "starting position" or a bare FEN source. */
+function singleFrame(fen) {
+  return { board: toMatrix(fenBoardRows(fen.split(' ')[0])), fen, turn: fen.split(' ')[1], squares: [] };
+}
+
+/** The backend's flat 64-char board string, reshaped into the 8 row strings `toMatrix` wants. */
+function flatBoardRows(flat) {
+  return Array.from({ length: 8 }, (_, i) => flat.slice(i * 8, i * 8 + 8));
+}
+
+/** A frame from the server's PGN replay (see PgnReplayApi.x). */
+function frameFromReplay(f) {
   return {
-    from: m.from,
-    to: m.to,
-    promotion: m.promotion,
-    san: m.san,
-    color: m.color,
-    uci: `${m.from}${m.to}${m.promotion ?? ''}`,
+    board: toMatrix(flatBoardRows(f.board)),
+    fen: f.fen,
+    turn: f.fen.split(' ')[1],
+    squares: f.fromSquare && f.toSquare ? [f.fromSquare, f.toSquare] : [],
   };
 }
 
-/** A game from chess.com (PGN) or a single position (FEN), as frames. */
-export function useGame({ pgn, fen }) {
-  return useMemo(() => {
-    try {
-      if (pgn) {
-        const source = new Chess();
-        source.loadPgn(pgn);
-        const history = source.history({ verbose: true });
-        const replay = new Chess(history[0]?.before ?? START_FEN);
-        const positions = [frame(replay)];
-        for (const m of history) {
-          replay.move(m);
-          positions.push(frame(replay, [m.from, m.to]));
-        }
-        return { positions, moves: history.map(moveOf), error: null };
-      }
-      const game = new Chess(fen ?? START_FEN);
-      return { positions: [frame(game)], moves: [], error: null };
-    } catch (e) {
-      return { positions: [], moves: [], error: e.message };
-    }
-  }, [pgn, fen]);
+function moveFromReplay(f) {
+  return {
+    from: f.fromSquare,
+    to: f.toSquare,
+    promotion: f.promotion,
+    san: f.notation,
+    color: f.color === 'White' ? 'w' : 'b',
+    uci: `${f.fromSquare}${f.toSquare}${f.promotion ?? ''}`,
+  };
 }
 
 /**
- * The game being played against the server, as frames.
+ * The game being played against the server (single-player or online), as frames.
  *
- * The server keeps the history as from/to squares. Replaying them reconstructs every position
- * exactly -- castling rights and en passant included -- which the board rows alone cannot.
- * Should the server ever accept a move the replay will not, the frames stop there and the
- * server's own FEN stands in for the position on the board.
+ * The server now sends the FEN and board for the position after each move directly on its
+ * `moveHistory` entries (see [MoveHistoryEntry] / [ChessGame.applyMove]), so this is pure
+ * reshaping of fields the backend already computed -- no local replay needed.
  */
-export function replayHistory(history = [], liveFen = null) {
-  const game = new Chess();
-  const positions = [frame(game)];
+export function gameFrames(moveHistory = []) {
+  const positions = [singleFrame(START_FEN)];
   const moves = [];
-  for (const entry of history) {
-    const promotion = entry.promotion ? String(entry.promotion).toLowerCase() : undefined;
-    let made;
-    try {
-      made = game.move({ from: entry.fromSquare, to: entry.toSquare, promotion });
-    } catch {
-      made = null;
-    }
-    if (!made) break;
-    moves.push(moveOf(made));
-    positions.push(frame(game, [made.from, made.to]));
-  }
-  if (liveFen && moves.length < history.length) {
-    try {
-      positions.push(frame(new Chess(liveFen)));
-    } catch {
-      // The live FEN is the server's own; if even that will not load, show what replayed.
-    }
+  for (const entry of moveHistory) {
+    positions.push({
+      board: toMatrix(flatBoardRows(entry.boardAfter)),
+      fen: entry.fen,
+      turn: entry.fen.split(' ')[1],
+      squares: [entry.fromSquare, entry.toSquare],
+    });
+    moves.push({
+      from: entry.fromSquare,
+      to: entry.toSquare,
+      promotion: entry.promotion ? entry.promotion.toLowerCase() : null,
+      san: entry.notation,
+      color: entry.color === 'White' ? 'w' : 'b',
+      uci: `${entry.fromSquare}${entry.toSquare}${entry.promotion ? entry.promotion.toLowerCase() : ''}`,
+    });
   }
   return { positions, moves };
 }
 
 /**
- * The move sequence a puzzle expects, as `{ from, to, promotion, san }` played in order from
- * `fen`. Headers and move numbers are stripped from `pgn` and each token is replayed on a board
- * seeded from `fen` directly, rather than trusting chess.js to parse an embedded `[FEN]` header --
- * so this works the same whether or not the source PGN declares `[SetUp "1"]`.
+ * A game from chess.com (PGN) or a single position (FEN), as frames.
+ *
+ * Resolving PGN's SAN moves into from/to squares needs the position's legal moves to
+ * disambiguate (e.g. "Nbd7"), which only the server's chess rules can answer -- see
+ * [PgnReplayApi.x]. A bare FEN with no PGN is just one static position, which needs no rules to
+ * display, so that path stays local.
  */
-export function puzzleSolution(fen, pgn) {
-  const tokens = pgn
-    .replace(/\[[^\]]*\]/g, '')
-    .replace(/\{[^}]*\}/g, '')
-    .trim()
-    .split(/\s+/)
-    .filter((t) => t && !/^\d+\.(\.\.)?$/.test(t) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t));
-
-  const game = new Chess(fen);
-  const moves = [];
-  for (const san of tokens) {
-    const made = game.move(san);
-    if (!made) break;
-    moves.push(moveOf(made));
-  }
-  return moves;
-}
-
-// ---------------------------------------------------------------------------- the local model
-
-const positionCache = new Map();
-const POSITION_CACHE_LIMIT = 4000;
-
-/**
- * Every legal move from a position, valued by the local model from the mover's point of view
- * and sorted best first. Pure in the FEN, so it is computed once per position ever seen.
- */
-export function scorePosition(fen) {
-  const hit = positionCache.get(fen);
-  if (hit) return hit;
-
-  const walker = new Chess(fen);
-  const color = walker.turn();
-  const candidates = walker.moves({ verbose: true }).map((m) => {
-    walker.move({ from: m.from, to: m.to, promotion: m.promotion });
-    const { v, terminal } = evaluate(walker, color);
-    walker.undo();
-    return { san: m.san, from: m.from, to: m.to, uci: `${m.from}${m.to}${m.promotion ?? ''}`, v, terminal };
+export function useGame({ pgn, fen }) {
+  const startFen = fen ?? START_FEN;
+  const query = useQuery({
+    queryKey: ['replay', startFen, pgn ?? null],
+    queryFn: () => replayPgn(startFen, pgn),
+    enabled: Boolean(pgn),
+    staleTime: Infinity,
   });
-  candidates.sort((a, b) => b.v - a.v || a.san.localeCompare(b.san));
 
-  const scored = { color, candidates, vs: candidates.map((c) => c.v) };
-  positionCache.set(fen, scored);
-  if (positionCache.size > POSITION_CACHE_LIMIT) positionCache.delete(positionCache.keys().next().value);
-  return scored;
-}
-
-/**
- * One decision per position: the moves available, the one played (if any), and -- once β is
- * fitted -- the policy's probabilities and the information measures that follow from them.
- */
-function decide(position, move) {
-  const { color, candidates, vs } = scorePosition(position.fen);
-  const playedIndex = move ? candidates.findIndex((c) => c.uci === move.uci) : -1;
-  const vPlayed = playedIndex >= 0 ? vs[playedIndex] : null;
-  return {
-    fen: position.fen,
-    color,
-    candidates,
-    vs,
-    branching: vs.length,
-    playedIndex,
-    rank: playedIndex >= 0 ? playedIndex + 1 : null,
-    vPlayed,
-    regret: vPlayed === null ? null : vs[0] - vPlayed,
-  };
-}
-
-/** Fit β per side by maximum likelihood, then derive probabilities, entropy and surprise. */
-function finish(decisions) {
-  const players = {};
-  for (const color of ['w', 'b']) {
-    const rows = decisions.filter((d) => d.color === color && d.playedIndex >= 0 && d.vs.length > 1);
-    const fit = rows.length ? fitBeta(rows) : { beta: DEFAULT_BETA, logLik: 0, perMove: 0 };
-    players[color] = { ...fit, fitted: rows.length > 0, moves: rows.length };
-  }
-
-  const done = decisions.map((d) => {
-    const beta = players[d.color].beta;
-    const probs = softmax(d.vs, beta);
-    const entropy = entropyBits(probs);
-    const maxEntropy = log2(Math.max(d.branching, 1));
-    const pPlayed = d.playedIndex >= 0 ? probs[d.playedIndex] : null;
+  return useMemo(() => {
+    if (!pgn) {
+      return { positions: [singleFrame(startFen)], moves: [], error: null };
+    }
+    if (query.isError) {
+      return { positions: [], moves: [], error: query.error.message };
+    }
+    if (!query.data) {
+      return { positions: [], moves: [], error: null };
+    }
+    const frames = query.data;
     return {
-      ...d,
-      beta,
-      probs,
-      entropy,
-      maxEntropy,
-      focus: maxEntropy > 0 ? 1 - entropy / maxEntropy : 1,
-      pPlayed,
-      surprisal: pPlayed ? -log2(pPlayed) : null,
+      positions: frames.map(frameFromReplay),
+      moves: frames.slice(1).map(moveFromReplay),
+      error: null,
     };
-  });
-
-  for (const color of ['w', 'b']) {
-    const rows = done.filter((d) => d.color === color && d.surprisal !== null && d.vs.length > 1);
-    const mean = (f) => (rows.length ? rows.reduce((a, r) => a + f(r), 0) / rows.length : null);
-    const share = (f) => (rows.length ? rows.filter(f).length / rows.length : null);
-    const crossEntropy = mean((r) => r.surprisal);
-    const uniformBits = mean((r) => r.maxEntropy);
-    Object.assign(players[color], {
-      crossEntropy,
-      perplexity: crossEntropy === null ? null : 2 ** crossEntropy,
-      uniformBits,
-      bitsExplained: crossEntropy === null ? null : uniformBits - crossEntropy,
-      meanEntropy: mean((r) => r.entropy),
-      meanBranching: mean((r) => r.branching),
-      top1: share((r) => r.rank === 1),
-      top3: share((r) => r.rank <= 3),
-    });
-  }
-
-  return { decisions: done, players };
+  }, [pgn, startFen, query.data, query.isError, query.error]);
 }
 
+// ---------------------------------------------------------------------------- the move-choice model
+//
+// Scoring every legal move at every position (material/placement/pawn-structure/king-safety
+// features, weighted into a value) and fitting the softmax policy's beta by maximum likelihood
+// used to run here; it now runs on the server, which already has the chess rules this needs
+// (legal moves, check detection) -- see ModelApi.x / MoveModel.x. This just asks for the numbers
+// and returns them in the same shape MetricsPanel.jsx has always read.
+
 /**
- * Runs the local model over a game, live: only positions never seen before cost anything, and
- * that work is spread over ~12ms slices so the board stays responsive. During play, a new move
- * scores one new position and refits β -- a few milliseconds.
+ * The model's read on a game: one decision per position (the moves available, the one played,
+ * and the policy's probabilities for each), and the fitted beta and summary stats per side.
  */
 export function useLocalPolicy(positions, moves) {
-  const [state, setState] = useState({ decisions: [], players: null, progress: 0, running: false });
-  const generation = useRef(0);
+  const fens = useMemo(() => positions.map((p) => p.fen), [positions]);
+  const playedUci = useMemo(() => moves.map((m) => m.uci), [moves]);
 
-  useEffect(() => {
-    const run = ++generation.current;
-    if (!positions.length) {
-      setState({ decisions: [], players: null, progress: 0, running: false });
-      return;
+  const query = useQuery({
+    queryKey: ['model-analyse', fens, playedUci],
+    queryFn: () => analyseMoveChoices(fens, playedUci),
+    enabled: fens.length > 0,
+    staleTime: Infinity,
+  });
+
+  return useMemo(() => {
+    if (!query.data) {
+      return { decisions: [], players: null, progress: 0, running: fens.length > 0 };
     }
-
-    const decisions = new Array(positions.length);
-    let next = 0;
-    let timer = 0;
-
-    const slice = () => {
-      if (run !== generation.current) return;
-      const started = performance.now();
-      while (next < positions.length && performance.now() - started < 12) {
-        decisions[next] = decide(positions[next], moves[next] ?? null);
-        next++;
-      }
-      if (next < positions.length) {
-        setState((s) => ({ ...s, progress: next / positions.length, running: true }));
-        timer = setTimeout(slice, 0);
-        return;
-      }
-      setState({ ...finish(decisions), progress: 1, running: false });
-    };
-
-    slice();
-    return () => clearTimeout(timer);
-  }, [positions, moves]);
-
-  return state;
+    return { decisions: query.data.decisions, players: query.data.players, progress: 1, running: false };
+  }, [query.data, fens.length]);
 }

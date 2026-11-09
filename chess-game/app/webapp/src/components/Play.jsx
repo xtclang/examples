@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import './Play.css';
-import { Chess } from 'chess.js';
 import Board from './Board.jsx';
 import { moveSquares, toMatrix } from '../lib/play.js';
 import { Segmented, Skeleton, Thinking } from './ui.jsx';
@@ -17,24 +16,6 @@ const AI_DIFFICULTIES = [
   { value: 'strong', label: 'Strong' },
   { value: 'expert', label: 'Expert' },
 ];
-
-/** Why a game ended, read off the status word the server sends. */
-const END_REASON = {
-  Checkmate: 'Checkmate',
-  Stalemate: 'Stalemate — draw',
-  FiftyMoveRule: 'Fifty-move rule — draw',
-  InsufficientMaterial: 'Insufficient material — draw',
-  ThreefoldRepetition: 'Threefold repetition — draw',
-  Timeout: 'Time out',
-};
-
-function isInCheck(fen) {
-  try {
-    return new Chess(fen).inCheck();
-  } catch {
-    return false;
-  }
-}
 
 const clock = (ms) => {
   if (!Number.isFinite(ms)) return '—';
@@ -132,8 +113,7 @@ function GameMenu({ options, value, onChange, difficulty, onDifficultyChange, on
 }
 
 /** The game-state alert: checkmate, stalemate, draw or timeout, with a way to play again. */
-function GameOverModal({ status, message, onRestart, onDismiss, restarting }) {
-  const title = END_REASON[status] ?? 'Game over';
+function GameOverModal({ message, onRestart, onDismiss, restarting }) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onDismiss}>
       <div
@@ -143,7 +123,7 @@ function GameOverModal({ status, message, onRestart, onDismiss, restarting }) {
         aria-labelledby="game-over-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="game-over-title">{title}</h2>
+        <h2 id="game-over-title">Game over</h2>
         <p>{message}</p>
         <div className="modal-actions">
           <button className="btn" onClick={onDismiss}>
@@ -186,7 +166,7 @@ export default function Play({ play, viewing, onView }) {
   const shown = live ? null : frames.positions[viewing];
   const tc = state.timeControl;
   const over = state.status !== 'Ongoing';
-  const inCheck = live && !over && isInCheck(state.fen);
+  const inCheck = live && !over && state.inCheck;
 
   const status = over
     ? state.message
@@ -200,7 +180,6 @@ export default function Play({ play, viewing, onView }) {
     <div className="play">
       {over && !dismissed && (
         <GameOverModal
-          status={state.status}
           message={state.message}
           onRestart={(ms, inc) => {
             setDismissed(true);

@@ -105,10 +105,15 @@ class CheckDetection {
 
     /**
      * Get all legal moves for a player (excluding moves that leave king in check).
+     *
+     * @param firstOnly  stop at the first legal move found. Enough when the caller only needs to
+     *                   know whether a legal move exists (checkmate/stalemate detection), and far
+     *                   cheaper: each candidate costs a full king-safety scan.
      */
     static MovePair[] getAllLegalMoves(String boardStr, Color turn,
                                         CastlingRights castlingRights,
-                                        String? enPassantTarget) {
+                                        String? enPassantTarget,
+                                        Boolean firstOnly = False) {
         Char[] board = BoardUtils.cloneBoard(boardStr);
         MovePair[] legalMoves = new MovePair[];
         
@@ -142,6 +147,9 @@ class CheckDetection {
                 }
                 
                 legalMoves = legalMoves.addAll([new MovePair(from, to)]);
+                if (firstOnly) {
+                    return legalMoves;
+                }
             }
         }
         
@@ -155,7 +163,7 @@ class CheckDetection {
     static (Boolean checkmate, Boolean stalemate) checkGameEnd(String board, Color turn,
                                                                 CastlingRights castlingRights,
                                                                 String? enPassantTarget) {
-        MovePair[] legalMoves = getAllLegalMoves(board, turn, castlingRights, enPassantTarget);
+        MovePair[] legalMoves = getAllLegalMoves(board, turn, castlingRights, enPassantTarget, True);
         
         if (legalMoves.size > 0) {
             return (False, False); // Game continues

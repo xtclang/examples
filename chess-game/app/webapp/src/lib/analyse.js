@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { analyseMoveChoices, replayPgn } from '../api.js';
 import { toMatrix } from './play.js';
 
@@ -136,6 +136,8 @@ export function useLocalPolicy(positions, moves) {
     queryFn: () => analyseMoveChoices(fens, playedUci),
     enabled: fens.length > 0,
     staleTime: Infinity,
+    // After each move the key changes; keep showing the last result until the new one lands.
+    placeholderData: keepPreviousData,
   });
 
   return useMemo(() => {

@@ -72,14 +72,12 @@ service StockfishApi {
         String json;
         try {
             RequestOut request = client.createRequest(GET, new Uri(uri));
-            request.header["User-Agent"] = USER_AGENT;
-            request.header["Accept"]     = "application/json";
 
             ResponseIn response = client.send(request);
             Byte[]     bytes    = response.body?.bytes : [];
             json = bytes.unpackUtf8();
         } catch (Exception e) {
-            return new EngineReply(False, error = "Stockfish request failed");
+            return new EngineReply(False, error = $"Stockfish request failed: {api.ChessComApi.describe(e)}");
         }
 
         if (jsonField(json, "success") != "true") {

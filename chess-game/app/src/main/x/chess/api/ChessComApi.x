@@ -87,15 +87,30 @@ service ChessComApi {
     private SimpleResponse fetch(String uri) {
         try {
             RequestOut request = client.createRequest(GET, new Uri(uri));
-            request.header["User-Agent"] = USER_AGENT;
-            request.header["Accept"]     = "application/json";
 
             ResponseIn response = client.send(request);
             Byte[]     bytes    = response.body?.bytes : [];
             return new SimpleResponse(response.status, Json, bytes);
         } catch (Exception e) {
-            return new SimpleResponse(BadGateway, Json, errorBody("chess.com request failed"));
+            return new SimpleResponse(BadGateway, Json, errorBody($"chess.com request failed: {describe(e)}"));
         }
+    }
+
+    /**
+     * A JSON-safe one-line description of a failure, so the real cause reaches the client
+     * instead of being swallowed.
+     */
+    static String describe(Exception e) {
+        StringBuffer out = new StringBuffer();
+        for (Char ch : e.toString()) {
+            if (ch.asciiLetter() || ch.asciiDigit() || ch == ' ' || ch == '.' || ch == ':' || ch == '_' || ch == '-') {
+                out.add(ch);
+            }
+            if (out.size >= 200) {
+                break;
+            }
+        }
+        return out.toString();
     }
 
     private SimpleResponse badRequest(String message) {

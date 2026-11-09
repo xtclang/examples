@@ -19,6 +19,28 @@ import core.MoveModel.BetaFit;
 @WebService("/api/model")
 service ModelApi {
     /**
+     * Scores already computed, keyed by FEN. Scoring a position (applying every legal move and
+     * generating the replies to each) is the expensive part, and the client re-sends the whole
+     * game after every move, so without this each ply would rescore every earlier position.
+     * Capped so a long-running server cannot grow it without bound.
+     */
+    private Map<String, PositionScore> scoreCache = new HashMap();
+
+    private static Int MAX_CACHED_POSITIONS = 5000;
+
+    private PositionScore scoreOf(String fen) {
+        if (PositionScore cached := scoreCache.get(fen)) {
+            return cached;
+        }
+        PositionScore score = MoveModel.scorePosition(fen);
+        if (scoreCache.size >= MAX_CACHED_POSITIONS) {
+            scoreCache.clear();
+        }
+        scoreCache.put(fen, score);
+        return score;
+    }
+
+    /**
      * POST /api/model/analyse
      *
      * @param request the game's positions (`fens`, one per ply including the start) and the
@@ -33,7 +55,7 @@ service ModelApi {
     AnalysisResult analyse(@BodyParam AnalyseRequest request) {
         Partial[] partials = new Partial[];
         for (Int i : 0 ..< request.fens.size) {
-            PositionScore score = MoveModel.scorePosition(request.fens[i]);
+            PositionScore score = scoreOf(request.fens[i]);
             Double[] vs = new Double[score.candidates.size](j -> score.candidates[j].v);
 
             String playedKey = i < request.playedUci.size ? request.playedUci[i] : "";

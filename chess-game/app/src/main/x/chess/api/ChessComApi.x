@@ -1,4 +1,4 @@
-import web.HttpClient;
+import web.Client;
 import web.RequestOut;
 import web.ResponseIn;
 import web.responses.SimpleResponse;
@@ -20,8 +20,9 @@ service ChessComApi {
     static String BASE_URI   = "https://api.chess.com/pub";
     static String USER_AGENT = "xtc-chess-game";
 
-    // Reused across requests; HttpClient is a const and holds no per-request state
-    HttpClient client = new HttpClient();
+    // Platform-provided client; the host only provisions outbound HTTP(S) through this injection
+    // point, not through a directly-constructed HttpClient.
+    @Inject Client client;
 
     /**
      * GET /api/chesscom/player/{username}

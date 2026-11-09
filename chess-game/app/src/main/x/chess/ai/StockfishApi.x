@@ -1,4 +1,4 @@
-import web.HttpClient;
+import web.Client;
 import web.RequestOut;
 import web.ResponseIn;
 /**
@@ -33,8 +33,9 @@ service StockfishApi {
     // Nibble-to-hex lookup used by urlEncode
     static String HEX_DIGITS = "0123456789ABCDEF";
 
-    // Reused across requests; HttpClient is a const and holds no per-request state
-    HttpClient client = new HttpClient();
+    // Platform-provided client; the host only provisions outbound HTTP(S) through this injection
+    // point, not through a directly-constructed HttpClient.
+    @Inject Client client;
 
     /**
      * One answer from the engine. Every numeric field is kept as text, exactly as the API sent

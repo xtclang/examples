@@ -1,0 +1,86 @@
+/* Document defaults and element-level styles shared across pages. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--body);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--t-base) ease, color var(--t-base) ease;
+}
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+b,
+strong {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+}
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--muted);
+}
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 3px solid var(--bg);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+* {
+  scrollbar-color: var(--line) transparent;
+}
+
+.label {
+  font-family: var(--display);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.empty {
+  margin: 2px 0;
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--muted);
+}
+.error {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--red);
+}

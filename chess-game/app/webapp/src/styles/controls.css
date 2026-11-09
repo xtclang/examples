@@ -1,0 +1,247 @@
+/* Shared buttons, filters and segmented controls. */
+.btn,
+.chip,
+.icon-btn,
+.pill,
+.segmented button,
+.section-toggle,
+.th-sort,
+.scoresheet button,
+.moves button,
+.link-btn {
+  transition:
+    transform var(--t-press) var(--ease-out),
+    background-color var(--t-fast) ease,
+    border-color var(--t-fast) ease,
+    color var(--t-fast) ease;
+}
+.btn:active:not(:disabled),
+.chip:active,
+.icon-btn:active,
+.pill:active,
+.segmented button:active,
+.scoresheet button:active,
+.moves button:active {
+  transform: scale(0.97);
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--display);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.btn-nav {
+  padding: 4px 12px;
+  border-radius: 0;
+  font-size: 10px;
+}
+.btn-nav.on {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.btn-wide {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+}
+.btn-solid {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-weight: 500;
+}
+.btn-primary {
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.btn-sm {
+  padding: 5px 10px;
+}
+.btn-icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 11px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-ink);
+}
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled),
+  .chip:hover:not(.on),
+  .icon-btn:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+  .btn-solid:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
+    background: var(--ink-strong);
+    border-color: var(--ink-strong);
+    color: var(--on-ink);
+  }
+  .link-btn:hover {
+    color: var(--ink);
+  }
+  .segmented button:not(.on):hover {
+    color: var(--ink);
+  }
+  .scoresheet button:not(.on):hover,
+  .moves button:not(.active):hover {
+    background: var(--line-soft);
+  }
+  .section-toggle:hover h2 {
+    color: var(--ink-strong);
+  }
+  .moves-table tbody tr:hover {
+    background: var(--line-soft);
+  }
+  .pill:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}
+
+.segmented {
+  position: relative;
+  display: inline-flex;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.segmented-pill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  background: var(--ink);
+  border-radius: var(--r-sm);
+  transition: transform var(--t-base) var(--ease-out), width var(--t-base) var(--ease-out);
+}
+.segmented button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.segmented button.on {
+  color: var(--on-ink);
+}
+.segmented-sm {
+  padding: 3px;
+  border-radius: 10px;
+}
+.segmented-sm .segmented-pill {
+  top: 3px;
+  bottom: 3px;
+  border-radius: 7px;
+}
+.segmented-sm button {
+  padding: 3px 10px;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.skeleton {
+  display: inline-block;
+  vertical-align: middle;
+  background: linear-gradient(90deg, var(--line-soft) 25%, var(--canvas) 50%, var(--line-soft) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.thinking { display: inline-flex; align-items: center; gap: 3px; }
+.thinking i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  animation: breathe 1s ease-in-out infinite;
+}
+.thinking i:nth-child(2) { animation-delay: 0.15s; }
+.thinking i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes breathe {
+  50% { opacity: 1; transform: translateY(-2px); }
+}

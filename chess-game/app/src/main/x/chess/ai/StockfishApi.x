@@ -20,7 +20,7 @@ import web.ResponseIn;
  */
 service StockfishApi {
     static String BASE_URI     = "https://stockfish.online/api/s/v2.php";
-    static String USER_AGENT   = "xtc-chess-game-example";
+    static String USER_AGENT   = "xtc-chess-game";
 
     /**
      * Search depth used for computer moves. The upstream API rejects anything over 15, and the

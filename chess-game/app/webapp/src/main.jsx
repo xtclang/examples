@@ -7,8 +7,8 @@ import '@fontsource/dosis/600.css';
 import '@fontsource/dynapuff/400.css';
 import '@fontsource/dynapuff/500.css';
 import '@fontsource/dynapuff/600.css';
-import App from './App.jsx';
 import './index.css';
+import App from './App.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },

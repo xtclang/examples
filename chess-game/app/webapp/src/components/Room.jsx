@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import Board from './Board.jsx';
 import { moveSquares, toMatrix } from '../lib/play.js';
 import { Segmented, Skeleton, Thinking } from './ui.jsx';
+import './Play.css';
+import './Room.css';
 
 const TIME_CONTROLS = [
   { label: 'No clock', ms: 0, inc: 0 },

@@ -16,6 +16,7 @@ import {
   WinLostChart,
 } from './charts.jsx';
 import { MovesTable } from './MovesTable.jsx';
+import './MetricsPanel.css';
 import { ChartCard, Empty, Metric, OutcomeBar, Progress, Section, Segmented, Thinking } from './ui.jsx';
 
 const SIDE = { w: 'White', b: 'Black' };

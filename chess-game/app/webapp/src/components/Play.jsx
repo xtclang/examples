@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import './Play.css';
 import { Chess } from 'chess.js';
 import Board from './Board.jsx';
 import { moveSquares, toMatrix } from '../lib/play.js';
@@ -10,6 +11,12 @@ const TIME_CONTROLS = [
   { label: '10 + 5', ms: 10 * 60_000, inc: 5_000 },
 ];
 const TIME_OPTIONS = TIME_CONTROLS.map((t) => ({ value: t.label, label: t.label }));
+const AI_DIFFICULTIES = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'strong', label: 'Strong' },
+  { value: 'expert', label: 'Expert' },
+];
 
 /** Why a game ended, read off the status word the server sends. */
 const END_REASON = {
@@ -90,7 +97,7 @@ function CheckAlert({ onYou }) {
 }
 
 /** New game + time control, tucked behind one button instead of sitting in the main flow. */
-function GameMenu({ options, value, onChange, onNewGame, busy }) {
+function GameMenu({ options, value, onChange, difficulty, onDifficultyChange, onNewGame, busy }) {
   const ref = useRef(null);
   return (
     <details className="game-menu" ref={ref}>
@@ -102,6 +109,13 @@ function GameMenu({ options, value, onChange, onNewGame, busy }) {
       </summary>
       <div className="game-menu-body">
         <Segmented label="Time control" value={value} onChange={onChange} options={options} size="sm" />
+        <Segmented
+          label="AI difficulty"
+          value={difficulty}
+          onChange={onDifficultyChange}
+          options={AI_DIFFICULTIES}
+          size="sm"
+        />
         <button
           className="btn btn-solid btn-sm"
           onClick={() => {
@@ -156,11 +170,15 @@ export default function Play({ play, viewing, onView }) {
 
   const [dismissed, setDismissed] = useState(false);
   const [nextLabel, setNextLabel] = useState(TIME_CONTROLS[0].label);
+  const [nextDifficulty, setNextDifficulty] = useState('strong');
   const lastStatus = useRef(state?.status);
   useEffect(() => {
     if (state?.status !== lastStatus.current) setDismissed(false);
     lastStatus.current = state?.status;
   }, [state?.status]);
+  useEffect(() => {
+    if (state?.difficulty) setNextDifficulty(state.difficulty);
+  }, [state?.difficulty]);
 
   if (!state) return error ? <p className="error">{error}</p> : <PlaySkeleton />;
 
@@ -203,7 +221,7 @@ export default function Play({ play, viewing, onView }) {
           {tc && (
             <div className="clocks" aria-label="Clocks">
               <span className={state.turn === 'Black' && !over ? 'on' : ''}>
-                <span className="clock-side">Engine</span> {clock(tc.blackTimeMs)}
+                <span className="clock-side">Engine · {AI_DIFFICULTIES.find((level) => level.value === state.difficulty)?.label ?? 'Strong'}</span> {clock(tc.blackTimeMs)}
               </span>
               <span className={state.turn === 'White' && !over ? 'on' : ''}>
                 <span className="clock-side">You</span> {clock(tc.whiteTimeMs)}
@@ -214,10 +232,12 @@ export default function Play({ play, viewing, onView }) {
             options={TIME_OPTIONS}
             value={nextLabel}
             onChange={setNextLabel}
+            difficulty={nextDifficulty}
+            onDifficultyChange={setNextDifficulty}
             busy={restarting}
             onNewGame={() => {
               const t = TIME_CONTROLS.find((tc) => tc.label === nextLabel) ?? TIME_CONTROLS[0];
-              restart(t.ms, t.inc);
+              restart(t.ms, t.inc, nextDifficulty);
             }}
           />
         </div>

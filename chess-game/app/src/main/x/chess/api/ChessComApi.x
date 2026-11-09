@@ -18,7 +18,7 @@ import web.responses.SimpleResponse;
 @WebService("/api/chesscom")
 service ChessComApi {
     static String BASE_URI   = "https://api.chess.com/pub";
-    static String USER_AGENT = "xtc-chess-game-example";
+    static String USER_AGENT = "xtc-chess-game";
 
     // Reused across requests; HttpClient is a const and holds no per-request state
     HttpClient client = new HttpClient();
@@ -79,8 +79,6 @@ service ChessComApi {
     SimpleResponse puzzle() {
         return fetch($"{BASE_URI}/puzzle");
     }
-
-    // ----- helpers -------------------------------------------------------------------------------
 
     /**
      * Performs a GET against chess.com and relays the status and body.

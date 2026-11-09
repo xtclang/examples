@@ -34,8 +34,8 @@ const session = (id) => encodeURIComponent(id);
 const square = (name) => encodeURIComponent(name);
 
 export const getGameState = (id) => get(`state/${session(id)}`);
-export const resetGame = (id, timeControlMs = 0, incrementMs = 0) =>
-  post(`reset/${session(id)}`, timeControlMs > 0 ? { timeControlMs, incrementMs } : undefined);
+export const resetGame = (id, timeControlMs = 0, incrementMs = 0, difficulty = 'strong') =>
+  post(`reset/${session(id)}`, { timeControlMs, incrementMs, difficulty });
 export const playMove = (id, from, to) => post(`move/${session(id)}/${square(from)}/${square(to)}`);
 export const getValidMoves = (id, from) => get(`validmoves/${session(id)}/${square(from)}`);
 

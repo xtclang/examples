@@ -1,0 +1,13 @@
+/* Puzzle-solving feedback. */
+.puzzle { display: flex; flex-direction: column; gap: 8px; }
+.status-dot.wrong {
+  background: var(--red);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 20%, transparent);
+}
+@keyframes puzzle-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.puzzle-wrong { animation: puzzle-shake 450ms var(--ease-out); }

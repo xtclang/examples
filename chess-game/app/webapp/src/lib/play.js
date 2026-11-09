@@ -133,8 +133,8 @@ export function usePlay() {
   });
 
   const restart = useMutation({
-    mutationFn: ({ timeControlMs = 0, incrementMs = 0 } = {}) =>
-      resetGame(sessionId, timeControlMs, incrementMs),
+    mutationFn: ({ timeControlMs = 0, incrementMs = 0, difficulty = 'strong' } = {}) =>
+      resetGame(sessionId, timeControlMs, incrementMs, difficulty),
     onSuccess: (next) => {
       clearSelection();
       client.setQueryData(key, next);
@@ -208,7 +208,8 @@ export function usePlay() {
     targets,
     touch,
     clearSelection,
-    restart: (timeControlMs, incrementMs) => restart.mutate({ timeControlMs, incrementMs }),
+    restart: (timeControlMs, incrementMs, difficulty = state?.difficulty ?? 'strong') =>
+      restart.mutate({ timeControlMs, incrementMs, difficulty }),
     restarting: restart.isPending,
   };
 }

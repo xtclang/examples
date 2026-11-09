@@ -1,0 +1,103 @@
+/* Chessboard and square-level interaction states. */
+.board-title {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 400;
+}
+.board-wrap { position: relative; }
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-md);
+}
+.board-skeleton { display: block; box-shadow: none; }
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  touch-action: manipulation;
+}
+.square.light { background: var(--board-light); }
+.square.dark { background: var(--board-dark); }
+.square::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--board-hl);
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+.square.hl::after { opacity: 1; }
+.square.sel::after {
+  opacity: 1;
+  background: var(--board-sel);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
+.board.playable .square { cursor: pointer; }
+.board.playable .square:focus-visible {
+  outline: 3px solid var(--series-b);
+  outline-offset: -3px;
+}
+.square.lifting { z-index: 3; }
+.coord {
+  position: absolute;
+  z-index: 1;
+  color: var(--board-dark);
+  font-family: var(--display);
+  font-size: 10cqh;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+.square.dark .coord { color: var(--board-light); }
+.coord.rank { top: 5%; left: 6%; }
+.coord.file { right: 7%; bottom: 4%; }
+.piece {
+  position: relative;
+  z-index: 2;
+  margin-top: -4cqh;
+  font-size: 78cqh;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
+}
+.piece.w {
+  color: #fafaf8;
+  -webkit-text-stroke: 1.3px #34342f;
+}
+.piece.b {
+  color: #232220;
+  -webkit-text-stroke: 1.3px #121110;
+}
+.target {
+  position: absolute;
+  z-index: 2;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: var(--board-mark);
+  pointer-events: none;
+  animation: target-in var(--t-fast) var(--ease-out);
+}
+.target.capture {
+  width: 88%;
+  height: 88%;
+  border: 7cqh solid var(--board-mark);
+  background: none;
+}
+@keyframes target-in {
+  from { opacity: 0; transform: scale(0.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .target { animation: none; }
+}

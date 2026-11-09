@@ -1,4 +1,5 @@
 import { FEATURES } from '../lib/model.js';
+import './Guide.css';
 
 const TOC = [
   { id: 'play', label: 'How to play' },

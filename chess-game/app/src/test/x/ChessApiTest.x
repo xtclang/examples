@@ -152,6 +152,17 @@ module ChessApiTest {
         }
 
         @Test
+        void shouldSaveSelectedDifficultyForTheNewGame() {
+            ChessApi api = new ChessApi();
+            String id = freshSession("difficulty");
+
+            val state = api.reset(id, new ChessApi.ResetRequest(0, 0, "expert"));
+
+            assert state.difficulty == "expert";
+            assert api.state(id).difficulty == "expert";
+        }
+
+        @Test
         void shouldKeepSessionsIndependent() {
             ChessApi api   = new ChessApi();
             String   one   = freshSession("one");

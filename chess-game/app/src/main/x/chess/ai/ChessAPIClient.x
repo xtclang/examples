@@ -13,6 +13,7 @@ service ChessAPIClient {
      * the upstream API rejects anything over 15.
      */
     static Int SEARCH_DEPTH = 12;
+    static String DEFAULT_DIFFICULTY = "strong";
 
     // The engine that plays every computer move
     StockfishApi engine = new StockfishApi();
@@ -25,15 +26,47 @@ service ChessAPIClient {
      * a full engine suggests (castling, for instance). An unusable or missing answer falls back
      * to a random legal move so that the game never stalls when the engine is unreachable.
      */
-    (Int, Int, String?) findBestMove(GameRecord record) {
+    (Int, Int, String?) findBestMove(GameRecord record, Int depth = SEARCH_DEPTH) {
         String fen = AIUtility.boardToFen(record);
-        StockfishApi.EngineMove move = engine.bestMove(fen, SEARCH_DEPTH);
+        StockfishApi.EngineMove move = engine.bestMove(fen, depth);
 
         if (move.usable && isPlayable(record, move.fromIndex, move.toIndex)) {
             return (move.fromIndex, move.toIndex, move.promotion);
         }
 
         return AIUtility.findRandomLegalMove(record);
+    }
+
+    /** Converts user-facing difficulty names into the supported set. */
+    static String normalizeDifficulty(String difficulty) {
+        switch (difficulty.toLowercase()) {
+        case "beginner":
+            return "beginner";
+        case "casual":
+            return "casual";
+        case "strong":
+            return "strong";
+        case "expert":
+            return "expert";
+        default:
+            return DEFAULT_DIFFICULTY;
+        }
+    }
+
+    /** Maps difficulty to the bounded Stockfish search depth. */
+    static Int depthForDifficulty(String difficulty) {
+        switch (normalizeDifficulty(difficulty)) {
+        case "beginner":
+            return 2;
+        case "casual":
+            return 5;
+        case "strong":
+            return SEARCH_DEPTH;
+        case "expert":
+            return StockfishApi.MAX_DEPTH;
+        default:
+            return SEARCH_DEPTH;
+        }
     }
 
     /**

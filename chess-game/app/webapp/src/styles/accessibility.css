@@ -1,0 +1,24 @@
+/* Honor operating-system motion preferences across all components. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .segmented-pill,
+  .chevron,
+  .winbar-white,
+  .progress span,
+  .section-body {
+    transition-duration: 1ms !important;
+  }
+  .btn:active,
+  .chip:active,
+  .icon-btn:active,
+  .pill:active,
+  .segmented button:active {
+    transform: none !important;
+  }
+  .skeleton { animation: none; }
+}

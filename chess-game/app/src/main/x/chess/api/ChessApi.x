@@ -7,6 +7,7 @@ import services.TimeControlService;
 import validation.ValidMovesHelper;
 import core.ChessLogic;
 import ai.AIUtility;
+import ai.ChessAPIClient;
 /**
  * ChessApi Service
  *
@@ -35,6 +36,7 @@ service ChessApi {
     // Per-session pending state tracking
     @Atomic private Map<String, Boolean> pendingActiveMap = new HashMap();
     @Atomic private Map<String, Time> pendingStartMap = new HashMap();
+    @Atomic private Map<String, String> difficultyMap = new HashMap();
     @Atomic private Boolean autoApplied;    // True if an auto-move was just applied
 
     // Duration to wait before opponent makes a move (3 seconds)
@@ -154,6 +156,11 @@ service ChessApi {
             // Create a fresh game with initial board setup
             GameRecord resetGame = ChessLogic.resetGame();
             
+            String difficulty = request == Null
+                    ? ChessAPIClient.DEFAULT_DIFFICULTY
+                    : ChessAPIClient.normalizeDifficulty(request.difficulty);
+            difficultyMap.put(sessionId, difficulty);
+
             // Apply time control if specified
             if (request != Null && request.timeControlMs > 0) {
                 TimeControl tc = timeControlService.create(request.timeControlMs, request.incrementMs);
@@ -176,7 +183,9 @@ service ChessApi {
     /**
      * Request body for resetting a game with time control.
      */
-    static const ResetRequest(Int timeControlMs = 0, Int incrementMs = 0);
+    static const ResetRequest(Int timeControlMs = 0,
+                              Int incrementMs = 0,
+                              String difficulty = ChessAPIClient.DEFAULT_DIFFICULTY);
 
 
     /**
@@ -207,7 +216,8 @@ service ChessApi {
                    TimeControl? timeControl = Null,
                    MoveHistoryEntry[] moveHistory = [],
                    String sessionId = "",
-                   String fen = "");
+                   String fen = "",
+                   String difficulty = ChessAPIClient.DEFAULT_DIFFICULTY);
 
 
     // ----- Helper Methods ------------------------------------------------------
@@ -293,7 +303,8 @@ service ChessApi {
                 adjustedTc,                           // Time control with current remaining time
                 record.moveHistory,                   // Complete move history
                 sessionId,                            // Echo sessionId for client sanity-check
-                AIUtility.boardToFen(record));        // The position, for the client's analysis
+                AIUtility.boardToFen(record),          // The position, for the client's analysis
+                difficultyMap.getOrDefault(sessionId, ChessAPIClient.DEFAULT_DIFFICULTY));
     }
 
     /**
@@ -399,7 +410,9 @@ service ChessApi {
         Duration waited = now - pendingStart;
         if (waited >= moveDelay) {
             // Time's up! Get the best move from the Stockfish API
-            (Int from, Int to, String? promotion) = apiClient.findBestMove(record);
+            String difficulty = difficultyMap.getOrDefault(sessionId, ChessAPIClient.DEFAULT_DIFFICULTY);
+            Int depth = ChessAPIClient.depthForDifficulty(difficulty);
+            (Int from, Int to, String? promotion) = apiClient.findBestMove(record, depth);
             AutoResponse reply = ChessLogic.autoMove(record, from, to, promotion);
             pendingActiveMap.put(sessionId, False);
             autoApplied = True;

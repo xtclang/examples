@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import Board from './Board.jsx';
 import { puzzleSolution } from '../lib/analyse.js';
+import './Puzzle.css';
 
 /** How long the opponent's reply waits before it plays, so it reads as a reply and not a jump. */
 const REPLY_DELAY_MS = 500;

@@ -1,5 +1,6 @@
 import db.models.TimeControl;
 import db.models.MoveHistoryEntry;
+import validation.CheckDetection;
 
 /**
  * OnlineChess Helper Service
@@ -129,6 +130,7 @@ class OnlineChessLogic {
         Boolean isYourTurn = playerColor != Null && playerColor == game.turn && !game.isWaitingForOpponent();
         String detail = message ?: describeOnlineState(game, playerId);
         Boolean opponentLeft = game.hasOpponentLeft(playerId);
+        Boolean inCheck = game.status == GameStatus.Ongoing && CheckDetection.isInCheck(game.board, game.turn);
         return new OnlineApiState(
             ChessLogic.boardRows(game.board),
             game.turn.toString(),
@@ -146,7 +148,8 @@ class OnlineChessLogic {
             playerId,
             opponentLeft,
             game.moveHistory,
-            adjustedTimeControl);
+            adjustedTimeControl,
+            inCheck);
     }
 
     /**
@@ -305,7 +308,8 @@ class OnlineChessLogic {
                          String playerId = "",
                          Boolean opponentLeft = False,
                          MoveHistoryEntry[] moveHistory = [],
-                         TimeControl? timeControl = Null);
+                         TimeControl? timeControl = Null,
+                         Boolean inCheck = False);
 
     /**
      * Room Creation Response

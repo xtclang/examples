@@ -5,6 +5,7 @@ import db.models.TimeControl;
 import db.models.MoveHistoryEntry;
 import services.TimeControlService;
 import validation.ValidMovesHelper;
+import validation.CheckDetection;
 import core.ChessLogic;
 import ai.AIUtility;
 import ai.ChessAPIClient;
@@ -213,6 +214,7 @@ service ChessApi {
                    Int playerScore,
                    Int opponentScore,
                    Boolean opponentPending,
+                   Boolean inCheck = False,
                    TimeControl? timeControl = Null,
                    MoveHistoryEntry[] moveHistory = [],
                    String sessionId = "",
@@ -290,6 +292,10 @@ service ChessApi {
             }
         }
         
+        // Whether the side to move is currently in check (only meaningful while the game is ongoing)
+        Boolean inCheck = record.status == GameStatus.Ongoing
+                && CheckDetection.isInCheck(record.board, record.turn);
+
         // Construct API state with all game information
         return new ApiState(
                 ChessLogic.boardRows(record.board),  // Board as array of 8 strings
@@ -300,6 +306,7 @@ service ChessApi {
                 record.playerScore,                   // White's capture count
                 record.opponentScore,                 // Black's capture count
                 pending,                              // Is opponent thinking?
+                inCheck,                              // Is the side to move in check?
                 adjustedTc,                           // Time control with current remaining time
                 record.moveHistory,                   // Complete move history
                 sessionId,                            // Echo sessionId for client sanity-check

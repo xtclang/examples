@@ -46,3 +46,33 @@ export const playMove = (id, path) => post(`move/${session(id)}/${encodeURICompo
 
 /** Today's scoreboard. */
 export const getScores = () => get('scores');
+
+// ----- playing a friend in a room (see OnlineApi.x) -----
+
+const code = (c) => encodeURIComponent(c);
+
+/**
+ * Open a room as Black. The reply has the room code to share and your private player id.
+ * `timeControlMs` is each player's starting time (0 for no clock); `incrementMs` is added after
+ * each of their moves.
+ */
+export const createRoom = (name, { timeControlMs = 0, incrementMs = 0 } = {}) =>
+  post('online/create', { name, timeControlMs, incrementMs });
+
+/** Take the second seat in a room, as White. */
+export const joinRoom = (roomCode, name) => post(`online/join/${code(roomCode)}`, { name });
+
+/** The room as this player sees it. Polled to see the other player's moves. */
+export const getRoomState = (roomCode, playerId) => get(`online/state/${code(roomCode)}/${code(playerId)}`);
+
+/** Your legal moves in the room, as paths; none unless it is your turn. */
+export const getRoomMoves = (roomCode, playerId) => get(`online/moves/${code(roomCode)}/${code(playerId)}`);
+
+export const playRoomMove = (roomCode, playerId, path) =>
+  post(`online/move/${code(roomCode)}/${code(playerId)}/${encodeURIComponent(path)}`);
+
+/** A new game in the same room, once one has ended. */
+export const rematchRoom = (roomCode, playerId) => post(`online/rematch/${code(roomCode)}/${code(playerId)}`);
+
+/** Leave the room; leaving a game in progress forfeits it. */
+export const leaveRoom = (roomCode, playerId) => post(`online/leave/${code(roomCode)}/${code(playerId)}`);

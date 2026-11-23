@@ -226,3 +226,19 @@
   .target { animation: none; }
   .piece { transition: none; }
 }
+
+/* ----- The same pieces, off the board: header, dialogs and player names. ----- */
+.piece-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  container-type: size;
+  vertical-align: middle;
+}
+/* a touch smaller than the cell, so the piece's thickness and shadow have room */
+.piece-icon .piece { width: 84%; height: 84%; }
+.piece-pair { display: inline-flex; align-items: center; gap: 0; }
+.piece-pair .piece-icon + .piece-icon { margin-left: -10%; }
+.brand { display: inline-flex; align-items: center; }

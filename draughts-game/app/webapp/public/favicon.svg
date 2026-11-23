@@ -1,6 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#0b0b0b"/>
-  <rect x="4" y="4" width="56" height="56" rx="9" fill="none" stroke="#fff" stroke-width="2"/>
-  <circle cx="32" cy="32" r="16" fill="#fff"/>
-  <circle cx="32" cy="32" r="10" fill="none" stroke="#0b0b0b" stroke-width="2"/>
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a5630"/>
+      <stop offset="0.5" stop-color="#6b3f20"/>
+      <stop offset="1" stop-color="#583218"/>
+    </linearGradient>
+    <radialGradient id="black" cx="0.5" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#3b3b3d"/>
+      <stop offset="0.62" stop-color="#1b1b1d"/>
+      <stop offset="1" stop-color="#0c0c0d"/>
+    </radialGradient>
+    <radialGradient id="white" cx="0.5" cy="0.5" r="0.55">
+      <stop offset="0" stop-color="#f6f0e0"/>
+      <stop offset="0.64" stop-color="#e3d9c0"/>
+      <stop offset="1" stop-color="#cfc3a3"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="0.34" cy="0.28" r="0.5">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- the board's wooden frame -->
+  <rect width="64" height="64" rx="13" fill="url(#wood)"/>
+  <rect x="1" y="1" width="62" height="62" rx="12" fill="none" stroke="#ffdcaa" stroke-opacity="0.3" stroke-width="1.5"/>
+
+  <!-- a white piece, behind -->
+  <g transform="translate(40 25)">
+    <circle cy="3.2" r="17" fill="#a99e84"/>
+    <circle r="17" fill="url(#white)"/>
+    <circle r="17" fill="url(#shine)"/>
+    <circle r="14.4" fill="none" stroke="#786440" stroke-opacity="0.28" stroke-width="1.4"/>
+    <circle r="10.5" fill="none" stroke="#786440" stroke-opacity="0.3" stroke-width="1.6"/>
+  </g>
+
+  <!-- a black piece, in front -->
+  <g transform="translate(25 39)">
+    <circle cx="0.6" cy="4" r="18.5" fill="#000" opacity="0.45"/>
+    <circle cy="3.4" r="18.5" fill="#000"/>
+    <circle r="18.5" fill="url(#black)"/>
+    <circle r="18.5" fill="url(#shine)"/>
+    <circle r="15.6" fill="none" stroke="#fff" stroke-opacity="0.14" stroke-width="1.6"/>
+    <circle r="11.4" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="2"/>
+  </g>
 </svg>

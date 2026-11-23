@@ -1,8 +1,10 @@
 import { useLayoutEffect, useRef } from 'react';
 import './Board.css';
+import { Piece } from './Piece.jsx';
 
 const FILES = 'abcdefgh';
 const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
+const ORDER = [0, 1, 2, 3, 4, 5, 6, 7];
 const NAMES = { b: 'black man', B: 'black king', w: 'white man', W: 'white king' };
 
 /** Strong ease-out: the piece leaves at once and settles softly. */
@@ -11,37 +13,21 @@ const GLIDE = { duration: 240, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' };
 const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-/** The crown on a king: a gold band with five points, outlined so it reads on both colours. */
-function Crown() {
-  return (
-    <svg className="crown" viewBox="0 0 32 28" aria-hidden="true">
-      <path
-        d="M3 22 1.5 7.5 9.5 13 16 3l6.5 10 8-5.5L29 22z"
-        fill="#f4c542"
-        stroke="#7a5608"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <rect x="3" y="22.5" width="26" height="4" rx="1.6" fill="#e0a82a" stroke="#7a5608" strokeWidth="1.6" />
-      <circle cx="1.8" cy="7.2" r="2" fill="#fff3b8" stroke="#7a5608" strokeWidth="1.2" />
-      <circle cx="16" cy="3.2" r="2" fill="#fff3b8" stroke="#7a5608" strokeWidth="1.2" />
-      <circle cx="30.2" cy="7.2" r="2" fill="#fff3b8" stroke="#7a5608" strokeWidth="1.2" />
-    </svg>
-  );
-}
-
 /**
  * Renders an 8x8 matrix of 'b' 'B' 'w' 'W' (or null), the top row first.
  *
  * Read-only by default. With `onSelect` the dark squares become buttons; `movable` marks the
  * pieces that can move, `selected` the one picked up, and `targets` where it can go.
  *
+ * `flipped` turns the board round so the other player sits at the bottom, as White does in a room.
+ *
  * `moveKey` counts the moves played so far. When it goes up by exactly one, the piece that just
- * moved glides from where it started -- so the second player's move is something you see happen,
+ * moved glides from where it started -- so the other player's move is something you see happen,
  * not a piece that has silently teleported. Stepping backwards or jumping repaints at once.
  */
 export default function Board({
   board,
+  flipped = false,
   highlight = [],
   selected = null,
   targets = [],
@@ -74,25 +60,31 @@ export default function Board({
     glide.onfinish = glide.oncancel = () => destination.classList.remove('lifting');
   }, [moveKey, highlight]);
 
+  const rows = flipped ? [...ORDER].reverse() : ORDER;
+  const cols = rows;
+  const files = flipped ? [...FILES].reverse() : [...FILES];
+  const ranks = flipped ? [...RANKS].reverse() : RANKS;
+
   return (
     <div className="board-frame">
       {/* The coordinates sit on the wooden rails, as on a real board. */}
       <div className="rail rail-files rail-top" aria-hidden="true">
-        {[...FILES].map((f) => <span key={f}>{f}</span>)}
+        {files.map((f) => <span key={f}>{f}</span>)}
       </div>
       <div className="rail rail-files rail-bottom" aria-hidden="true">
-        {[...FILES].map((f) => <span key={f}>{f}</span>)}
+        {files.map((f) => <span key={f}>{f}</span>)}
       </div>
       <div className="rail rail-ranks rail-left" aria-hidden="true">
-        {RANKS.map((r) => <span key={r}>{r}</span>)}
+        {ranks.map((r) => <span key={r}>{r}</span>)}
       </div>
       <div className="rail rail-ranks rail-right" aria-hidden="true">
-        {RANKS.map((r) => <span key={r}>{r}</span>)}
+        {ranks.map((r) => <span key={r}>{r}</span>)}
       </div>
 
       <div ref={host} className={onSelect ? 'board playable' : 'board'} role="grid" aria-label="Draughts board">
-        {board.map((rank, row) =>
-          rank.map((cell, col) => {
+        {rows.map((row) =>
+          cols.map((col) => {
+            const cell = board[row][col];
             const square = FILES[col] + (8 - row);
             const dark = (row + col) % 2 === 1;
             const isTarget = targets.includes(square);
@@ -106,14 +98,13 @@ export default function Board({
 
             const interactive = Boolean(onSelect) && dark;
             const press = interactive ? () => onSelect(square) : undefined;
-            const description = cell ? NAMES[cell] : 'empty';
             return (
               <div
                 key={square}
                 data-square={square}
                 className={cls}
                 role="gridcell"
-                aria-label={`${square}, ${description}${isTarget ? ', can move here' : ''}`}
+                aria-label={`${square}, ${cell ? NAMES[cell] : 'empty'}${isTarget ? ', can move here' : ''}`}
                 aria-selected={interactive ? square === selected : undefined}
                 tabIndex={interactive ? 0 : undefined}
                 onPointerDown={press}
@@ -128,11 +119,7 @@ export default function Board({
                     : undefined
                 }
               >
-                {cell && (
-                  <span className={`piece ${cell.toLowerCase()}${cell === cell.toUpperCase() ? ' king' : ''}`}>
-                    {cell === cell.toUpperCase() && <Crown />}
-                  </span>
-                )}
+                {cell && <Piece color={cell.toLowerCase()} king={cell === cell.toUpperCase()} />}
                 {isTarget && <span className="target" aria-hidden="true" />}
               </div>
             );

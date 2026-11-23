@@ -78,7 +78,6 @@
 .choice legend { margin-bottom: 6px; padding: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips .chip { padding: 6px 14px; font-size: 12px; }
-.level-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
 
 .play-head {
   display: flex;
@@ -131,15 +130,6 @@
 .player-side { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
 .player .thinking { margin-left: 6px; }
 .player-count { margin-left: auto; font-variant-numeric: tabular-nums; }
-.disc {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-}
-.disc-b { background: #232220; }
-.disc-w { background: #fafaf8; border: 1px solid #c9c9c0; }
 .play-hint { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
 
 .scoresheet {
@@ -170,3 +160,26 @@
 /* The board shares the column with the status line, two player bars and a hint, so size it to
    what is left of the window rather than the whole of it. */
 .board-pane { --above: 290px; }
+
+/* The dialogs' own pieces. */
+.result-pieces { display: flex; justify-content: center; margin: 4px 0 14px; }
+.game-over-modal { text-align: center; }
+.game-over-modal h2 { margin-bottom: 8px; }
+.game-over-modal .modal-actions { justify-content: center; }
+
+/* A player's clock. It lights while it is running, and turns red in the last half minute. */
+.player-clock {
+  margin-left: auto;
+  padding: 1px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.player-clock + .player-count { margin-left: 10px; }
+.player-clock.on { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
+.player-clock.low { border-color: var(--blunder); color: var(--blunder); }
+.player-clock.on.low { background: var(--blunder); color: #fff; }

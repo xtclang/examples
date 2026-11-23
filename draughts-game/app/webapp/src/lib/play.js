@@ -62,6 +62,67 @@ export function boardAlong(matrix, path) {
 }
 
 /**
+ * Picking a move square by square.
+ *
+ * The server lists every legal move as a path ("c3-e5-g7"). Tap a piece, then the squares of its
+ * move: where it may go next is the square after the path so far in every move that starts with
+ * it. When the path matches a listed move exactly, `submit` is called with it. A multi-jump is
+ * several taps, the piece staying where it has got to until the chain is finished.
+ */
+export function useSelection({ legal, playable, submit }) {
+  // The squares picked so far: the piece, then each landing square of a multi-jump.
+  const [path, setPath] = useState([]);
+
+  // Where the picked piece may go next: the square after `path` in every move that starts with it.
+  const targets = useMemo(() => {
+    if (!path.length) return [];
+    const next = new Set();
+    for (const text of legal) {
+      const squares = text.split('-');
+      if (squares.length > path.length && path.every((sq, i) => squares[i] === sq)) {
+        next.add(squares[path.length]);
+      }
+    }
+    return [...next];
+  }, [path, legal]);
+
+  const movable = useMemo(() => new Set(legal.map((text) => text.split('-')[0])), [legal]);
+
+  /** Tap a square: pick up a piece, step on to a landing square, or put the piece back. */
+  const touch = useCallback(
+    (square) => {
+      if (!playable) return;
+
+      if (path.length && square === path[0]) {
+        setPath([]);
+        return;
+      }
+      if (path.length && targets.includes(square)) {
+        const next = [...path, square];
+        const text = next.join('-');
+        if (legal.includes(text)) {
+          setPath([]);
+          submit(text);
+        } else {
+          setPath(next); // a multi-jump with more to come
+        }
+        return;
+      }
+      // Choosing another piece is only allowed before a jump has begun.
+      if (path.length <= 1 && movable.has(square)) {
+        setPath([square]);
+        return;
+      }
+      if (path.length <= 1) setPath([]);
+    },
+    [playable, path, targets, legal, movable, submit]
+  );
+
+
+  return { path, setPath, targets, movable, touch, selected: path.length ? path[path.length - 1] : null };
+}
+
+/**
  * Plays one game: against the computer, or two people taking turns.
  *
  * TanStack Query owns the game: one query for the state and one for the legal moves. The server
@@ -90,9 +151,6 @@ export function usePlay() {
     staleTime: Infinity,
   });
   const legal = useMemo(() => (moves.data?.success ? moves.data.moves : []), [moves.data]);
-
-  // The squares picked so far: the piece, then each landing square of a multi-jump.
-  const [path, setPath] = useState([]);
 
   const move = useMutation({
     mutationFn: (text) => playMove(sessionId, text),
@@ -136,50 +194,8 @@ export function usePlay() {
 
   const playable = Boolean(ongoing) && !thinking && !move.isPending && moves.isSuccess;
 
-  // Where the picked piece may go next: the square after `path` in every move that starts with it.
-  const targets = useMemo(() => {
-    if (!path.length) return [];
-    const next = new Set();
-    for (const text of legal) {
-      const squares = text.split('-');
-      if (squares.length > path.length && path.every((sq, i) => squares[i] === sq)) {
-        next.add(squares[path.length]);
-      }
-    }
-    return [...next];
-  }, [path, legal]);
-
-  const movable = useMemo(() => new Set(legal.map((text) => text.split('-')[0])), [legal]);
-
-  /** Tap a square: pick up a piece, step on to a landing square, or put the piece back. */
-  const touch = useCallback(
-    (square) => {
-      if (!playable) return;
-
-      if (path.length && square === path[0]) {
-        setPath([]);
-        return;
-      }
-      if (path.length && targets.includes(square)) {
-        const next = [...path, square];
-        const text = next.join('-');
-        if (legal.includes(text)) {
-          setPath([]);
-          move.mutate(text);
-        } else {
-          setPath(next); // a multi-jump with more to come
-        }
-        return;
-      }
-      // Choosing another piece is only allowed before a jump has begun.
-      if (path.length <= 1 && movable.has(square)) {
-        setPath([square]);
-        return;
-      }
-      if (path.length <= 1) setPath([]);
-    },
-    [playable, path, targets, legal, movable, move]
-  );
+  const selection = useSelection({ legal, playable, submit: (text) => move.mutate(text) });
+  const { setPath } = selection;
 
   return {
     sessionId,
@@ -189,11 +205,7 @@ export function usePlay() {
       game.error?.message ?? move.error?.message ?? computer.error?.message ?? restart.error?.message ?? '',
     playable,
     thinking,
-    path,
-    selected: path.length ? path[path.length - 1] : null,
-    targets,
-    movable,
-    touch,
+    selection,
     restart: (setup) => restart.mutate(setup),
     restarting: restart.isPending,
   };

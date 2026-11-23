@@ -19,12 +19,15 @@ module draughtsDB.examples.org {
     import models.MoveEntry;
     import models.GameRecord;
     import models.ScoreEntry;
+    import models.TimeControl;
+    import models.RoomRecord;
 
     /**
      * Draughts Database Schema Interface
      *
      * The schema keeps:
      * - the games in progress, one per browser session id
+     * - the rooms two people play in over the web, one per room code
      * - the scoreboard, one row per player per day
      *
      * All database operations should be performed within transactions.
@@ -35,6 +38,11 @@ module draughtsDB.examples.org {
          * Games, indexed by browser session ID. Each browser tab/window gets its own game.
          */
         @RO oodb.DBMap<String, GameRecord> games;
+
+        /**
+         * Rooms, indexed by room code: games played between two browsers.
+         */
+        @RO oodb.DBMap<String, RoomRecord> rooms;
 
         /**
          * Scoreboard rows, indexed by "{date}|{nickname}" (see ScoreEntry).

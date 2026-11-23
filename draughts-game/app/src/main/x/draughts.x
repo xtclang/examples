@@ -2,6 +2,8 @@ import core.DraughtsRules;
 import core.DraughtsGame;
 import core.DraughtsAi;
 import api.DraughtsApi;
+import api.OnlineApi;
+import core.Scoreboard;
 
 /**
  * Draughts Game Server Module
@@ -15,6 +17,7 @@ import api.DraughtsApi;
  *   jumps, kings, and a draw rule (see draughts/core/DraughtsRules.x)
  * - One game per browser session, persisted in the draughts database schema
  * - A computer opponent (minimax with alpha-beta pruning) at Low, Medium and High strength
+ * - Rooms: play a friend from your own device with a shared code (see OnlineApi)
  * - A daily scoreboard of nicknames, kept by the server when a game ends
  * - Static content serving for the React client
  */
@@ -32,6 +35,7 @@ module draughts.examples.org {
     import db.models.Color;
     import db.models.MoveEntry;
     import db.models.ScoreEntry;
+    import db.models.RoomRecord;
 
     /**
      * Database access for the web services.

@@ -1,8 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Play from './components/Play.jsx';
+import Room from './components/Room.jsx';
 import Scoreboard from './components/Scoreboard.jsx';
+import { PiecePair } from './components/Piece.jsx';
 import { usePersistentState } from './components/ui.jsx';
 import { usePlay } from './lib/play.js';
+import { useRoom } from './lib/room.js';
+import { play as playSound, setSoundEnabled } from './lib/sound.js';
 
 /** The theme lives on <html> as a class; index.html applies the saved one before first paint. */
 function useTheme() {
@@ -13,34 +17,82 @@ function useTheme() {
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
 }
 
-function Rules() {
-  return (
-    <section className="rules" aria-label="How to play">
-      <h2>How to play</h2>
-      <ul>
-        <li>Black moves first. Take turns at the same screen.</li>
-        <li>Men move one square diagonally forward; kings move both ways.</li>
-        <li>Jump an enemy piece by landing on the empty square just beyond it.</li>
-        <li>Captures are compulsory, and a piece must keep jumping while it can.</li>
-        <li>A man reaching the far row becomes a king, and its move ends there.</li>
-        <li>If you cannot move, you lose. 40 moves each with no capture or man moved is a draw.</li>
-      </ul>
-    </section>
-  );
+/** Sound on or off, remembered. Turning it on plays a blip so you can hear that it is. */
+function useSoundSwitch() {
+  const [on, setOn] = usePersistentState('sound', true);
+  useEffect(() => setSoundEnabled(on), [on]);
+  return [
+    on,
+    () => {
+      setOn(!on);
+      if (!on) {
+        setSoundEnabled(true);
+        playSound('move');
+      }
+    },
+  ];
 }
 
+const TITLES = { play: 'Draughts', room: 'Play a friend' };
+
 export default function App() {
-  const play = usePlay();
+  const [view, setView] = usePersistentState('view', 'play');
   const [theme, toggleTheme] = useTheme();
+  const [soundOn, toggleSound] = useSoundSwitch();
+
+  // A friend's invitation link (?room=CODE) lands on the Room page with the code filled in.
+  const [joinCode] = useState(() => new URLSearchParams(window.location.search).get('room'));
+  useEffect(() => {
+    if (joinCode) setView('room');
+  }, [joinCode, setView]);
+
+  const play = usePlay();
+  const room = useRoom(view === 'room');
+
+  // Once in the room, the invitation is used up: drop it from the address.
+  useEffect(() => {
+    if (joinCode && room.seat) window.history.replaceState(null, '', window.location.pathname);
+  }, [joinCode, room.seat]);
+
+  const playing = view === 'play';
 
   return (
     <div className="shell">
       <header className="site-head">
-        <div className="head-left" />
-        <div className="head-center">
-          <h1 className="page-title">Draughts</h1>
+        <div className="head-left">
+          <span className="brand">
+            <PiecePair size={26} />
+          </span>
         </div>
-        <nav className="head-right" aria-label="Page">
+        <div className="head-center">
+          <h1 className="page-title">{TITLES[view]}</h1>
+        </div>
+        <nav className="head-right" aria-label="Pages">
+          <button className={`btn btn-nav${playing ? ' on' : ''}`} onClick={() => setView('play')}>
+            Play
+          </button>
+          <button className={`btn btn-nav${!playing ? ' on' : ''}`} onClick={() => setView('room')}>
+            Room
+          </button>
+          <button
+            className="icon-btn"
+            onClick={toggleSound}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? 'Mute sounds' : 'Turn sounds on'}
+            title={soundOn ? 'Mute sounds' : 'Turn sounds on'}
+          >
+            <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+              <path d="M2 6h2.6L8 3v10L4.6 10H2z" fill="currentColor" />
+              {soundOn ? (
+                <path
+                  d="M10.4 5.6a3.6 3.6 0 0 1 0 4.8M12.2 3.8a6.2 6.2 0 0 1 0 8.4"
+                  fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"
+                />
+              ) : (
+                <path d="M10.5 6l3.5 4M14 6l-3.5 4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
           <button
             className="icon-btn theme-toggle"
             onClick={toggleTheme}
@@ -66,12 +118,11 @@ export default function App() {
 
       <main className="split">
         <section className="pane board-pane">
-          <Play play={play} />
+          {playing ? <Play play={play} /> : <Room room={room} joinCode={joinCode} />}
         </section>
         <section className="pane analysis-pane">
           <div className="panel">
             <Scoreboard />
-            <Rules />
           </div>
         </section>
       </main>

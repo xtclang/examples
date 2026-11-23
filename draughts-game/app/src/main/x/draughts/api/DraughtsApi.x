@@ -254,16 +254,7 @@ service DraughtsApi {
      * Put a finished game on today's scoreboard, one result for each player.
      */
     void recordResult(GameRecord game) {
-        String today  = clock.now.date.toString();
-        Color? winner = DraughtsGame.winnerOf(game.status);
-        addScore(today, game.blackName, winner == Black, winner == Null);
-        addScore(today, game.whiteName, winner == White, winner == Null);
-    }
-
-    private void addScore(String date, String name, Boolean win, Boolean draw) {
-        String     key     = DraughtsGame.scoreKey(date, name);
-        ScoreEntry current = schema.scores.getOrDefault(key, new ScoreEntry(name));
-        schema.scores.put(key, current.record(win, draw));
+        Scoreboard.record(schema, clock.now.date.toString(), game);
     }
 
     /**
@@ -293,21 +284,5 @@ service DraughtsApi {
     /**
      * A human-readable description of the game for the status line.
      */
-    String describeState(GameRecord game, Boolean mustCapture) {
-        switch (game.status) {
-        case BlackWins:
-            return $"{game.blackName} (Black) wins: {game.whiteName} has no legal moves left.";
-        case WhiteWins:
-            return $"{game.whiteName} (White) wins: {game.blackName} has no legal moves left.";
-        case Draw:
-            return "Draw: 40 moves each without a capture or a man moving.";
-        default:
-            break;
-        }
-        if (DraughtsGame.computerToMove(game)) {
-            return $"{game.whiteName} is thinking...";
-        }
-        String name = game.turn == Black ? game.blackName : game.whiteName;
-        return mustCapture ? $"{name} to move - you must capture." : $"{name} to move.";
-    }
+    String describeState(GameRecord game, Boolean mustCapture) = DraughtsGame.describeState(game, mustCapture);
 }

@@ -149,6 +149,27 @@ service DraughtsGame {
     }
 
     /**
+     * A human-readable description of the game for the status line.
+     */
+    static String describeState(GameRecord game, Boolean mustCapture) {
+        switch (game.status) {
+        case BlackWins:
+            return $"{game.blackName} (Black) wins: {game.whiteName} has no legal moves left.";
+        case WhiteWins:
+            return $"{game.whiteName} (White) wins: {game.blackName} has no legal moves left.";
+        case Draw:
+            return "Draw: 40 moves each without a capture or a man moving.";
+        default:
+            break;
+        }
+        if (computerToMove(game)) {
+            return $"{game.whiteName} is thinking...";
+        }
+        String name = game.turn == Black ? game.blackName : game.whiteName;
+        return mustCapture ? $"{name} to move - you must capture." : $"{name} to move.";
+    }
+
+    /**
      * The board as 8 strings, one per row, row 0 (the top of the screen) first.
      */
     static String[] boardRows(String board) {

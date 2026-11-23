@@ -14,8 +14,3 @@
 .scoreboard th:first-child,
 .scoreboard td:first-child { text-align: left; max-width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scoreboard-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
-
-.rules { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
-.rules h2 { margin-bottom: 8px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
-.rules ul { margin: 0; padding-left: 1.1rem; color: var(--ink-2); font-size: 14px; }
-.rules li { margin: 4px 0; }

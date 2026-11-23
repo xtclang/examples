@@ -17,8 +17,10 @@ import db.models.ScoreEntry;
  * - GET  /api/moves/{sessionId}                  every legal move for the player to move
  * - POST /api/move/{sessionId}/{path}            play a move, e.g. "c3-d4" or "c3-e5-g7"
  * - POST /api/computer/{sessionId}               the computer plays its move, when it is its turn
+ * - GET  /api/scores                             today's scoreboard
  *
- * When a game ends, each player's result goes on the day's scoreboard (see ScoresApi).
+ * When a game ends, each player's result goes on the day's scoreboard, which `scores` reads. They
+ * share this one service because the platform allows only one web service per path.
  * All operations are transactional. Each browser session gets its own game via a session id.
  */
 @WebService("/api")
@@ -194,6 +196,45 @@ service DraughtsApi {
                           String sessionId = "",
                           String level = "",
                           Boolean computerToMove = False);
+
+    /**
+     * GET /api/scores
+     *
+     * Today's table, best first: by points, then wins, then name.
+     */
+    @Get("scores")
+    @Produces(Json)
+    @HttpsRequired
+    ScoreTable scores() {
+        using (schema.createTransaction()) {
+            String prefix = $"{clock.now.date}|";
+            ScoreRow[] rows = new Array<ScoreRow>();
+            for (String key : schema.scores.keys) {
+                if (key.startsWith(prefix), ScoreEntry entry := schema.scores.get(key)) {
+                    rows.add(new ScoreRow(entry.name, entry.played, entry.won, entry.drawn,
+                                          entry.lost, entry.points));
+                }
+            }
+            return new ScoreTable(rows.sorted((a, b) -> {
+                Ordered byPoints = b.points <=> a.points;
+                if (byPoints != Equal) {
+                    return byPoints;
+                }
+                Ordered byWins = b.won <=> a.won;
+                return byWins != Equal ? byWins : a.name <=> b.name;
+            }));
+        }
+    }
+
+    /**
+     * One row of the scoreboard.
+     */
+    static const ScoreRow(String name, Int played, Int won, Int drawn, Int lost, Int points);
+
+    /**
+     * The scoreboard as sent to the client.
+     */
+    static const ScoreTable(ScoreRow[] table);
 
     // ----- Helper Methods ------------------------------------------------------
 

@@ -2,7 +2,6 @@ import core.DraughtsRules;
 import core.DraughtsGame;
 import core.DraughtsAi;
 import api.DraughtsApi;
-import api.ScoresApi;
 
 /**
  * Draughts Game Server Module

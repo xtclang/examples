@@ -3,7 +3,6 @@ module DraughtsApiTest {
     package db       import draughtsDB.examples.org;
 
     import draughts.api.DraughtsApi;
-    import draughts.api.ScoresApi;
 
     import db.models.Color;
     import db.models.GameRecord;
@@ -195,7 +194,7 @@ module DraughtsApiTest {
             assert after.status == "BlackWins";
             assert after.message == "Game already finished";
 
-            val table = new ScoresApi().scores().table;
+            val table = api.scores().table;
             Int found = 0;
             for (val row : table) {
                 if (row.name == ann) {

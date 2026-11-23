@@ -1,4 +1,4 @@
-// Client for the XTC backend (see DraughtsApi.x and ScoresApi.x).
+// Client for the XTC backend (see DraughtsApi.x).
 //
 // Every @WebService here is @HttpsRequired. In dev, `/api` is relative so Vite's proxy (which
 // already targets the HTTPS backend) handles it. In the production build, the page can be

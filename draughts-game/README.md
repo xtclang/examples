@@ -53,7 +53,7 @@ draughts-game/
     ├── src/main/x/
     │   ├── draughts.x         # the @WebApp module: Database, static content
     │   └── draughts/
-    │       ├── api/           # web services: DraughtsApi (/api), ScoresApi (/api/scores)
+    │       ├── api/           # web service: DraughtsApi (/api) — game and scoreboard
     │       └── core/          # DraughtsRules (the rules), DraughtsAi (the computer),
     │                          #   DraughtsGame (game state)
     ├── src/test/x/            # xunit suites

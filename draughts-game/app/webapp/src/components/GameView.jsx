@@ -3,7 +3,7 @@ import './Play.css';
 import Board from './Board.jsx';
 import { PieceIcon } from './Piece.jsx';
 import { Skeleton, Thinking } from './ui.jsx';
-import { boardAlong, moveSquares, toMatrix } from '../lib/play.js';
+import { boardAlong, moveRoute, moveSquares, toMatrix } from '../lib/play.js';
 import { formatClock, LOW_MS, useClocks } from '../lib/clock.js';
 import { play as playSound, useGameSounds } from '../lib/sound.js';
 
@@ -127,6 +127,7 @@ export default function GameView({
   const past = live ? null : state.history[viewing - 1];
   const board = live ? boardAlong(toMatrix(state.board), selection.path) : toMatrix(past.boardAfter.match(/.{8}/g));
   const highlight = live ? moveSquares(state.lastMove) : moveSquares(past.path);
+  const route = live ? moveRoute(state.lastMove) : [];
   const blacksTurn = state.turn === 'Black';
 
   const tags = {
@@ -153,7 +154,7 @@ export default function GameView({
   const liveHint = hint ?? (
     over
       ? 'Game over.'
-      : selection.path.length > 1
+      : selection.path.length > 1 && playable
         ? 'Keep jumping: choose the next square.'
         : state.mustCapture
           ? 'A capture is compulsory. The pieces that can capture are ringed.'
@@ -177,6 +178,7 @@ export default function GameView({
           board={board}
           flipped={flipped}
           highlight={highlight}
+          route={route}
           selected={live ? selection.selected : null}
           targets={live ? selection.targets : []}
           movable={live && playable ? selection.movable : null}

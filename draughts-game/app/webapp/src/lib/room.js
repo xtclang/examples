@@ -69,7 +69,11 @@ export function useRoom(active = true) {
 
   const move = useMutation({
     mutationFn: (text) => playRoomMove(seat.code, seat.playerId, text),
-    onSuccess: accept,
+    onSuccess: (next) => {
+      accept(next);
+      selection.setPath([]); // with the new state, in the same render
+    },
+    onError: () => selection.setPath([]),
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
 

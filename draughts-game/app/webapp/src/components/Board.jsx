@@ -22,13 +22,16 @@ const reducedMotion = () =>
  * `flipped` turns the board round so the other player sits at the bottom, as White does in a room.
  *
  * `moveKey` counts the moves played so far. When it goes up by exactly one, the piece that just
- * moved glides from where it started -- so the other player's move is something you see happen,
- * not a piece that has silently teleported. Stepping backwards or jumping repaints at once.
+ * moved glides from where it started, hopping through every square of a multi-jump (`route`) --
+ * so the other player's move is something you see happen, not a piece that has silently
+ * teleported. A move the viewer has just made themselves is not replayed: its piece was already
+ * drawn where it landed. Stepping backwards or jumping repaints at once.
  */
 export default function Board({
   board,
   flipped = false,
   highlight = [],
+  route = [],
   selected = null,
   targets = [],
   movable = null,
@@ -37,6 +40,7 @@ export default function Board({
 }) {
   const host = useRef(null);
   const previousKey = useRef(moveKey);
+  const previousBoard = useRef(board);
 
   useLayoutEffect(() => {
     const prev = previousKey.current;
@@ -45,20 +49,39 @@ export default function Board({
     if (highlight.length < 2 || reducedMotion() || !host.current) return;
 
     const [from, to] = highlight;
+
+    // If the piece was already drawn on its destination, the viewer made this move themselves
+    // (the board showed it landing while the server answered): do not play it a second time.
+    const row = 8 - Number(to[1]);
+    const col = FILES.indexOf(to[0]);
+    if (previousBoard.current?.[row]?.[col]) return;
+
     const origin = host.current.querySelector(`[data-square="${from}"]`);
     const destination = host.current.querySelector(`[data-square="${to}"]`);
     const piece = destination?.querySelector('.piece');
     if (!origin || !piece || typeof piece.animate !== 'function') return;
 
-    const a = origin.getBoundingClientRect();
+    // The piece starts on the first square of its route and hops through the rest, ending where
+    // it already is. Offsets are measured from the destination, which is where the piece is drawn.
     const b = destination.getBoundingClientRect();
+    const squares = route.length >= 2 && route[0] === from && route[route.length - 1] === to ? route : [from, to];
+    const frames = squares.map((square) => {
+      const r = host.current.querySelector(`[data-square="${square}"]`)?.getBoundingClientRect() ?? b;
+      return { transform: `translate(${r.left - b.left}px, ${r.top - b.top}px)` };
+    });
     destination.classList.add('lifting');
-    const glide = piece.animate(
-      [{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: 'translate(0, 0)' }],
-      GLIDE
-    );
+    const glide = piece.animate(frames, {
+      duration: GLIDE.duration + 170 * (squares.length - 2),
+      easing: GLIDE.easing,
+    });
     glide.onfinish = glide.oncancel = () => destination.classList.remove('lifting');
-  }, [moveKey, highlight]);
+  }, [moveKey, highlight, route]);
+
+  // Remember what was drawn, for the next move to compare with. Declared after the effect above
+  // so that, when it runs, it still sees the previous render's board.
+  useLayoutEffect(() => {
+    previousBoard.current = board;
+  });
 
   const rows = flipped ? [...ORDER].reverse() : ORDER;
   const cols = rows;

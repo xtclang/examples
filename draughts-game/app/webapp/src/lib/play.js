@@ -40,6 +40,11 @@ export function moveSquares(lastMove) {
   return path.length >= 2 ? [path[0], path[path.length - 1]] : [];
 }
 
+/** Every square a move visited, in order: "c3-e5-g7" -> ['c3', 'e5', 'g7']. */
+export function moveRoute(lastMove) {
+  return typeof lastMove === 'string' ? lastMove.split('-') : [];
+}
+
 /**
  * The board with a half-finished multi-jump drawn on it: the piece sits where it has got to, and
  * what it has jumped is gone. Every jump is two squares along a diagonal, so the piece jumped is
@@ -101,7 +106,10 @@ export function useSelection({ legal, playable, submit }) {
         const next = [...path, square];
         const text = next.join('-');
         if (legal.includes(text)) {
-          setPath([]);
+          // The finished path goes on the board (the piece sits where it landed, what it took is
+          // gone) and stays there until the server's reply replaces it, so nothing snaps back
+          // and the move is not played a second time.
+          setPath(next);
           submit(text);
         } else {
           setPath(next); // a multi-jump with more to come
@@ -155,9 +163,12 @@ export function usePlay() {
   const move = useMutation({
     mutationFn: (text) => playMove(sessionId, text),
     onSuccess: (next) => {
+      // New state and a cleared selection land in the same render: the move is drawn once.
       client.setQueryData(key, next);
+      selection.setPath([]);
       if (next.status !== 'Ongoing') client.invalidateQueries({ queryKey: ['scores'] });
     },
+    onError: () => selection.setPath([]),
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
 
@@ -172,7 +183,7 @@ export function usePlay() {
   const restart = useMutation({
     mutationFn: (setup) => newGame(sessionId, setup),
     onSuccess: (next) => {
-      setPath([]);
+      selection.setPath([]);
       client.setQueryData(key, next);
     },
   });
@@ -195,7 +206,6 @@ export function usePlay() {
   const playable = Boolean(ongoing) && !thinking && !move.isPending && moves.isSuccess;
 
   const selection = useSelection({ legal, playable, submit: (text) => move.mutate(text) });
-  const { setPath } = selection;
 
   return {
     sessionId,

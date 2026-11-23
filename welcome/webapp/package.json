@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.1.1",
-    "vite": "^8.3.1"
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.8"
   },
   "scripts": {
     "start": "vite",
@@ -18,5 +18,8 @@
     "preview": "vite preview",
     "test": "echo \"No frontend tests: the Create React App boilerplate test was removed in the move to Vite.\" && exit 1",
     "eject": "echo \"Nothing to eject: the Vite build configuration is already in vite.config.js.\""
+  },
+  "allowScripts": {
+    "fsevents": true
   }
 }

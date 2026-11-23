@@ -2,8 +2,8 @@
 xtc = "0.4.4-SNAPSHOT"
 java = "25"
 node = "7.1.0"
-nodejs = "22.21.0"
-npm = "11.6.2"
+nodejs = "22.23.5"
+npm = "11.21.3"
 
 [plugins]
 xtc = { id = "org.xtclang.xtc-plugin", version.ref = "xtc" }

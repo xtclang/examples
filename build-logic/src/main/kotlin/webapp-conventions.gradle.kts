@@ -13,6 +13,7 @@
  */
 
 import com.github.gradle.node.npm.task.NpmTask
+import org.gradle.api.artifacts.VersionCatalogsExtension
 
 plugins {
     `java-base`
@@ -53,10 +54,15 @@ sourceSets.named("main") {
 //      compiled webapp output is available as XTC module resources (used by
 //      @StaticContent annotations). Both tasks copy the webapp/build resource srcDir.
 if (hasNpmWebapp) {
+    // Every webapp builds with the catalog's Node.js and npm; without them, the node plugin's own defaults apply,
+    // an older Node than the webapps' packages require
+    val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
     node {
         download.set(providers.gradleProperty("node.download")
             .map { it.toBoolean() }
             .orElse(true))
+        version.set(libs.findVersion("nodejs").get().requiredVersion)
+        npmVersion.set(libs.findVersion("npm").get().requiredVersion)
         nodeProjectDir.set(file("webapp"))
     }
 

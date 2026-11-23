@@ -1,0 +1,6 @@
+/* Shared foundation only. Route and component styles live beside their React components. */
+@import './styles/tokens.css';
+@import './styles/base.css';
+@import './styles/controls.css';
+@import './styles/layout.css';
+@import './styles/accessibility.css';

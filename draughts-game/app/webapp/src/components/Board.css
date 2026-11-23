@@ -1,0 +1,106 @@
+/* The draughts board and square-level interaction states. */
+.board-wrap { position: relative; }
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow-md);
+  user-select: none;
+}
+.board-skeleton { display: block; box-shadow: none; }
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+  touch-action: manipulation;
+}
+.square.light { background: var(--board-light); }
+.square.dark { background: var(--board-dark); }
+.square::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--board-hl);
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+.square.hl::after { opacity: 1; }
+.square.sel::after {
+  opacity: 1;
+  background: var(--board-sel);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+}
+.board.playable .square.dark { cursor: pointer; }
+.board.playable .square:focus-visible {
+  outline: 3px solid var(--series-b);
+  outline-offset: -3px;
+}
+.square.lifting { z-index: 3; }
+.coord {
+  position: absolute;
+  z-index: 1;
+  color: var(--board-dark);
+  font-family: var(--display);
+  font-size: 10cqh;
+  line-height: 1;
+  pointer-events: none;
+}
+.square.dark .coord { color: var(--board-light); }
+.coord.rank { top: 5%; left: 6%; }
+.coord.file { right: 7%; bottom: 4%; }
+
+/* A piece is a disc with a rim, so a man and a king read apart at a glance. */
+.piece {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 76%;
+  height: 76%;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+  box-shadow: inset 0 -0.6cqh 0 rgba(0, 0, 0, 0.28), 0 0.8cqh 1.4cqh rgba(0, 0, 0, 0.35);
+}
+.piece::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  border: 0.7cqh solid currentColor;
+  opacity: 0.28;
+}
+.piece.b { background: #232220; color: #f0efe9; }
+.piece.w { background: #fafaf8; color: #34342f; border: 0.5cqh solid #c9c9c0; }
+.piece.king::after {
+  content: "♛";
+  position: relative;
+  font-size: 46cqh;
+  line-height: 1;
+  color: var(--series-w);
+  text-shadow: 0 0.4cqh 0 rgba(0, 0, 0, 0.25);
+}
+.square.movable .piece { box-shadow: 0 0 0 0.9cqh color-mix(in srgb, var(--board-sel) 80%, transparent),
+    inset 0 -0.6cqh 0 rgba(0, 0, 0, 0.28), 0 0.8cqh 1.4cqh rgba(0, 0, 0, 0.35); }
+.target {
+  position: absolute;
+  z-index: 2;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: var(--board-mark);
+  pointer-events: none;
+  animation: target-in var(--t-fast) var(--ease-out);
+}
+@keyframes target-in {
+  from { opacity: 0; transform: scale(0.7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .target { animation: none; }
+}

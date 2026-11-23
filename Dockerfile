@@ -13,6 +13,9 @@ COPY card-game/build.gradle.kts card-game/build.gradle.kts
 COPY chess-game/settings.gradle.kts chess-game/build.gradle.kts chess-game/
 COPY chess-game/app/build.gradle.kts chess-game/app/
 COPY chess-game/db/build.gradle.kts chess-game/db/
+COPY draughts-game/settings.gradle.kts draughts-game/build.gradle.kts draughts-game/
+COPY draughts-game/app/build.gradle.kts draughts-game/app/
+COPY draughts-game/db/build.gradle.kts draughts-game/db/
 COPY welcome/build.gradle.kts welcome/build.gradle.kts
 RUN ./gradlew dependencies --no-daemon 2>/dev/null || true
 
@@ -21,6 +24,7 @@ COPY banking/ banking/
 COPY counter/ counter/
 COPY card-game/ card-game/
 COPY chess-game/ chess-game/
+COPY draughts-game/ draughts-game/
 COPY welcome/ welcome/
 
 # Tests already run on the dedicated CI `build` job on Linux. The image

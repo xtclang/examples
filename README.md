@@ -53,6 +53,13 @@ examples/
     └── db/                       # :db subproject — produces chessDB.xtc
         ├── build.gradle.kts
         └── src/main/x/           # chessDB.x + chessDB/{base,factory,models,pieces,types}/
+│
+└── draughts-game/                # Composite build — two-player draughts (no AI), same layout as chess-game
+    ├── app/                      # :app subproject — produces draughts.xtc
+    │   ├── src/main/x/           # draughts.x + draughts/{api,core}/
+    │   ├── src/test/x/           # DraughtsRulesTest, DraughtsApiTest
+    │   └── webapp/               # React client (Vite)
+    └── db/                       # :db subproject — produces draughtsDB.xtc
 ```
 
 ## Prerequisites
@@ -151,6 +158,8 @@ build (configured in `build-logic`'s `xtc-conventions` plugin):
 - `banking/src/test/x/BankTest.x` — bank database operations.
 - `chess-game/app/src/test/x/Chess*Test.x` — 16 modules covering chess
   logic, board operations, AI, validation, and time control.
+- `draughts-game/app/src/test/x/Draughts*Test.x` — the rules of English draughts
+  and the `/api` endpoints.
 
 ## Continuous Integration
 
@@ -169,6 +178,11 @@ xtc build -o out chess-game/db/src/main/x/chessDB.x
 xtc build -o out -L out -r chess-game/app/webapp chess-game/app/src/main/x/chess.x
 # chess.examples.org is @WebApp — needs the XQIZ.IT platform to host
 
+# Draughts game (same shape as chess; see draughts-game/README.md)
+xtc build -o out draughts-game/db/src/main/x/draughtsDB.x
+xtc build -o out -L out -r draughts-game/app/webapp draughts-game/app/src/main/x/draughts.x
+# draughts.examples.org is @WebApp — needs the XQIZ.IT platform to host
+
 # Welcome (build the React frontend first: cd welcome/webapp && npm install && npm run build)
 xtc build -o out -r welcome/webapp welcome/src/main/x/*.x
 xtc run -L out welcomeTest                 # standalone DB console app
@@ -183,7 +197,7 @@ xtc build -o out -r banking/webapp banking/src/main/x/*.x
 # BankStressTest is @WebApp — needs the XQIZ.IT platform
 ```
 
-`@WebApp` modules (`chess`, `welcome`, `count`, `BankStressTest`) cannot be
+`@WebApp` modules (`chess`, `draughts`, `welcome`, `count`, `BankStressTest`) cannot be
 run via plain `xtc run` — they require the XQIZ.IT platform to host them.
 `welcomeTest` is a standalone `module ... { void run() {...} }` and is the
 only example currently runnable directly with `xtc run`.

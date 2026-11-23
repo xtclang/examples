@@ -22,6 +22,8 @@
  * @param quietPlies  Half-moves since the last capture or man move (for the draw rule)
  * @param lastMove    The last move's path (e.g. "c3-e5"), or Null if no moves yet
  * @param history     Every move made, in order
+ * @param level       "" for two players at one screen; "easy", "medium" or "hard" when White is the
+ *                    computer (the human always plays Black)
  */
 const GameRecord(String board,
                  Color turn = Black,
@@ -30,4 +32,5 @@ const GameRecord(String board,
                  String whiteName = "White",
                  Int quietPlies = 0,
                  String? lastMove = Null,
-                 MoveEntry[] history = []) {}
+                 MoveEntry[] history = [],
+                 String level = "") {}

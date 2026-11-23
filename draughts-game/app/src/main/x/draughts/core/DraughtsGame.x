@@ -28,10 +28,34 @@ service DraughtsGame {
 
     /**
      * A new game in the starting position. Black moves first.
+     *
+     * @param level  "" for two players at one screen; "easy", "medium" or "hard" to play the
+     *               computer, which is White and is named after its level
      */
-    static GameRecord newGame(String blackName = "Black", String whiteName = "White") {
+    static GameRecord newGame(String blackName = "Black", String whiteName = "White",
+                              String level = "") {
+        String chosen = normalizeLevel(level);
+        String white  = chosen.empty
+                ? cleanName(whiteName, "White")
+                : $"Computer ({DraughtsAi.levelFor(chosen).label})";
         return new GameRecord(DraughtsRules.startingBoard(), Black, Ongoing,
-                              cleanName(blackName, "Black"), cleanName(whiteName, "White"));
+                              cleanName(blackName, "Black"), white, 0, Null, [], chosen);
+    }
+
+    /**
+     * A level name the game understands: "easy", "medium" or "hard", or "" for no computer. A
+     * level that is not recognised is taken as medium.
+     */
+    static String normalizeLevel(String? level) {
+        String text = (level ?: "").trim();
+        return text.empty ? "" : DraughtsAi.levelFor(text).name;
+    }
+
+    /**
+     * True if the computer is to move: it plays White, in a game that has a level.
+     */
+    static Boolean computerToMove(GameRecord record) {
+        return !record.level.empty && record.status == Ongoing && record.turn == White;
     }
 
     /**
@@ -54,6 +78,33 @@ service DraughtsGame {
         if (record.status != Ongoing) {
             return new MoveOutcome(False, record, "Game already finished");
         }
+        if (computerToMove(record)) {
+            return new MoveOutcome(False, record, "It is the computer's turn");
+        }
+        return play(record, pathText);
+    }
+
+    /**
+     * Play the computer's move, chosen by DraughtsAi at the game's level.
+     */
+    static MoveOutcome applyComputerMove(GameRecord record, Random random) {
+        if (record.status != Ongoing) {
+            return new MoveOutcome(False, record, "Game already finished");
+        }
+        if (!computerToMove(record)) {
+            return new MoveOutcome(False, record, "It is not the computer's turn");
+        }
+        Move move;
+        if (!(move := DraughtsAi.chooseMove(record.board, record.turn, record.level, random))) {
+            return new MoveOutcome(False, record, "The computer has no legal move");
+        }
+        return play(record, move.pathText);
+    }
+
+    /**
+     * Apply a move for whoever is to move, once it is known to be theirs to make.
+     */
+    private static MoveOutcome play(GameRecord record, String pathText) {
 
         Int[] path = DraughtsRules.parsePath(pathText);
         if (path.size < 2) {
@@ -81,7 +132,8 @@ service DraughtsGame {
                                         move.captures.size, crowned, move.notation, board);
 
         GameRecord updated = new GameRecord(board, next, status, record.blackName, record.whiteName,
-                                            quietPlies, move.pathText, record.history + entry);
+                                            quietPlies, move.pathText, record.history + entry,
+                                            record.level);
         return new MoveOutcome(True, updated, move.notation);
     }
 

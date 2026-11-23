@@ -8,13 +8,15 @@ import db.models.ScoreEntry;
 /**
  * DraughtsApi Service
  *
- * RESTful API for playing draughts. Two people take turns at one screen; the server holds the
- * game, enforces the rules and tells the client what the board looks like and where each piece
- * may go. Endpoints:
+ * RESTful API for playing draughts, against the computer (which plays White, at a chosen level)
+ * or against a second person taking turns at the same screen. The server holds the game, enforces
+ * the rules, chooses the computer's moves, and tells the client what the board looks like and where
+ * each piece may go. Endpoints:
  * - GET  /api/state/{sessionId}                  the current game
  * - POST /api/new/{sessionId}                    start a new game, with the two nicknames
  * - GET  /api/moves/{sessionId}                  every legal move for the player to move
  * - POST /api/move/{sessionId}/{path}            play a move, e.g. "c3-d4" or "c3-e5-g7"
+ * - POST /api/computer/{sessionId}               the computer plays its move, when it is its turn
  *
  * When a game ends, each player's result goes on the day's scoreboard (see ScoresApi).
  * All operations are transactional. Each browser session gets its own game via a session id.
@@ -23,7 +25,8 @@ import db.models.ScoreEntry;
 service DraughtsApi {
     // Database access; see the Database service in draughts.x
     @Lazy DraughtsSchema schema.calc() = Database.connect();
-    @Inject Clock clock;
+    @Inject Clock  clock;
+    @Inject Random random;
 
     /**
      * GET /api/state/{sessionId}
@@ -44,7 +47,7 @@ service DraughtsApi {
      *
      * Starts a new game for this session, replacing any game in progress.
      *
-     * @param request the two nicknames; either may be left out
+     * @param request the nicknames and, to play the computer, its level; all may be left out
      */
     @Post("new/{sessionId}")
     @Produces(Json)
@@ -53,16 +56,17 @@ service DraughtsApi {
         using (schema.createTransaction()) {
             GameRecord game = request == Null
                     ? DraughtsGame.newGame()
-                    : DraughtsGame.newGame(request.black, request.white);
+                    : DraughtsGame.newGame(request.black, request.white, request.level);
             schema.games.put(sessionId, game);
             return toApiState(game, "New game started", sessionId);
         }
     }
 
     /**
-     * Request body for starting a game.
+     * Request body for starting a game. A `level` of "easy", "medium" or "hard" plays the
+     * computer (the second nickname is then ignored); "" plays a second person.
      */
-    static const NewGameRequest(String black = "Black", String white = "White");
+    static const NewGameRequest(String black = "Black", String white = "White", String level = "");
 
     /**
      * GET /api/moves/{sessionId}
@@ -79,6 +83,9 @@ service DraughtsApi {
             GameRecord game = ensureGame(sessionId);
             if (game.status != Ongoing) {
                 return new MovesResponse(False, "Game already finished", []);
+            }
+            if (DraughtsGame.computerToMove(game)) {
+                return new MovesResponse(False, "It is the computer's turn", []);
             }
             String[] paths = new Array<String>();
             for (Move move : DraughtsRules.legalMoves(game.board, game.turn)) {
@@ -124,6 +131,38 @@ service DraughtsApi {
     }
 
     /**
+     * POST /api/computer/{sessionId}
+     *
+     * The computer plays its move, if it is its turn. The client calls this after showing the
+     * player's own move, so the reply is something the player sees happen. If it is not the
+     * computer's turn the game comes back unchanged.
+     */
+    @Post("computer/{sessionId}")
+    @Produces(Json)
+    @HttpsRequired
+    ApiState computerMove(String sessionId) {
+        using (schema.createTransaction()) {
+            GameRecord game = ensureGame(sessionId);
+            if (!DraughtsGame.computerToMove(game)) {
+                return toApiState(game, Null, sessionId);
+            }
+            try {
+                MoveOutcome result = DraughtsGame.applyComputerMove(game, random);
+                if (!result.ok) {
+                    return toApiState(game, result.message, sessionId);
+                }
+                schema.games.put(sessionId, result.record);
+                if (result.record.status != Ongoing) {
+                    recordResult(result.record);
+                }
+                return toApiState(result.record, Null, sessionId);
+            } catch (Exception e) {
+                return toApiState(game, $"Server error: {e.toString()}", sessionId);
+            }
+        }
+    }
+
+    /**
      * The complete game state, as sent to the web client.
      *
      * @param board       8 strings, one per row, row 0 (the top of the screen) first
@@ -138,6 +177,8 @@ service DraughtsApi {
      * @param mustCapture True if the player to move has a capture, so must make one
      * @param history     Every move so far
      * @param sessionId   Echo of the session id
+     * @param level       "" for two players, else the computer's level: "easy", "medium" or "hard"
+     * @param computerToMove True if the computer is to move: the client should now ask for it
      */
     static const ApiState(String[] board,
                           String turn,
@@ -150,7 +191,9 @@ service DraughtsApi {
                           Int whitePieces,
                           Boolean mustCapture,
                           MoveEntry[] history,
-                          String sessionId = "");
+                          String sessionId = "",
+                          String level = "",
+                          Boolean computerToMove = False);
 
     // ----- Helper Methods ------------------------------------------------------
 
@@ -201,7 +244,9 @@ service DraughtsApi {
                 DraughtsRules.countPieces(game.board, White),
                 mustCapture,
                 game.history,
-                sessionId);
+                sessionId,
+                game.level,
+                DraughtsGame.computerToMove(game));
     }
 
     /**
@@ -217,6 +262,9 @@ service DraughtsApi {
             return "Draw: 40 moves each without a capture or a man moving.";
         default:
             break;
+        }
+        if (DraughtsGame.computerToMove(game)) {
+            return $"{game.whiteName} is thinking...";
         }
         String name = game.turn == Black ? game.blackName : game.whiteName;
         return mustCapture ? $"{name} to move - you must capture." : $"{name} to move.";

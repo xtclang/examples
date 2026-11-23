@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getGameState, getMoves, newGame, playMove } from '../api.js';
+import { computerMove, getGameState, getMoves, newGame, playMove } from '../api.js';
 
 const SESSION_KEY = 'draughts-session';
 
@@ -62,7 +62,7 @@ export function boardAlong(matrix, path) {
 }
 
 /**
- * Plays one game, two people taking turns.
+ * Plays one game: against the computer, or two people taking turns.
  *
  * TanStack Query owns the game: one query for the state and one for the legal moves. The server
  * is the only thing that decides what a move does -- legality, captures, crowning -- so there is
@@ -103,15 +103,38 @@ export function usePlay() {
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
 
+  const computer = useMutation({
+    mutationFn: () => computerMove(sessionId),
+    onSuccess: (next) => {
+      client.setQueryData(key, next);
+      if (next.status !== 'Ongoing') client.invalidateQueries({ queryKey: ['scores'] });
+    },
+  });
+
   const restart = useMutation({
-    mutationFn: ({ black, white }) => newGame(sessionId, black, white),
+    mutationFn: (setup) => newGame(sessionId, setup),
     onSuccess: (next) => {
       setPath([]);
       client.setQueryData(key, next);
     },
   });
 
-  const playable = Boolean(ongoing) && !move.isPending && moves.isSuccess;
+  // The computer replies a moment after the player's own move lands, so its move is something
+  // you see happen. The server picks the move; this only asks for it, once per position.
+  const thinking = Boolean(state?.computerToMove);
+  const asked = useRef(-1);
+  const plies = state?.history.length ?? 0;
+  const { mutate: askComputer, isPending: asking } = computer;
+  useEffect(() => {
+    if (!thinking || move.isPending || asking || asked.current === plies) return undefined;
+    const timer = setTimeout(() => {
+      asked.current = plies;
+      askComputer();
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [thinking, plies, move.isPending, asking, askComputer]);
+
+  const playable = Boolean(ongoing) && !thinking && !move.isPending && moves.isSuccess;
 
   // Where the picked piece may go next: the square after `path` in every move that starts with it.
   const targets = useMemo(() => {
@@ -162,14 +185,16 @@ export function usePlay() {
     sessionId,
     state,
     loading: game.isPending,
-    error: game.error?.message ?? move.error?.message ?? restart.error?.message ?? '',
+    error:
+      game.error?.message ?? move.error?.message ?? computer.error?.message ?? restart.error?.message ?? '',
     playable,
+    thinking,
     path,
     selected: path.length ? path[path.length - 1] : null,
     targets,
     movable,
     touch,
-    restart: (black, white) => restart.mutate({ black, white }),
+    restart: (setup) => restart.mutate(setup),
     restarting: restart.isPending,
   };
 }

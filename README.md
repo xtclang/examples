@@ -54,7 +54,7 @@ examples/
         ├── build.gradle.kts
         └── src/main/x/           # chessDB.x + chessDB/{base,factory,models,pieces,types}/
 │
-└── draughts-game/                # Composite build — two-player draughts (no AI), same layout as chess-game
+└── draughts-game/                # Composite build — draughts against the computer or a friend, same layout as chess-game
     ├── app/                      # :app subproject — produces draughts.xtc
     │   ├── src/main/x/           # draughts.x + draughts/{api,core}/
     │   ├── src/test/x/           # DraughtsRulesTest, DraughtsApiTest
@@ -158,8 +158,8 @@ build (configured in `build-logic`'s `xtc-conventions` plugin):
 - `banking/src/test/x/BankTest.x` — bank database operations.
 - `chess-game/app/src/test/x/Chess*Test.x` — 16 modules covering chess
   logic, board operations, AI, validation, and time control.
-- `draughts-game/app/src/test/x/Draughts*Test.x` — the rules of English draughts
-  and the `/api` endpoints.
+- `draughts-game/app/src/test/x/Draughts*Test.x` — the rules of English draughts,
+  the computer opponent, and the `/api` endpoints.
 
 ## Continuous Integration
 

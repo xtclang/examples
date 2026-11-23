@@ -70,6 +70,16 @@
 }
 .privacy { margin: 4px 0 16px; color: var(--muted); font-size: 13px; line-height: 1.4; }
 
+.status-dot.busy {
+  background: var(--series-w);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--series-w) 22%, transparent);
+}
+.choice { margin: 0 0 14px; padding: 0; border: 0; }
+.choice legend { margin-bottom: 6px; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip { padding: 6px 14px; font-size: 12px; }
+.level-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
 .play-head {
   display: flex;
   align-items: center;
@@ -119,6 +129,7 @@
 }
 .player-name { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-side { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.player .thinking { margin-left: 6px; }
 .player-count { margin-left: auto; font-variant-numeric: tabular-nums; }
 .disc {
   flex: none;
@@ -155,3 +166,7 @@
   cursor: pointer;
 }
 .scoresheet button.on { background: var(--ink); color: var(--on-ink); }
+
+/* The board shares the column with the status line, two player bars and a hint, so size it to
+   what is left of the window rather than the whole of it. */
+.board-pane { --above: 290px; }

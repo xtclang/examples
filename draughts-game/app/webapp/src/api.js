@@ -29,8 +29,14 @@ const session = (id) => encodeURIComponent(id);
 /** The game for this session: board, turn, status, message, history. */
 export const getGameState = (id) => get(`state/${session(id)}`);
 
-/** Start a new game, replacing the current one. */
-export const newGame = (id, black, white) => post(`new/${session(id)}`, { black, white });
+/**
+ * Start a new game, replacing the current one. A `level` of 'easy', 'medium' or 'hard' plays the
+ * computer (which is White); '' plays a second person at the same screen.
+ */
+export const newGame = (id, { black, white, level }) => post(`new/${session(id)}`, { black, white, level });
+
+/** Ask the computer to play its move. Does nothing, server-side, if it is not its turn. */
+export const computerMove = (id) => post(`computer/${session(id)}`);
 
 /** Every legal move for the player to move, each as a path like "c3-e5-g7". */
 export const getMoves = (id) => get(`moves/${session(id)}`);

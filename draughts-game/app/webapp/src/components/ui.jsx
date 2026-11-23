@@ -30,3 +30,14 @@ export function usePersistentState(key, initial) {
 export function Skeleton({ width = '100%', height = '1em', radius = 6 }) {
   return <span className="skeleton" style={{ width, height, borderRadius: radius }} aria-hidden="true" />;
 }
+
+/** Three dots that breathe while the computer thinks. */
+export function Thinking({ label = 'Thinking' }) {
+  return (
+    <span className="thinking" role="status" aria-label={label}>
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}

@@ -1,16 +1,81 @@
-/* The draughts board and square-level interaction states. */
+/*
+ * The draughts board: a wooden board in a frame, with the coordinates on the rails.
+ *
+ * It is drawn as a physical object, so its colours do not change with the page theme.
+ */
 .board-wrap { position: relative; }
+
+.board-frame {
+  --rail: 5.2%;
+  --wood-light: #ecd3a5;
+  --wood-light-2: #e1c28c;
+  --wood-dark: #8b5a34;
+  --wood-dark-2: #6f4527;
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: var(--rail);
+  border-radius: 14px;
+  background:
+    /* grain along the frame */
+    repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 7px),
+    linear-gradient(135deg, #8a5630 0%, #6b3f20 45%, #583218 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 220, 170, 0.28),
+    inset 0 2px 0 rgba(255, 220, 170, 0.22),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 18px 32px -10px rgba(0, 0, 0, 0.55);
+}
+
+/* Coordinates on the rails. */
+.rail {
+  position: absolute;
+  display: grid;
+  color: rgba(255, 234, 205, 0.78);
+  font-family: var(--display);
+  font-size: 2.6cqw;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  text-transform: uppercase;
+  user-select: none;
+  pointer-events: none;
+}
+.rail span { display: grid; place-items: center; }
+.rail-files {
+  left: var(--rail);
+  right: var(--rail);
+  height: var(--rail);
+  grid-template-columns: repeat(8, 1fr);
+}
+.rail-top { top: 0; }
+.rail-bottom { bottom: 0; }
+.rail-ranks {
+  top: var(--rail);
+  bottom: var(--rail);
+  width: var(--rail);
+  grid-template-rows: repeat(8, 1fr);
+}
+.rail-left { left: 0; }
+.rail-right { right: 0; }
+
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   width: 100%;
-  aspect-ratio: 1;
+  height: 100%;
   overflow: hidden;
-  border-radius: var(--r-md);
-  box-shadow: 0 0 0 1px var(--line), var(--shadow-md);
+  border-radius: 3px;
+  /* the lip where the playing surface sits slightly below the frame */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 0 3px rgba(255, 220, 170, 0.14),
+    inset 0 0 14px rgba(0, 0, 0, 0.4);
   user-select: none;
 }
-.board-skeleton { display: block; box-shadow: none; }
+.board-skeleton { display: block; aspect-ratio: 1; box-shadow: none; }
+
 .square {
   position: relative;
   display: flex;
@@ -19,88 +84,145 @@
   container-type: size;
   touch-action: manipulation;
 }
-.square.light { background: var(--board-light); }
-.square.dark { background: var(--board-dark); }
+.square.light {
+  background:
+    repeating-linear-gradient(88deg, rgba(120, 80, 30, 0.07) 0 1px, transparent 1px 6px),
+    linear-gradient(145deg, var(--wood-light), var(--wood-light-2));
+}
+.square.dark {
+  background:
+    repeating-linear-gradient(88deg, rgba(0, 0, 0, 0.09) 0 1px, transparent 1px 6px),
+    linear-gradient(145deg, var(--wood-dark), var(--wood-dark-2));
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+}
 .square::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: var(--board-hl);
+  background: rgba(255, 207, 77, 0.42);
   opacity: 0;
   transition: opacity var(--t-fast) ease;
 }
 .square.hl::after { opacity: 1; }
 .square.sel::after {
   opacity: 1;
-  background: var(--board-sel);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9);
+  background: rgba(255, 214, 90, 0.55);
+  box-shadow: inset 0 0 0 0.8cqh rgba(255, 236, 170, 0.95);
 }
 .board.playable .square.dark { cursor: pointer; }
 .board.playable .square:focus-visible {
-  outline: 3px solid var(--series-b);
+  outline: 3px solid #4aa3ff;
   outline-offset: -3px;
 }
 .square.lifting { z-index: 3; }
-.coord {
-  position: absolute;
-  z-index: 1;
-  color: var(--board-dark);
-  font-family: var(--display);
-  font-size: 10cqh;
-  line-height: 1;
-  pointer-events: none;
-}
-.square.dark .coord { color: var(--board-light); }
-.coord.rank { top: 5%; left: 6%; }
-.coord.file { right: 7%; bottom: 4%; }
 
-/* A piece is a disc with a rim, so a man and a king read apart at a glance. */
+/* ----- Pieces: a disc with a bevelled rim, so a man and a king read apart at a glance. ----- */
 .piece {
+  --edge: #050505;
   position: relative;
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 76%;
-  height: 76%;
+  width: 78%;
+  height: 78%;
   border-radius: 50%;
   pointer-events: none;
   will-change: transform;
-  box-shadow: inset 0 -0.6cqh 0 rgba(0, 0, 0, 0.28), 0 0.8cqh 1.4cqh rgba(0, 0, 0, 0.35);
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) ease;
+  /* the piece's thickness, then its shadow on the board */
+  box-shadow:
+    0 1.6cqh 0 var(--edge),
+    0 2.4cqh 2.2cqh 0.2cqh rgba(0, 0, 0, 0.55);
 }
+/* outer groove */
 .piece::before {
   content: "";
   position: absolute;
-  inset: 14%;
+  inset: 7%;
   border-radius: 50%;
-  border: 0.7cqh solid currentColor;
-  opacity: 0.28;
+  box-shadow:
+    inset 0 0 0 0.7cqh rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1.4cqh rgba(255, 255, 255, 0.1);
 }
-.piece.b { background: #232220; color: #f0efe9; }
-.piece.w { background: #fafaf8; color: #34342f; border: 0.5cqh solid #c9c9c0; }
-.piece.king::after {
-  content: "♛";
+/* inner dished face */
+.piece::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0.8cqh 1.2cqh rgba(0, 0, 0, 0.45),
+    0 0.5cqh 0.5cqh rgba(255, 255, 255, 0.14);
+}
+.piece.b {
+  --edge: #000;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 38%),
+    radial-gradient(circle at 50% 50%, #3b3b3d 0%, #1b1b1d 62%, #0c0c0d 100%);
+}
+.piece.w {
+  --edge: #a99e84;
+  background:
+    radial-gradient(circle at 34% 28%, #ffffff 0%, rgba(255, 255, 255, 0) 42%),
+    radial-gradient(circle at 50% 50%, #f6f0e0 0%, #e3d9c0 64%, #cfc3a3 100%);
+}
+.piece.w::before {
+  box-shadow:
+    inset 0 0 0 0.7cqh rgba(120, 100, 60, 0.28),
+    inset 0 0 0 1.4cqh rgba(255, 255, 255, 0.6);
+}
+.piece.w::after {
+  box-shadow:
+    inset 0 0.8cqh 1.2cqh rgba(120, 100, 60, 0.35),
+    0 0.5cqh 0.5cqh rgba(255, 255, 255, 0.7);
+}
+
+/* A king: a gold rim, with the crown standing on the face. */
+.piece.king::before {
+  box-shadow:
+    inset 0 0 0 0.9cqh #d9a62a,
+    inset 0 0 0 1.8cqh rgba(255, 236, 160, 0.55);
+}
+.crown {
   position: relative;
-  font-size: 46cqh;
-  line-height: 1;
-  color: var(--series-w);
-  text-shadow: 0 0.4cqh 0 rgba(0, 0, 0, 0.25);
+  z-index: 1;
+  width: 52%;
+  height: auto;
+  margin-top: -2%;
+  filter: drop-shadow(0 0.7cqh 0.5cqh rgba(0, 0, 0, 0.5));
 }
-.square.movable .piece { box-shadow: 0 0 0 0.9cqh color-mix(in srgb, var(--board-sel) 80%, transparent),
-    inset 0 -0.6cqh 0 rgba(0, 0, 0, 0.28), 0 0.8cqh 1.4cqh rgba(0, 0, 0, 0.35); }
+
+/* A piece that can move right now (shown when a capture is compulsory, so you can see which). */
+.square.movable .piece {
+  box-shadow:
+    0 0 0 0.9cqh rgba(255, 207, 77, 0.85),
+    0 1.6cqh 0 var(--edge),
+    0 2.4cqh 2.2cqh 0.2cqh rgba(0, 0, 0, 0.55);
+}
+/* The piece that is picked up lifts off the board. */
+.square.sel .piece {
+  transform: translateY(-6%) scale(1.06);
+  box-shadow:
+    0 2.6cqh 0 var(--edge),
+    0 5cqh 3.4cqh 0.2cqh rgba(0, 0, 0, 0.5);
+}
+
 .target {
   position: absolute;
-  z-index: 2;
-  width: 30%;
-  height: 30%;
+  z-index: 3;
+  width: 32%;
+  height: 32%;
   border-radius: 50%;
-  background: var(--board-mark);
+  background: radial-gradient(circle at 40% 35%, rgba(255, 244, 200, 0.95), rgba(255, 207, 77, 0.8));
+  box-shadow: 0 0 0 0.8cqh rgba(255, 244, 200, 0.4), 0 0.8cqh 1.2cqh rgba(0, 0, 0, 0.4);
   pointer-events: none;
   animation: target-in var(--t-fast) var(--ease-out);
 }
 @keyframes target-in {
-  from { opacity: 0; transform: scale(0.7); }
+  from { opacity: 0; transform: scale(0.6); }
 }
 @media (prefers-reduced-motion: reduce) {
   .target { animation: none; }
+  .piece { transition: none; }
 }

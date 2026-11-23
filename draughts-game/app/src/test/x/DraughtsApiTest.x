@@ -208,5 +208,83 @@ module DraughtsApiTest {
             }
             assert found == 2;
         }
+
+        @Test
+        void shouldPlayTheComputerAtAChosenLevel() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("vsai");
+
+            val state = api.newGame(id, new DraughtsApi.NewGameRequest("Ann", "ignored", "medium"));
+            assert state.level == "medium";
+            assert state.blackName == "Ann";
+            assert state.whiteName == "Computer (Medium)";
+            assert !state.computerToMove;
+
+            // The human's move hands the turn to the computer, which has not moved yet
+            val after = api.move(id, "c3-d4");
+            assert after.turn == "White";
+            assert after.computerToMove;
+            assert after.history.size == 1;
+            assert after.message == "Computer (Medium) is thinking...";
+
+            // Nobody else may move for the computer, and there are no moves to offer
+            val refused = api.move(id, "b6-a5");
+            assert refused.history.size == 1;
+            assert refused.message == "It is the computer's turn";
+            assert !api.legalMoves(id).success;
+
+            // The computer replies when asked, and it is the human's turn again
+            val reply = api.computerMove(id);
+            assert reply.history.size == 2;
+            assert reply.history[1].color == White;
+            assert reply.turn == "Black";
+            assert !reply.computerToMove;
+            assert api.legalMoves(id).success;
+        }
+
+        @Test
+        void shouldNotLetTheComputerMoveOutOfTurn() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("outofturn");
+            api.newGame(id, new DraughtsApi.NewGameRequest("Ann", "", "easy"));
+
+            // It is the human's turn, so asking for a computer move changes nothing
+            val state = api.computerMove(id);
+            assert state.history.empty;
+            assert state.turn == "Black";
+
+            // And a two-player game never has a computer
+            String two = fresh("two");
+            api.newGame(two, new DraughtsApi.NewGameRequest("Ann", "Bo", ""));
+            api.move(two, "c3-d4");
+            val s2 = api.computerMove(two);
+            assert s2.history.size == 1;
+            assert s2.level == "";
+            assert !s2.computerToMove;
+        }
+
+        @Test
+        void shouldPlayManyMovesAgainstTheComputerWithEveryMoveAccepted() {
+            DraughtsApi api   = new DraughtsApi();
+            String      id    = fresh("many");
+            var         state = api.newGame(id, new DraughtsApi.NewGameRequest(fresh("Ann"), "", "easy"));
+
+            // The human plays the first legal move each time; the computer answers.
+            Int plies = 0;
+            while (state.status == "Ongoing" && plies < 30) {
+                Int before = state.history.size;
+                if (state.computerToMove) {
+                    state = api.computerMove(id);
+                } else {
+                    state = api.move(id, api.legalMoves(id).moves[0]);
+                }
+                assert state.history.size == before + 1;
+                ++plies;
+            }
+            assert state.history.size == plies;
+            for (Int i : 0 ..< state.history.size) {
+                assert state.history[i].color == (i % 2 == 0 ? Black : White);
+            }
+        }
     }
 }

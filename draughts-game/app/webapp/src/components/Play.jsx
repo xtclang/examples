@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import './Play.css';
 import Board from './Board.jsx';
 import { boardAlong, moveSquares, toMatrix } from '../lib/play.js';
-import { Skeleton, usePersistentState } from './ui.jsx';
+import { Skeleton, Thinking, usePersistentState } from './ui.jsx';
 
 /** The moves so far as a scoresheet. Any move can be clicked to look at that position. */
 function Scoresheet({ history, viewing, onView }) {
@@ -48,27 +48,39 @@ function PlaySkeleton() {
 }
 
 /** One player: a disc in their colour, their nickname, and how many pieces they have left. */
-function PlayerTag({ color, name, pieces, active }) {
+function PlayerTag({ color, name, pieces, active, computer, thinking }) {
   return (
     <div className={`player${active ? ' on' : ''}`} aria-current={active ? 'true' : undefined}>
       <span className={`disc disc-${color}`} aria-hidden="true" />
       <span className="player-name">{name}</span>
-      <span className="player-side">{color === 'b' ? 'Black · moves first' : 'White'}</span>
-      <span className="player-count">{pieces}</span>
+      <span className="player-side">
+        {computer ? 'Computer' : color === 'b' ? 'Black · moves first' : 'White'}
+      </span>
+      {thinking && <Thinking label="Computer thinking" />}
+      <span className="player-count" title="Pieces left">{pieces}</span>
     </div>
   );
 }
 
-/** Who is playing. Asked before the first game, and again from "New game". */
+const LEVELS = [
+  { value: 'easy', label: 'Low', note: 'Looks 2 moves ahead and sometimes slips.' },
+  { value: 'medium', label: 'Medium', note: 'Looks 4 moves ahead; the odd slip.' },
+  { value: 'hard', label: 'High', note: 'Looks up to 7 moves ahead and never slips. It may take a few seconds.' },
+];
+
+const DEFAULT_SETUP = { mode: '1', black: '', white: '', level: 'medium' };
+
+/** Who is playing, and against what. Asked before the first game, and again from "New game". */
 function NewGameModal({ initial, onStart, onCancel, busy }) {
-  const [black, setBlack] = useState(initial.black);
-  const [white, setWhite] = useState(initial.white);
+  const [setup, setSetup] = useState({ ...DEFAULT_SETUP, ...initial });
   const first = useRef(null);
   useEffect(() => first.current?.focus(), []);
+  const set = (patch) => setSetup((current) => ({ ...current, ...patch }));
+  const vsComputer = setup.mode === '1';
 
   const submit = (e) => {
     e.preventDefault();
-    onStart(black.trim(), white.trim());
+    onStart({ ...setup, black: setup.black.trim(), white: setup.white.trim() });
   };
 
   return (
@@ -82,30 +94,75 @@ function NewGameModal({ initial, onStart, onCancel, busy }) {
         onSubmit={submit}
       >
         <h2 id="new-game-title">New game</h2>
+
+        <fieldset className="choice">
+          <legend className="label">Players</legend>
+          <div className="chips" role="radiogroup" aria-label="Players">
+            {[
+              ['1', '1 player'],
+              ['2', '2 players'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={setup.mode === value}
+                className={`chip${setup.mode === value ? ' on' : ''}`}
+                onClick={() => set({ mode: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label className="field">
-          <span className="label">Black — moves first</span>
+          <span className="label">{vsComputer ? 'Your nickname (Black, moves first)' : 'Black — moves first'}</span>
           <input
             ref={first}
-            value={black}
-            onChange={(e) => setBlack(e.target.value)}
+            value={setup.black}
+            onChange={(e) => set({ black: e.target.value })}
             maxLength={20}
             placeholder="Black"
             autoComplete="nickname"
           />
         </label>
-        <label className="field">
-          <span className="label">White</span>
-          <input
-            value={white}
-            onChange={(e) => setWhite(e.target.value)}
-            maxLength={20}
-            placeholder="White"
-            autoComplete="off"
-          />
-        </label>
+
+        {vsComputer ? (
+          <fieldset className="choice">
+            <legend className="label">Computer strength</legend>
+            <div className="chips" role="radiogroup" aria-label="Computer strength">
+              {LEVELS.map((level) => (
+                <button
+                  key={level.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={setup.level === level.value}
+                  className={`chip${setup.level === level.value ? ' on' : ''}`}
+                  onClick={() => set({ level: level.value })}
+                >
+                  {level.label}
+                </button>
+              ))}
+            </div>
+            <p className="level-note">{LEVELS.find((level) => level.value === setup.level)?.note}</p>
+          </fieldset>
+        ) : (
+          <label className="field">
+            <span className="label">White</span>
+            <input
+              value={setup.white}
+              onChange={(e) => set({ white: e.target.value })}
+              maxLength={20}
+              placeholder="White"
+              autoComplete="off"
+            />
+          </label>
+        )}
+
         <p className="privacy">
           Use nicknames, not real names. They are saved on this server and shown on today&apos;s public
-          scoreboard when a game ends. This browser also remembers them for next time.
+          scoreboard when a game ends. This browser also remembers your choices for next time.
         </p>
         <div className="modal-actions">
           {onCancel && (
@@ -152,10 +209,11 @@ function GameOverModal({ message, onRematch, onNew, onDismiss, busy }) {
 }
 
 export default function Play({ play }) {
-  const { state, error, playable, path, selected, targets, movable, touch, restart, restarting } = play;
+  const { state, error, playable, thinking, path, selected, targets, movable, touch, restart, restarting } =
+    play;
 
-  // The nicknames this browser used last, so they are filled in next time.
-  const [names, setNames] = usePersistentState('draughts-names', null);
+  // What this browser chose last time, so it is filled in next time.
+  const [saved, setSaved] = usePersistentState('draughts-setup', null);
   const [asking, setAsking] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [viewing, setViewing] = useState(null);
@@ -175,18 +233,23 @@ export default function Play({ play }) {
   useEffect(() => {
     if (state && !greeted) {
       setGreeted(true);
-      if (!names && moveCount === 0) setAsking(true);
+      if (!saved && moveCount === 0) setAsking(true);
     }
-  }, [state, greeted, names, moveCount]);
+  }, [state, greeted, saved, moveCount]);
 
   if (!state) return error ? <p className="error">{error}</p> : <PlaySkeleton />;
 
-  const start = (black, white) => {
-    setNames({ black, white });
+  const start = (setup) => {
+    setSaved(setup);
     setAsking(false);
     setDismissed(true);
-    restart(black, white);
+    restart({
+      black: setup.black,
+      white: setup.white,
+      level: setup.mode === '1' ? setup.level : '',
+    });
   };
+  const vsComputer = state.level !== '';
 
   const live = viewing === null;
   const shownBoard = live ? boardAlong(toMatrix(state.board), path) : toMatrix(state.history[viewing - 1].boardAfter.match(/.{8}/g));
@@ -200,9 +263,9 @@ export default function Play({ play }) {
     <div className="play">
       {asking && (
         <NewGameModal
-          initial={names ?? { black: '', white: '' }}
+          initial={saved ?? DEFAULT_SETUP}
           onStart={start}
-          onCancel={moveCount === 0 && !names ? null : () => setAsking(false)}
+          onCancel={moveCount === 0 && !saved ? null : () => setAsking(false)}
           busy={restarting}
         />
       )}
@@ -211,14 +274,14 @@ export default function Play({ play }) {
           message={state.message}
           busy={restarting}
           onDismiss={() => setDismissed(true)}
-          onRematch={() => start(state.blackName, state.whiteName)}
+          onRematch={() => start(saved ?? { ...DEFAULT_SETUP, mode: vsComputer ? '1' : '2', black: state.blackName, white: state.whiteName, level: state.level || 'medium' })}
           onNew={() => setAsking(true)}
         />
       )}
 
       <header className="play-head">
         <p className="play-status" aria-live="polite">
-          <span className={`status-dot ${over ? 'over' : 'ready'}`} aria-hidden="true" />
+          <span className={`status-dot ${over ? 'over' : thinking ? 'busy' : 'ready'}`} aria-hidden="true" />
           {status}
         </p>
         <button className="btn btn-solid btn-sm" onClick={() => setAsking(true)}>
@@ -226,7 +289,14 @@ export default function Play({ play }) {
         </button>
       </header>
 
-      <PlayerTag color="w" name={state.whiteName} pieces={state.whitePieces} active={!over && !black} />
+      <PlayerTag
+        color="w"
+        name={state.whiteName}
+        pieces={state.whitePieces}
+        active={!over && !black}
+        computer={vsComputer}
+        thinking={thinking}
+      />
 
       <div className="board-wrap">
         <Board
@@ -257,9 +327,11 @@ export default function Play({ play }) {
           ? 'Click any move to look back; the game waits for you.'
           : over
             ? 'Game over — start another with New game.'
-            : path.length > 1
-              ? 'Keep jumping: choose the next square.'
-              : state.mustCapture
+            : thinking
+              ? 'The computer is choosing its move.'
+              : path.length > 1
+                ? 'Keep jumping: choose the next square.'
+                : state.mustCapture
                 ? 'A capture is compulsory. The pieces that can capture are ringed.'
                 : 'Click a piece, then a highlighted square.'}
       </p>

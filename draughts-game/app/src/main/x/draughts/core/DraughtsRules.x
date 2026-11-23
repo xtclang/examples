@@ -148,101 +148,124 @@ service DraughtsRules {
      */
     static Int crowningRow(Color player) = player == Black ? 0 : SIZE - 1;
 
-    /**
-     * A row step of -1 moves up the screen (Black's forward), +1 moves down (White's).
-     */
-    private static Boolean mayMove(Char piece, Int rowStep) {
-        return isKing(piece) || (ownerOf(piece) == Black ? rowStep < 0 : rowStep > 0);
-    }
+    private static Boolean isBlack(Char piece) = piece == 'b' || piece == 'B';
 
-    private static Boolean onBoard(Int row, Int col) = 0 <= row < SIZE && 0 <= col < SIZE;
+    private static Boolean isWhite(Char piece) = piece == 'w' || piece == 'W';
 
     // ----- Moves -------------------------------------------------------------
+    //
+    // Move generation runs inside the computer's search, millions of times, so it works on a
+    // mutable Char[] in place -- making a jump, looking further, then undoing it -- and allocates
+    // only when it finds a move.
 
     /**
      * Every capture sequence for the piece on `from`. A capturing piece must keep jumping while
      * it can, so each result is a maximal chain; a man crowned mid-chain stops there.
      *
      * Captured pieces come off the board as they are jumped, so a piece cannot be jumped twice,
-     * and the square the piece left can be landed on again.
+     * and the square the piece left can be landed on again. The board is changed while the chain
+     * is explored and restored before this returns.
      */
     private static Move[] captureSequences(Char[] board, Int from, Char piece,
                                            Int[] path, Int[] captured) {
-        Color    mover   = ownerOf(piece).as(Color);
-        Move[]   results = new Array<Move>();
-        Int      row     = from / SIZE;
-        Int      col     = from % SIZE;
+        Boolean black   = isBlack(piece);
+        Boolean king    = isKing(piece);
+        Move[]? results = Null;
+        Int     row     = from / SIZE;
+        Int     col     = from % SIZE;
 
-        for (Int rowStep : [-1, 1]) {
-            if (!mayMove(piece, rowStep)) {
+        for (Int d : 0 ..< 4) {
+            Int rowStep = d < 2 ? -1 : 1;
+            if (!king && (rowStep < 0) != black) {
+                continue; // men only jump forwards: Black up the screen, White down
+            }
+            Int colStep = d % 2 == 0 ? -1 : 1;
+            Int landRow = row + 2 * rowStep;
+            Int landCol = col + 2 * colStep;
+            if (landRow < 0 || landRow >= SIZE || landCol < 0 || landCol >= SIZE) {
                 continue;
             }
-            for (Int colStep : [-1, 1]) {
-                Int landRow = row + 2 * rowStep;
-                Int landCol = col + 2 * colStep;
-                if (!onBoard(landRow, landCol)) {
-                    continue;
-                }
-                Int mid  = (row + rowStep) * SIZE + col + colStep;
-                Int land = landRow * SIZE + landCol;
-                if (ownerOf(board[mid]) != opponent(mover) || board[land] != '.') {
-                    continue;
-                }
-
-                // Make the jump on a copy of the board, then look for more jumps.
-                Char[] next = BoardCopy.of(board);
-                next[from] = '.';
-                next[mid]  = '.';
-                next[land] = piece;
-                Int[] newPath     = path + land;
-                Int[] newCaptured = captured + mid;
-
-                Boolean crowned = !isKing(piece) && landRow == crowningRow(mover);
-                Move[]  more    = crowned
-                        ? []
-                        : captureSequences(next, land, piece, newPath, newCaptured);
-                if (more.empty) {
-                    results.add(new Move(newPath, newCaptured));
-                } else {
-                    results.addAll(more);
-                }
+            Int  mid   = (row + rowStep) * SIZE + col + colStep;
+            Int  land  = landRow * SIZE + landCol;
+            Char taken = board[mid];
+            if (!(black ? isWhite(taken) : isBlack(taken)) || board[land] != '.') {
+                continue;
             }
+
+            // Make the jump, look for more jumps, then undo it.
+            board[from] = '.';
+            board[mid]  = '.';
+            board[land] = piece;
+            Int[] newPath     = path + land;
+            Int[] newCaptured = captured + mid;
+
+            Boolean crowned = !king && landRow == (black ? 0 : SIZE - 1);
+            Move[]  more    = crowned
+                    ? []
+                    : captureSequences(board, land, piece, newPath, newCaptured);
+
+            board[land] = '.';
+            board[mid]  = taken;
+            board[from] = piece;
+
+            Move[] found = results ?: new Array<Move>();
+            if (more.empty) {
+                found.add(new Move(newPath, newCaptured));
+            } else {
+                found.addAll(more);
+            }
+            results = found;
         }
-        return results.freeze(inPlace=True);
+        return results?.freeze(inPlace=True) : [];
     }
 
     /**
      * Every legal move for the player to move. If any capture exists, only captures are legal.
+     * The board is borrowed: it is changed while captures are explored and restored on return.
      */
-    static Move[] legalMoves(String boardText, Color turn) {
-        Char[] board    = BoardCopy.of(boardText);
-        Move[] captures = new Array<Move>();
-        Move[] steps    = new Array<Move>();
+    static Move[] legalMoves(Char[] board, Color turn) {
+        Boolean black    = turn == Black;
+        Move[]? captures = Null;
+        Move[]? steps    = Null;
 
         for (Int from : 0 ..< 64) {
             Char piece = board[from];
-            if (ownerOf(piece) != turn) {
+            if (!(black ? isBlack(piece) : isWhite(piece))) {
                 continue;
             }
-            captures.addAll(captureSequences(board, from, piece, [from], []));
+            Move[] jumps = captureSequences(board, from, piece, [from], []);
+            if (!jumps.empty) {
+                Move[] found = captures ?: new Array<Move>();
+                found.addAll(jumps);
+                captures = found;
+            }
+            if (captures != Null) {
+                continue; // a capture exists, so plain steps no longer matter
+            }
 
-            Int row = from / SIZE;
-            Int col = from % SIZE;
-            for (Int rowStep : [-1, 1]) {
-                if (!mayMove(piece, rowStep)) {
+            Boolean king = isKing(piece);
+            Int     row  = from / SIZE;
+            Int     col  = from % SIZE;
+            for (Int d : 0 ..< 4) {
+                Int rowStep = d < 2 ? -1 : 1;
+                if (!king && (rowStep < 0) != black) {
                     continue;
                 }
-                for (Int colStep : [-1, 1]) {
-                    Int toRow = row + rowStep;
-                    Int toCol = col + colStep;
-                    if (onBoard(toRow, toCol) && board[toRow * SIZE + toCol] == '.') {
-                        steps.add(new Move([from, toRow * SIZE + toCol], []));
-                    }
+                Int toRow = row + rowStep;
+                Int toCol = col + (d % 2 == 0 ? -1 : 1);
+                if (toRow >= 0 && toRow < SIZE && toCol >= 0 && toCol < SIZE
+                        && board[toRow * SIZE + toCol] == '.') {
+                    Move[] found = steps ?: new Array<Move>();
+                    found.add(new Move([from, toRow * SIZE + toCol], []));
+                    steps = found;
                 }
             }
         }
-        return (captures.empty ? steps : captures).freeze(inPlace=True);
+        Move[]? result = captures ?: steps;
+        return result?.freeze(inPlace=True) : [];
     }
+
+    static Move[] legalMoves(String board, Color turn) = legalMoves(BoardCopy.of(board), turn);
 
     /**
      * The legal move that follows exactly this path, if there is one.
@@ -257,24 +280,29 @@ service DraughtsRules {
     }
 
     /**
-     * The board after a move. The old board is not changed.
+     * The board after a move, as a new array. The old board is not changed.
      *
      * @return the new board, and whether the move crowned a man
      */
-    static (String, Boolean) applyMove(String boardText, Move move) {
-        Char[] board = BoardCopy.of(boardText);
+    static (Char[], Boolean) applyMove(Char[] board, Move move) {
+        Char[] next  = BoardCopy.of(board);
         Int    from  = move.path[0];
         Int    to    = move.path[move.path.size - 1];
-        Char   piece = board[from];
+        Char   piece = next[from];
 
-        board[from] = '.';
+        next[from] = '.';
         for (Int captured : move.captures) {
-            board[captured] = '.';
+            next[captured] = '.';
         }
 
-        Boolean crowned = !isKing(piece) && to / SIZE == crowningRow(ownerOf(piece).as(Color));
-        board[to] = crowned ? (piece == 'b' ? 'B' : 'W') : piece;
-        return new String(board), crowned;
+        Boolean crowned = !isKing(piece) && to / SIZE == (isBlack(piece) ? 0 : SIZE - 1);
+        next[to] = crowned ? (piece == 'b' ? 'B' : 'W') : piece;
+        return next, crowned;
+    }
+
+    static (String, Boolean) applyMove(String board, Move move) {
+        (Char[] next, Boolean crowned) = applyMove(BoardCopy.of(board), move);
+        return new String(next), crowned;
     }
 
     /**

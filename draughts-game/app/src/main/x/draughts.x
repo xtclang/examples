@@ -1,19 +1,21 @@
 import core.DraughtsRules;
 import core.DraughtsGame;
+import core.DraughtsAi;
 import api.DraughtsApi;
 import api.ScoresApi;
 
 /**
  * Draughts Game Server Module
  *
- * A web-based draughts (English draughts / checkers) game for two players taking turns at the
- * same screen, written with the Ecstasy web framework. It is a port of the Compator draughts
- * course demo, without the computer opponent: every move is made by a person.
+ * A web-based draughts (English draughts / checkers) game, written with the Ecstasy web
+ * framework: play the computer at one of three levels, or a second person at the same screen. It
+ * is a port of the Compator draughts course demo.
  *
  * Key features:
  * - The full rules of English draughts, enforced on the server: compulsory captures, multiple
  *   jumps, kings, and a draw rule (see draughts/core/DraughtsRules.x)
  * - One game per browser session, persisted in the draughts database schema
+ * - A computer opponent (minimax with alpha-beta pruning) at Low, Medium and High strength
  * - A daily scoreboard of nicknames, kept by the server when a game ends
  * - Static content serving for the React client
  */

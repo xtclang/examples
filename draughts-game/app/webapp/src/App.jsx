@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Play from './components/Play.jsx';
 import Room from './components/Room.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Scoreboard from './components/Scoreboard.jsx';
 import { PiecePair } from './components/Piece.jsx';
 import { usePersistentState } from './components/ui.jsx';
@@ -118,7 +119,9 @@ export default function App() {
 
       <main className="split">
         <section className="pane board-pane">
-          {playing ? <Play play={play} /> : <Room room={room} joinCode={joinCode} />}
+          <ErrorBoundary resetKey={view}>
+            {playing ? <Play play={play} /> : <Room room={room} joinCode={joinCode} />}
+          </ErrorBoundary>
         </section>
         <section className="pane analysis-pane">
           <div className="panel">

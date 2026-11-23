@@ -13,30 +13,34 @@
 .lobby-lead { margin: 0 0 16px; color: var(--ink-2); font-size: 15px; }
 .lobby-note { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .btn-wide-center { width: 100%; padding: 10px 18px; font-size: 12px; }
-.lobby-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0 12px;
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.tab {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 4px);
+  background: transparent;
   color: var(--muted);
+  cursor: pointer;
   font-family: var(--display);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease;
 }
-.lobby-or::before,
-.lobby-or::after { content: ""; flex: 1; border-top: 1px solid var(--line-soft); }
-.lobby-join { display: flex; gap: 8px; margin-bottom: 12px; }
-.lobby-join input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: transparent;
+.tab:hover { color: var(--ink); }
+.tab.on { background: var(--ink); color: var(--on-ink); }
+.code-input {
   font-family: var(--display);
-  font-size: 16px;
-  letter-spacing: 0.2em;
+  font-size: 20px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
 }
 .lobby-card .error { margin: 8px 0 0; }

@@ -59,7 +59,10 @@ export function boardAlong(matrix, path) {
   for (let i = 1; i < path.length; i++) {
     const a = rowCol(path[i - 1]);
     const b = rowCol(path[i]);
-    next[(a.row + b.row) / 2][(a.col + b.col) / 2] = null;
+    // Only a jump (two squares along a diagonal) takes a piece; a plain step takes nothing.
+    if (Math.abs(a.row - b.row) === 2 && Math.abs(a.col - b.col) === 2) {
+      next[(a.row + b.row) / 2][(a.col + b.col) / 2] = null;
+    }
   }
   const end = rowCol(path[path.length - 1]);
   next[end.row][end.col] = piece;

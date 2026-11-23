@@ -12,9 +12,12 @@
   --wood-dark: #8b5a34;
   --wood-dark-2: #6f4527;
   position: relative;
+  /* Sized by its width alone. Equal padding on every side (a percentage of that width) makes the
+     frame square without `aspect-ratio`, which Safari resolves differently with padding and
+     container queries -- there it stretched the board. */
+  display: block;
   container-type: inline-size;
   width: 100%;
-  aspect-ratio: 1;
   padding: var(--rail);
   border-radius: 14px;
   background:
@@ -61,10 +64,14 @@
 .rail-right { right: 0; }
 
 .board {
+  /* The playing surface is the square: as wide as the frame allows, as tall as it is wide, with
+     eight equal rows and columns that can never grow to fill extra height. */
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   border-radius: 3px;
   /* the lip where the playing surface sits slightly below the frame */
@@ -73,6 +80,7 @@
     0 0 0 3px rgba(255, 220, 170, 0.14),
     inset 0 0 14px rgba(0, 0, 0, 0.4);
   user-select: none;
+  -webkit-user-select: none;
 }
 .board-skeleton { display: block; aspect-ratio: 1; box-shadow: none; }
 
@@ -81,6 +89,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
   container-type: size;
   touch-action: manipulation;
 }

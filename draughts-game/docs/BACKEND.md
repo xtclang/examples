@@ -20,6 +20,7 @@ Everything here is in XTC/Ecstasy. The React client (`app/webapp`) is covered on
  │  OnlineApi    /api/online   rooms, clocks, per-room scoreboard                   │
  │        │                                                                         │
  │        ▼  (no HTTP knowledge below this line)                                    │
+ │  api helpers: SessionHelper · RoomIdentity · RoomView · RoomSettlement           │
  │  DraughtsGame   start games, apply a move to a GameRecord                        │
  │  DraughtsAi     minimax + alpha-beta, iterative deepening                        │
  │  DraughtsRules  legal moves, applying moves, win/draw detection                  │
@@ -38,6 +39,17 @@ Two Ecstasy modules are built and deployed together:
 |---|---|---|
 | `draughtsDB.examples.org` | `db/src/main/x/draughtsDB.x` + `draughtsDB/models/*.x` | The schema and the immutable record types |
 | `draughts.examples.org` | `app/src/main/x/draughts.x` + `draughts/{api,core}/*.x` | The web app. It imports the DB module as the package `db` |
+
+The endpoint classes hold only endpoints. Their helpers are static services in separate files under `api/`:
+
+| File | Holds |
+|---|---|
+| `api/SessionHelper.x` | `ensureGame`, `recordResult`, `toApiState` (single-player) |
+| `api/RoomIdentity.x` | `colorOf`, `isYourTurn`, `randomText`, the code and id alphabets |
+| `api/RoomView.x` | `notFound`, `refuse`, `stateFor`: the `RoomState` responses |
+| `api/RoomSettlement.x` | `settle`: ends a game whose clock ran out (section 6.3) |
+
+They take the schema, the time or the random source as parameters, since a static service can't see the web service's injected resources.
 
 The layering is deliberate. `core/*` knows nothing about HTTP or transactions, so it is unit-tested directly. `api/*` owns transactions, request parsing and response shapes, and calls into `core`.
 
@@ -262,7 +274,7 @@ remaining(player) = running && it's their turn
 
 Because it is wall-clock time kept in the record rather than process state, **clocks survive a server restart**.
 
-**Lazy settlement.** Since no timer fires, `OnlineApi.settle(code, room)` runs at the start of **every** request that reads a room (`join`, `state`, `moves`, `move`, `rematch`, `leave`, `scores`, `scores/reset`). If the player to move has run out of time it:
+**Lazy settlement.** Since no timer fires, `RoomSettlement.settle(schema, now, code, room)` runs at the start of **every** request that reads a room (`join`, `state`, `moves`, `move`, `rematch`, `leave`, `scores`, `scores/reset`). If the player to move has run out of time it:
 
 1. Marks the game as won by the opponent.
 2. Zeroes the loser's bank and sets `timedOut = true`.

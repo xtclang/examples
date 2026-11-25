@@ -15,8 +15,8 @@ service GameClock {
     /**
      * The shortest and longest a player's bank can start with, and the longest increment.
      */
-    static Int MIN_MS       = 30_000;
-    static Int MAX_MS       = 10_800_000;
+    static Int MIN_MS        = 30_000;
+    static Int MAX_MS        = 10_800_000;
     static Int MAX_INCREMENT = 60_000;
 
     /**

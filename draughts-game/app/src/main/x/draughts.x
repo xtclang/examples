@@ -3,6 +3,11 @@ import core.DraughtsGame;
 import core.DraughtsAi;
 import api.DraughtsApi;
 import api.OnlineApi;
+import api.SessionHelper;
+import api.RoomIdentity;
+import api.RoomView;
+import api.RoomSettlement;
+import core.GameClock;
 import core.Scoreboard;
 
 /**

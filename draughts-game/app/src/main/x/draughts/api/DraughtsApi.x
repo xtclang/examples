@@ -44,7 +44,7 @@ service DraughtsApi {
     @HttpsRequired
     ApiState state(String sessionId) {
         using (schema.createTransaction()) {
-            return toApiState(ensureGame(sessionId), Null, sessionId);
+            return SessionHelper.toApiState(SessionHelper.ensureGame(schema, sessionId), Null, sessionId);
         }
     }
 
@@ -64,7 +64,7 @@ service DraughtsApi {
                     ? DraughtsGame.newGame()
                     : DraughtsGame.newGame(request.black, request.white, request.level);
             schema.games.put(sessionId, game);
-            return toApiState(game, "New game started", sessionId);
+            return SessionHelper.toApiState(game, "New game started", sessionId);
         }
     }
 
@@ -86,7 +86,7 @@ service DraughtsApi {
     @HttpsRequired
     MovesResponse legalMoves(String sessionId) {
         using (schema.createTransaction()) {
-            GameRecord game = ensureGame(sessionId);
+            GameRecord game = SessionHelper.ensureGame(schema, sessionId);
             if (game.status != Ongoing) {
                 return new MovesResponse(False, "Game already finished", []);
             }
@@ -119,19 +119,19 @@ service DraughtsApi {
     @HttpsRequired
     ApiState move(String sessionId, String path) {
         using (schema.createTransaction()) {
-            GameRecord game = ensureGame(sessionId);
+            GameRecord game = SessionHelper.ensureGame(schema, sessionId);
             try {
                 MoveOutcome result = DraughtsGame.applyMove(game, path);
                 if (!result.ok) {
-                    return toApiState(game, result.message, sessionId);
+                    return SessionHelper.toApiState(game, result.message, sessionId);
                 }
                 schema.games.put(sessionId, result.record);
                 if (result.record.status != Ongoing) {
-                    recordResult(sessionId, result.record);
+                    SessionHelper.recordResult(schema, sessionId, result.record);
                 }
-                return toApiState(result.record, Null, sessionId);
+                return SessionHelper.toApiState(result.record, Null, sessionId);
             } catch (Exception e) {
-                return toApiState(game, $"Server error: {e.toString()}", sessionId);
+                return SessionHelper.toApiState(game, $"Server error: {e.toString()}", sessionId);
             }
         }
     }
@@ -148,22 +148,22 @@ service DraughtsApi {
     @HttpsRequired
     ApiState computerMove(String sessionId) {
         using (schema.createTransaction()) {
-            GameRecord game = ensureGame(sessionId);
+            GameRecord game = SessionHelper.ensureGame(schema, sessionId);
             if (!DraughtsGame.computerToMove(game)) {
-                return toApiState(game, Null, sessionId);
+                return SessionHelper.toApiState(game, Null, sessionId);
             }
             try {
                 MoveOutcome result = DraughtsGame.applyComputerMove(game, random);
                 if (!result.ok) {
-                    return toApiState(game, result.message, sessionId);
+                    return SessionHelper.toApiState(game, result.message, sessionId);
                 }
                 schema.games.put(sessionId, result.record);
                 if (result.record.status != Ongoing) {
-                    recordResult(sessionId, result.record);
+                    SessionHelper.recordResult(schema, sessionId, result.record);
                 }
-                return toApiState(result.record, Null, sessionId);
+                return SessionHelper.toApiState(result.record, Null, sessionId);
             } catch (Exception e) {
-                return toApiState(game, $"Server error: {e.toString()}", sessionId);
+                return SessionHelper.toApiState(game, $"Server error: {e.toString()}", sessionId);
             }
         }
     }
@@ -227,7 +227,7 @@ service DraughtsApi {
     ScoreTable resetScores(String sessionId) {
         using (schema.createTransaction()) {
             String scope = Scoreboard.sessionScope(sessionId);
-            if (!Scoreboard.canReset(ensureGame(sessionId))) {
+            if (!Scoreboard.canReset(SessionHelper.ensureGame(schema, sessionId))) {
                 return new ScoreTable(Scoreboard.table(schema, scope).table, False,
                                       "Finish the game before resetting the scoreboard.");
             }
@@ -235,54 +235,4 @@ service DraughtsApi {
             return Scoreboard.table(schema, scope);
         }
     }
-
-    // ----- Helper Methods ------------------------------------------------------
-
-    /**
-     * The game for a session, created in the starting position if there is none.
-     */
-    GameRecord ensureGame(String sessionId) {
-        if (GameRecord game := schema.games.get(sessionId)) {
-            return game;
-        }
-        GameRecord fresh = DraughtsGame.newGame();
-        schema.games.put(sessionId, fresh);
-        return fresh;
-    }
-
-    /**
-     * Put a finished game on the session's scoreboard, one result for each player.
-     */
-    void recordResult(String sessionId, GameRecord game) {
-        Scoreboard.record(schema, Scoreboard.sessionScope(sessionId), game);
-    }
-
-    /**
-     * Converts a GameRecord to the API response format.
-     */
-    ApiState toApiState(GameRecord game, String? message = Null, String sessionId = "") {
-        Boolean ongoing     = game.status == Ongoing;
-        Boolean mustCapture = ongoing
-                && DraughtsRules.legalMoves(game.board, game.turn)[0].captures.size > 0;
-        return new ApiState(
-                DraughtsGame.boardRows(game.board),
-                game.turn.toString(),
-                game.status.toString(),
-                message ?: describeState(game, mustCapture),
-                game.lastMove,
-                game.blackName,
-                game.whiteName,
-                DraughtsRules.countPieces(game.board, Black),
-                DraughtsRules.countPieces(game.board, White),
-                mustCapture,
-                game.history,
-                sessionId,
-                game.level,
-                DraughtsGame.computerToMove(game));
-    }
-
-    /**
-     * A human-readable description of the game for the status line.
-     */
-    String describeState(GameRecord game, Boolean mustCapture) = DraughtsGame.describeState(game, mustCapture);
 }

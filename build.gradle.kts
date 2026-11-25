@@ -28,6 +28,10 @@ dependencies {
     // the root's xtcModule configuration so installDist picks them up.
     xtcModule("org.xtclang.examples:app")
     xtcModule("org.xtclang.examples:db")
+
+    // Same for draughts-game, which uses its own group so the coordinates stay unique.
+    xtcModule("org.xtclang.examples.draughts:app")
+    xtcModule("org.xtclang.examples.draughts:db")
 }
 
 /**
@@ -53,9 +57,9 @@ val installDist = tasks.register<Copy>("installDist") {
  * lifecycle tasks (see AGENTS.md: attachment is controlled separately from
  * inclusion).
  */
-val chessGame = gradle.includedBuild("chess-game")
+val gameBuilds = listOf("chess-game", "draughts-game").map { gradle.includedBuild(it) }
 listOf("clean", "build", "check").forEach { name ->
     tasks.named(name) {
-        dependsOn(chessGame.task(":$name"))
+        gameBuilds.forEach { dependsOn(it.task(":$name")) }
     }
 }

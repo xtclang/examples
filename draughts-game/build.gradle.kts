@@ -16,7 +16,8 @@ plugins {
     `lifecycle-base`
 }
 
-group = "org.xtclang.examples"
+// Distinct from chess-game's group so the root composite can resolve each game's :app/:db.
+group = "org.xtclang.examples.draughts"
 version = "0.1.0-SNAPSHOT"
 
 subprojects {

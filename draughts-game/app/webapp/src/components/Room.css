@@ -1,0 +1,82 @@
+/* The lobby, the waiting screen and the room's own controls. */
+.lobby { display: grid; place-items: start center; padding: 8px 0 24px; }
+.lobby-card {
+  width: min(100%, 28rem);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--raise);
+  box-shadow: var(--shadow-md);
+}
+.modal-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.modal-head h2 { margin: 0; font-size: 18px; letter-spacing: 0.04em; }
+.lobby-lead { margin: 0 0 16px; color: var(--ink-2); font-size: 15px; }
+.lobby-note { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.btn-wide-center { width: 100%; padding: 10px 18px; font-size: 12px; }
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+.tab {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: calc(var(--r-md) - 4px);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease;
+}
+.tab:hover { color: var(--ink); }
+.tab.on { background: var(--ink); color: var(--on-ink); }
+.code-input {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.lobby-card .error { margin: 8px 0 0; }
+
+.lobby-waiting { text-align: center; }
+.lobby-waiting .modal-head { justify-content: center; }
+.room-code {
+  margin: 4px 0 18px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  color: var(--ink-strong);
+  font-family: var(--display);
+  font-size: 34px;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  user-select: all;
+}
+.room-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.lobby-waiting-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.room-head-actions { display: flex; align-items: center; gap: 8px; }
+.room-tag {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+}

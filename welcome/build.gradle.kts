@@ -9,11 +9,6 @@ plugins {
     id("webapp-conventions")
 }
 
-node {
-    version.set(libs.versions.nodejs)
-    npmVersion.set(libs.versions.npm)
-}
-
 xtcRun {
     module { moduleName = "welcomeTest" }
 }

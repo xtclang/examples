@@ -8,29 +8,60 @@ Everything here is in XTC/Ecstasy. The React client (`app/webapp`) is covered on
 
 ## 1. The big picture
 
-```
- browser (React)
-     │  HTTPS + JSON
-     ▼
- ┌──────────────────────── draughts.examples.org (@WebApp) ────────────────────────┐
- │                                                                                  │
- │  Home (@StaticContent "/")      serves the built client                          │
- │                                                                                  │
- │  DraughtsApi  /api          single-player + per-session scoreboard               │
- │  OnlineApi    /api/online   rooms, clocks, per-room scoreboard                   │
- │        │                                                                         │
- │        ▼  (no HTTP knowledge below this line)                                    │
- │  api helpers: SessionHelper · RoomIdentity · RoomView · RoomSettlement           │
- │  DraughtsGame   start games, apply a move to a GameRecord                        │
- │  DraughtsAi     minimax + alpha-beta, iterative deepening                        │
- │  DraughtsRules  legal moves, applying moves, win/draw detection                  │
- │  GameClock      clock arithmetic        Scoreboard   tallies, reset              │
- │                                                                                  │
- │  Database (service)   gets a DraughtsSchema: injected by the host, or jsondb     │
- └───────────────────────────────────────┬──────────────────────────────────────────┘
-                                         ▼
-                          draughtsDB.examples.org (@oodb.Database)
-                          games · rooms · scores   (DBMap each)
+```mermaid
+flowchart TB
+    browser(["Browser (React client)"])
+
+    subgraph app["draughts.examples.org (@WebApp)"]
+        direction TB
+        home["Home<br/>static content at /"]
+
+        subgraph web["Web services: HTTP only"]
+            direction LR
+            sp["DraughtsApi<br/>/api<br/>single-player, per-session scores"]
+            rooms["OnlineApi<br/>/api/online<br/>rooms, clocks, per-room scores"]
+        end
+
+        subgraph helpers["API helpers"]
+            direction LR
+            sh["SessionHelper"]
+            ri["RoomIdentity"]
+            rv["RoomView"]
+            rs["RoomSettlement"]
+        end
+
+        subgraph core["Core: no HTTP, no database access of its own"]
+            direction LR
+            game["DraughtsGame<br/>start games, apply moves"]
+            ai["DraughtsAi<br/>minimax, alpha-beta"]
+            rules["DraughtsRules<br/>legal moves, win and draw"]
+            clock["GameClock<br/>clock arithmetic"]
+            score["Scoreboard<br/>tally, reset"]
+        end
+
+        dbsvc["Database service<br/>host-injected schema, else jsondb"]
+    end
+
+    store[("draughtsDB.examples.org<br/>games, rooms, scores")]
+
+    browser -->|"HTTPS + JSON"| home
+    browser -->|"HTTPS + JSON"| sp
+    browser -->|"HTTPS + JSON"| rooms
+    sp --> sh
+    rooms --> ri
+    rooms --> rv
+    rooms --> rs
+    sh --> game
+    rv --> rules
+    rs --> clock
+    rs --> score
+    sh --> score
+    game --> ai
+    game --> rules
+    ai --> rules
+    sp --> dbsvc
+    rooms --> dbsvc
+    dbsvc --> store
 ```
 
 Two Ecstasy modules are built and deployed together:
@@ -60,6 +91,60 @@ The layering is deliberate. `core/*` knows nothing about HTTP or transactions, s
 ## 2. Data model (`db/`)
 
 All record types are immutable `const` classes. A "change" builds a new record and `put`s it over the old one. Nothing is mutated in place.
+
+### 2.0 How the records fit together
+
+```mermaid
+erDiagram
+    ROOMS ||--|| ROOM_RECORD : "key = room code"
+    GAMES ||--|| GAME_RECORD : "key = session id"
+    SCORES ||--|| SCORE_ENTRY : "key = scope|nickname"
+
+    ROOM_RECORD ||--|| GAME_RECORD : "game"
+    ROOM_RECORD ||--o| TIME_CONTROL : "timeControl (optional)"
+    GAME_RECORD ||--o{ MOVE_ENTRY : "history"
+
+    ROOM_RECORD {
+        String code
+        String blackId
+        String whiteId "null while waiting"
+        String leftId "null unless someone left"
+        Boolean timedOut
+    }
+    GAME_RECORD {
+        String board "64 chars"
+        Color turn
+        GameStatus status
+        String blackName
+        String whiteName
+        Int quietPlies
+        String lastMove
+        String level "empty = two humans"
+    }
+    MOVE_ENTRY {
+        Int moveNumber
+        Color color
+        String path
+        Int captures
+        Boolean crowned
+        String notation
+        String boardAfter
+    }
+    TIME_CONTROL {
+        Int initialMs
+        Int incrementMs
+        Int blackMs
+        Int whiteMs
+        Time lastMoveTime
+    }
+    SCORE_ENTRY {
+        String name
+        Int played
+        Int won
+        Int drawn
+        Int lost
+    }
+```
 
 ### 2.1 Schema
 
@@ -113,6 +198,16 @@ All access happens inside `using (schema.createTransaction()) { ... }`.
 | Single-player / same-screen | `games[sessionId]` | `game:{sessionId}` |
 | Room | `rooms[code].game` | `room:{code}` |
 
+```mermaid
+flowchart LR
+    subgraph single["Single-player session"]
+        g1["games[sessionId]"] -. "results go to" .-> s1["scores[game:sessionId|name]"]
+    end
+    subgraph room["Room"]
+        r1["rooms[code].game"] -. "results go to" .-> s2["scores[room:code|name]"]
+    end
+```
+
 ---
 
 ## 3. The rules engine (`core/DraughtsRules.x`)
@@ -125,6 +220,29 @@ The board is a 64-character `String`:
 
 ```
 '.' empty   'b' Black man   'B' Black king   'w' White man   'W' White king
+```
+
+The starting position, as the 64-character string is laid out (index = `row*8 + col`):
+
+```
+          a  b  c  d  e  f  g  h
+        ┌──┬──┬──┬──┬──┬──┬──┬──┐
+ 8  r0  │  │w │  │w │  │w │  │w │   White starts here, moves down
+        ├──┼──┼──┼──┼──┼──┼──┼──┤   (crowned on row 7)
+ 7  r1  │w │  │w │  │w │  │w │  │
+        ├──┼──┼──┼──┼──┼──┼──┼──┤
+ 6  r2  │  │w │  │w │  │w │  │w │
+        ├──┼──┼──┼──┼──┼──┼──┼──┤
+ 5  r3  │  │  │  │  │  │  │  │  │
+        ├──┼──┼──┼──┼──┼──┼──┼──┤
+ 4  r4  │  │  │  │  │  │  │  │  │
+        ├──┼──┼──┼──┼──┼──┼──┼──┤
+ 3  r5  │b │  │b │  │b │  │b │  │   Black starts here, moves up
+        ├──┼──┼──┼──┼──┼──┼──┼──┤   (crowned on row 0)
+ 2  r6  │  │b │  │b │  │b │  │b │
+        ├──┼──┼──┼──┼──┼──┼──┼──┤
+ 1  r7  │b │  │b │  │b │  │b │  │
+        └──┴──┴──┴──┴──┴──┴──┴──┘
 ```
 
 Index = `row*8 + col`. **Row 0 is the top of the screen.** Black starts at the bottom (rows 5–7) and moves *up*; White starts at the top (rows 0–2) and moves *down*. Only dark squares, where `(row + col)` is odd, are used.
@@ -191,6 +309,23 @@ Turns rules into stored game state.
 
 Every method returns `MoveOutcome(ok, record, message)`. On refusal `record` is the game *unchanged*, so the API can always send back a valid state.
 
+```mermaid
+flowchart TD
+    start(["applyMove / applyComputerMove"]) --> over{"Game over?"}
+    over -->|yes| r1["refuse: Game already finished"]
+    over -->|no| who{"Right caller for this turn?<br/>(humans never move for the computer)"}
+    who -->|no| r2["refuse: computer's turn / not the computer's turn"]
+    who -->|yes| parse{"parsePath: 2+ squares?"}
+    parse -->|no| r3["refuse: Invalid square format"]
+    parse -->|yes| find{"findMove: matches a legal move exactly?"}
+    find -->|no| r4["refuse: Illegal move<br/>(says if a capture was compulsory)"]
+    find -->|yes| apply["DraughtsRules.applyMove<br/>new board + crowned?"]
+    apply --> quiet["quietPlies: reset on capture or man move, else +1"]
+    quiet --> status["statusOf: win, loss or draw?"]
+    status --> entry["append MoveEntry, build new GameRecord"]
+    entry --> ok(["MoveOutcome ok = True"])
+```
+
 `winnerOf(status)` gives the winning `Color`, or `Null` for a draw. `boardRows` splits the 64-char board into 8 row strings for the client.
 
 ---
@@ -219,6 +354,24 @@ Measured on the dev machine, High takes about 3–4 s per move and Medium 0.3–
 4. Each finished depth reorders the moves so the best are tried first next time, which makes pruning far more effective.
 5. Ties for best are collected and one is picked at random, for variety.
 
+```mermaid
+flowchart TD
+    a(["chooseMove"]) --> moves{"Legal moves?"}
+    moves -->|none| f(["False"])
+    moves -->|exactly one| one(["return it"])
+    moves -->|several| rnd{"Random roll under the level's random chance?"}
+    rnd -->|yes| rm(["return a random move"])
+    rnd -->|no| d["depth = 1"]
+    d --> search["minimax every move at this depth"]
+    search --> late{"Deadline hit?"}
+    late -->|yes| keep["discard this depth, keep the last finished answer"]
+    late -->|no| save["save best moves, put them first next time"]
+    save --> more{"depth < level depth?"}
+    more -->|yes| inc["depth + 1"] --> search
+    more -->|no| pick
+    keep --> pick(["pick one of the tied best moves at random"])
+```
+
 `minimax` details:
 
 - Leaves (`depth == 0`) are scored immediately with `evaluate`, with no move generation. That is the biggest cost saving, and the trade-off is that a stalemate right at the search horizon is noticed one ply late.
@@ -242,10 +395,16 @@ Single-player uses the browser-generated `sessionId` the same way, with no furth
 
 ### 6.2 Room lifecycle
 
-```
-create ──► waiting (whiteId = Null) ──join──► playing ──► finished ──rematch──► playing …
-                │                                │
-              leave (room deleted)             leave ⇒ forfeit (other player wins)
+```mermaid
+stateDiagram-v2
+    [*] --> Waiting: create
+    Waiting --> Playing: join (second seat taken)
+    Waiting --> [*]: creator leaves (room deleted)
+    Playing --> Finished: win, draw, timeout
+    Playing --> Finished: a player leaves (forfeit)
+    Finished --> Playing: rematch (both still seated)
+    Finished --> Closed: a player leaves
+    Closed --> [*]
 ```
 
 - **create:** picks a code not already in `rooms`, creates a game with the creator as Black, and sets clocks if requested.
@@ -272,6 +431,22 @@ remaining(player) = running && it's their turn
                       : storedMs
 ```
 
+```mermaid
+sequenceDiagram
+    participant B as Black
+    participant S as Server (room record)
+    participant W as White
+    Note over S: clocks set, nothing running
+    B->>S: move 1
+    Note over S: no time taken off Black, increment added. lastMoveTime = now
+    Note over S: White's clock now counts down (computed on read)
+    W->>S: move 2
+    Note over S: White bank = stored - (now - lastMoveTime) + increment
+    Note over S: lastMoveTime = now. Black's clock counts down
+    B->>S: state (poll)
+    Note over S: Black live time = stored - (now - lastMoveTime)
+```
+
 Because it is wall-clock time kept in the record rather than process state, **clocks survive a server restart**.
 
 **Lazy settlement.** Since no timer fires, `RoomSettlement.settle(schema, now, code, room)` runs at the start of **every** request that reads a room (`join`, `state`, `moves`, `move`, `rematch`, `leave`, `scores`, `scores/reset`). If the player to move has run out of time it:
@@ -280,6 +455,14 @@ Because it is wall-clock time kept in the record rather than process state, **cl
 2. Zeroes the loser's bank and sets `timedOut = true`.
 3. Writes the room back.
 4. Records the result on the room's scoreboard.
+
+```mermaid
+flowchart TD
+    req(["Any request that reads a room"]) --> s{"settle: timed room, game live,<br/>player to move out of time?"}
+    s -->|no| go["carry on with the request"]
+    s -->|yes| end1["opponent wins, loser's bank = 0, timedOut = True"]
+    end1 --> save["write room back"] --> rec["record on room scoreboard"] --> go
+```
 
 The practical consequence is that **a timeout is only recorded when somebody next asks**. Clients poll every 1.5 s, so in a live game that is near-instant. For an abandoned room it happens whenever someone next looks. Note also that `GET` endpoints can therefore write to the database.
 
@@ -298,11 +481,52 @@ The practical consequence is that **a timeout is only recorded when somebody nex
 9. If that move ended the game, record it on the room's scoreboard.
 10. Return `stateFor(updated, playerId)`.
 
+```mermaid
+flowchart TD
+    m(["POST move"]) --> e1{"Room exists?"}
+    e1 -->|no| x1["notFound"]
+    e1 -->|yes| st["settle clocks"] --> e2{"Caller seated?"}
+    e2 -->|no| x2["refuse: not a player"]
+    e2 -->|yes| e3{"Opponent joined?"}
+    e3 -->|no| x3["refuse: waiting for opponent"]
+    e3 -->|yes| e4{"Game still ongoing?"}
+    e4 -->|no| x4["state with success = false<br/>(says how it ended)"]
+    e4 -->|yes| e5{"Caller's turn?"}
+    e5 -->|no| x5["refuse: not your turn"]
+    e5 -->|yes| e6{"DraughtsGame.applyMove ok?"}
+    e6 -->|no| x6["refuse: the rule that was broken"]
+    e6 -->|yes| ck["GameClock.afterMove, save room"]
+    ck --> fin{"Game ended?"}
+    fin -->|yes| sc["record on room scoreboard"] --> ret
+    fin -->|no| ret(["return stateFor(updated)"])
+```
+
 Any exception inside step 7–10 is caught and returned as `"Server error: …"` with the unchanged room.
 
 ### 6.5 Sync model
 
-There is no push channel. Clients **poll** `state/{code}/{playerId}` (about every 1.5 s) and compare. Because the server computes `yourTurn`, `waiting`, `opponentLeft` and the clocks, the client holds almost no game logic. A client discovers the opponent's move by seeing a changed `history` or `board`. It then fetches `moves` only when `yourTurn` is true.
+There is no push channel. Clients **poll** `state/{code}/{playerId}` (about every 1.5 s) and compare. Because the server computes `yourTurn`, `waiting`, `opponentLeft` and the clocks, the client holds almost no game logic.
+
+```mermaid
+sequenceDiagram
+    participant A as Player A (Black)
+    participant S as Server
+    participant B as Player B (White)
+    loop every 1.5 s
+        A->>S: GET state
+        B->>S: GET state
+    end
+    A->>S: GET moves (yourTurn = true)
+    S-->>A: legal paths
+    A->>S: POST move c3-d4
+    S-->>A: new state (yourTurn = false)
+    B->>S: GET state (next poll)
+    S-->>B: changed board and history, yourTurn = true
+    B->>S: GET moves
+    S-->>B: legal paths
+```
+
+A client discovers the opponent's move by seeing a changed `history` or `board`. It then fetches `moves` only when `yourTurn` is true.
 
 ---
 
@@ -319,12 +543,6 @@ A scoreboard belongs to **one match**: one room, or one single-player session. T
 Scoring: **win 3, draw 1, loss 0.**
 
 Results are recorded exactly once per game, at the moment it ends: on the deciding move, on the computer's deciding move, on a forfeit, or in `settle` for a timeout. A rematch starts a new game and the tally carries on until someone resets it.
-
-**Limitations to know about:**
-
-- Rows are keyed by *nickname*. If the same room has two players with the same name, they share one row. The client doesn't prevent that.
-- `table` and `reset` scan every key in `scores`. That is fine at this scale, but it is O(total rows) per call.
-- Old data from before scopes existed (date-keyed rows) is ignored and never cleaned up.
 
 ---
 
@@ -353,6 +571,19 @@ All endpoints are `@HttpsRequired` and `@Produces(Json)`.
 | POST | `scores/{sessionId}/reset` | | `ScoreTable` (`success:false` if mid-game) |
 
 **Why `computer` is a separate call.** `move` returns right after the human's move. The client animates it, then calls `computer` and shows the reply. This is why the AI's 0.3–4 s latency never freezes the human's own move. `ApiState.computerToMove` tells the client when to make that call.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as DraughtsApi
+    C->>S: POST move/{sessionId}/c3-d4
+    S-->>C: ApiState (computerToMove = true)
+    Note over C: animates the player's move
+    C->>S: POST computer/{sessionId}
+    Note over S: DraughtsAi searches, 0.3 to 4 s
+    S-->>C: ApiState with the computer's reply
+    Note over C: animates the reply
+```
 
 `moves` returns `{success:false}` when the game is over or it is the computer's turn.
 
@@ -471,14 +702,3 @@ The suites call the services directly, with no HTTP.
 | Make timeouts fire without a poll | Needs a scheduled task, which does not exist today. Settlement is lazy by design (6.3) |
 
 **Schema changes and deployed data.** `draughtsDB.xtc` defines the stored shapes. When a record type or a key format changes, as it did when scoreboards moved from date keys to match scopes, old rows are not migrated. Deploy to a clean data directory, or accept that stale rows are ignored.
-
----
-
-## 13. Known limits
-
-- **The real platform (XQIZ.IT) has not been run against this code.** It was verified through the XDK's `xtc`, the unit tests and a browser against a mock of the API.
-- Polling, not push. Latency is the poll interval, and load scales with open rooms.
-- Nicknames are not unique and aren't authenticated. Scoreboard rows merge on equal names.
-- Player ids are bearer secrets with no expiry. Rooms are never garbage-collected, except an unjoined room that its creator leaves.
-- The AI's budget is wall-clock, so a heavily loaded server plays shallower.
-- Timeouts are recorded lazily (6.3).

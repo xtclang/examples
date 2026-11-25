@@ -46,7 +46,7 @@ suites=()
 if ((${#only[@]})); then
   suites=("${only[@]}")
 else
-  for file in "$ROOT"/app/src/test/x/*.x; do
+  for file in "$ROOT"/app/src/test/x/*.x "$ROOT"/app/src/live/x/*.x; do
     name="$(basename "$file" .x)"
     if [[ "$name" == "$LIVE_SUITE" && $live == false ]]; then
       continue
@@ -66,6 +66,7 @@ printf '%-28s %8s %8s %8s %8s\n' "-----" "------" "------" "-------" "----"
 
 for name in "${suites[@]}"; do
   source="$ROOT/app/src/test/x/$name.x"
+  [[ -f "$source" ]] || source="$ROOT/app/src/live/x/$name.x"
   if [[ ! -f "$source" ]]; then
     echo "error: no test suite named $name" >&2
     failed=1

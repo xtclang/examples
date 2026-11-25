@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import Play from './components/Play.jsx';
 import Room from './components/Room.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
-import Scoreboard from './components/Scoreboard.jsx';
+import Scoreboard, { NoScoreboard } from './components/Scoreboard.jsx';
+import { getRoomScores, getScores, resetRoomScores, resetScores } from './api.js';
 import { PiecePair } from './components/Piece.jsx';
 import { usePersistentState } from './components/ui.jsx';
 import { usePlay } from './lib/play.js';
@@ -56,6 +57,12 @@ export default function App() {
   }, [joinCode, room.seat]);
 
   const playing = view === 'play';
+
+  // Each game keeps its own scoreboard: this session's, or the room's. It can be reset once the
+  // game in front of the players has ended (or before it has begun).
+  const game = playing ? play.state : room.state;
+  const idle = !game || game.status !== 'Ongoing' || game.history.length === 0;
+  const version = game ? `${game.status}:${game.history.length}` : 'none';
 
   return (
     <div className="shell">
@@ -125,7 +132,28 @@ export default function App() {
         </section>
         <section className="pane analysis-pane">
           <div className="panel">
-            <Scoreboard />
+            {playing ? (
+              <Scoreboard
+                scope="This game"
+                id={`play:${play.sessionId}`}
+                load={() => getScores(play.sessionId)}
+                reset={() => resetScores(play.sessionId)}
+                canReset={idle}
+                version={version}
+              />
+            ) : room.seat ? (
+              <Scoreboard
+                scope={`Room ${room.seat.code}`}
+                id={`room:${room.seat.code}`}
+                load={() => getRoomScores(room.seat.code, room.seat.playerId)}
+                reset={() => resetRoomScores(room.seat.code, room.seat.playerId)}
+                canReset={idle}
+                version={version}
+                poll={5000}
+              />
+            ) : (
+              <NoScoreboard />
+            )}
           </div>
         </section>
       </main>

@@ -113,8 +113,8 @@ export function NewGameModal({ initial, onStart, onCancel, busy }) {
         )}
 
         <p className="privacy">
-          Use nicknames, not real names. They are saved on this server and shown on today&apos;s public
-          scoreboard when a game ends.
+          Use nicknames, not real names. They are saved on this server and shown on the game&apos;s
+          scoreboard of the game when it ends.
         </p>
         <div className="modal-actions">
           {onCancel && (
@@ -153,7 +153,7 @@ export function GameOverModal({ status, message, onDismiss, children }) {
 }
 
 /** A yes/no question, e.g. before leaving a game in progress. */
-export function ConfirmModal({ title, message, confirm, onConfirm, onCancel, busy }) {
+export function ConfirmModal({ title, message, confirm, cancel = 'Stay', onConfirm, onCancel, busy }) {
   return (
     <Modal labelledBy="confirm-title" role="alertdialog" onDismiss={onCancel} className="game-over-modal">
       <div className="result-pieces">
@@ -163,7 +163,7 @@ export function ConfirmModal({ title, message, confirm, onConfirm, onCancel, bus
       <p>{message}</p>
       <div className="modal-actions">
         <button className="btn" onClick={onCancel}>
-          Stay
+          {cancel}
         </button>
         <button className="btn btn-solid" onClick={onConfirm} disabled={busy}>
           {confirm}

@@ -1,4 +1,6 @@
-.scoreboard h2 { margin-bottom: 12px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+.scoreboard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.scoreboard-scope { margin: 2px 0 0; color: var(--muted); font-family: var(--display); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+.scoreboard h2 { margin: 0; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
 .scoreboard table { width: 100%; border-collapse: collapse; font-family: var(--display); font-size: 13px; }
 .scoreboard th {
   padding: 4px 6px;

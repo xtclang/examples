@@ -1,8 +1,9 @@
 /**
- * Score Entry - one player's results for one day.
+ * Score Entry - one player's results in one match.
  *
- * The scoreboard is keyed by "{date}|{nickname}", so it starts afresh every day. A win is worth
- * 3 points and a draw 1.
+ * The scoreboard is keyed by "{scope}|{nickname}", where the scope is one match (a room, or a
+ * single-player session), so each match keeps its own tally and can be reset. A win is worth 3
+ * points and a draw 1.
  */
 const ScoreEntry(String name,
                  Int played = 0,

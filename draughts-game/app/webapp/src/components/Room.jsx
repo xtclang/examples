@@ -133,8 +133,8 @@ function Lobby({ room, joinCode }) {
 
         {room.error && <p className="error">{room.error}</p>}
         <p className="privacy">
-          Use a nickname, not your real name. It is saved on this server and shown on today&apos;s public
-          scoreboard when a game ends.
+          Use a nickname, not your real name. It is saved on this server and shown on the game&apos;s
+          scoreboard of the game when it ends.
         </p>
       </div>
     </div>

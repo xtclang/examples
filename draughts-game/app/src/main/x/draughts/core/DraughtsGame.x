@@ -177,7 +177,7 @@ service DraughtsGame {
     }
 
     /**
-     * The scoreboard key for a player on a given day.
+     * The scoreboard key for a player in a scoreboard's scope (see Scoreboard).
      */
-    static String scoreKey(String date, String name) = $"{date}|{name}";
+    static String scoreKey(String scope, String name) = $"{scope}|{name}";
 }

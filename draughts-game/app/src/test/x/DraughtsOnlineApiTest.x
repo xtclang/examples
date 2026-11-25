@@ -2,7 +2,6 @@ module DraughtsOnlineApiTest {
     package draughts import draughts.examples.org;
     package db       import draughtsDB.examples.org;
 
-    import draughts.api.DraughtsApi;
     import draughts.api.OnlineApi;
     import draughts.api.OnlineApi.NameRequest;
 
@@ -194,7 +193,7 @@ module DraughtsOnlineApiTest {
             assert won.message.startsWith($"{ann} (Black) wins");
             assert !api.move(made.roomCode, joined.playerId, "d8-e7").success;
 
-            val table = new DraughtsApi().scores().table;
+            val table = api.scores(made.roomCode, made.playerId).table;
             assert table.any(r -> r.name == ann && r.won == 1 && r.points == 3);
             assert table.any(r -> r.name == bo && r.lost == 1);
 
@@ -267,7 +266,7 @@ module DraughtsOnlineApiTest {
             // It is final: no more moves, and the result is on the scoreboard exactly once
             assert !api.move(made.roomCode, joined.playerId, "b6-a5").success;
             assert api.state(made.roomCode, joined.playerId).status == "BlackWins";
-            val table = new DraughtsApi().scores().table;
+            val table = api.scores(made.roomCode, made.playerId).table;
             assert table.any(r -> r.name == ann && r.won == 1 && r.played == 1);
             assert table.any(r -> r.name == bo && r.lost == 1 && r.played == 1);
 
@@ -276,6 +275,80 @@ module DraughtsOnlineApiTest {
             assert again.success;
             assert again.blackMs == 60_000 && again.whiteMs == 60_000;
             assert !again.clockRunning;
+        }
+
+        /**
+         * A room whose game is one jump from over: the service, the room code, and both player ids.
+         */
+        (OnlineApi, String, String, String) nearlyOverRoom(String ann, String bo) {
+            OnlineApi api    = new OnlineApi();
+            val       made   = api.createRoom(new NameRequest(ann));
+            val       joined = api.joinRoom(made.roomCode, new NameRequest(bo));
+            String board = "........" + "..w....." + ".b......" + "........" +
+                           "........" + "........" + "........" + "........";
+            using (api.schema.createTransaction()) {
+                api.schema.rooms.put(made.roomCode, new RoomRecord(made.roomCode,
+                        new GameRecord(board, Black, Ongoing, ann, bo), made.playerId, joined.playerId));
+            }
+            return api, made.roomCode, made.playerId, joined.playerId;
+        }
+
+        @Test
+        void shouldKeepARoomsScoreboardAcrossRematchesAndToItself() {
+            String ann = fresh("Ann");
+            String bo  = fresh("Bo");
+            (OnlineApi api, String code, String black, String white) = nearlyOverRoom(ann, bo);
+            (OnlineApi other, String otherCode, String otherBlack, _) = nearlyOverRoom(fresh("Cy"), fresh("Di"));
+
+            api.move(code, black, "b6-d8");
+            assert api.scores(code, black).table.any(r -> r.name == ann && r.won == 1 && r.played == 1);
+
+            // Both players see the same board
+            assert api.scores(code, white).table.size == 2;
+
+            // A rematch carries the tally on: it is the same match
+            assert api.rematch(code, white).success;
+            assert api.scores(code, black).table.any(r -> r.name == ann && r.won == 1);
+
+            // Another room has its own, and is empty
+            assert other.scores(otherCode, otherBlack).table.empty;
+        }
+
+        @Test
+        void shouldResetARoomsScoreboardOnceItsGameHasEndedForBothPlayers() {
+            String ann = fresh("Ann");
+            String bo  = fresh("Bo");
+            (OnlineApi api, String code, String black, String white) = nearlyOverRoom(ann, bo);
+
+            // One game played, and a rematch started with a move made: a game is in progress
+            api.move(code, black, "b6-d8");
+            assert api.rematch(code, white).success;
+            assert api.move(code, black, "c3-d4").success;
+
+            val refused = api.resetScores(code, black);
+            assert !refused.success;
+            assert refused.message == "Finish the game before resetting the scoreboard.";
+            assert refused.table.size == 2;
+            assert api.scores(code, white).table.size == 2;
+
+            // The game ends (White leaves, forfeiting); now either player can reset it, and
+            // both see it cleared
+            assert api.leave(code, white).success;
+            assert api.scores(code, black).table.any(r -> r.name == ann && r.won == 2);
+            val cleared = api.resetScores(code, black);
+            assert cleared.success && cleared.table.empty;
+            assert api.scores(code, black).table.empty;
+        }
+
+        @Test
+        void shouldNotShowOrResetARoomsScoreboardToAStranger() {
+            (OnlineApi api, String code, String black, _) = nearlyOverRoom(fresh("Ann"), fresh("Bo"));
+            api.move(code, black, "b6-d8");
+
+            assert !api.scores(code, "stranger").success;
+            assert !api.resetScores(code, "stranger").success;
+            assert !api.scores("NOPE00", "stranger").success;
+            assert api.scores(code, black).table.size == 2; // untouched
         }
     }
 }

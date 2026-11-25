@@ -30,8 +30,9 @@ look.
   - A man reaching the far row is crowned, and its move ends there.
   - A player with no legal move loses.
   - House rule (from the original): 40 moves each with no capture and no man moved is a draw.
-- **Scoreboard** — when a game ends the server adds each player's result to today's board
-  (win 3 points, draw 1). It starts afresh every day (UTC).
+- **Scoreboard** — one per game: a single-player session, or a room across all its rematches. When a
+  game ends the server adds each player's result (win 3 points, draw 1). Once the game has ended the
+  scoreboard can be reset, which clears it for everyone in that game. See [Scoreboards](#scoreboards).
 
 ## Prerequisites
 
@@ -89,6 +90,21 @@ cd app/webapp
 npm install
 npm run dev           # proxies /api to https://localhost:8090 — see vite.config.js
 ```
+
+## Scoreboards
+
+Each game keeps its own scoreboard, so one game's results never mix with another's:
+
+- a **single-player** game (against the computer, or two people at one screen) has the scoreboard of
+  its browser session, which carries on across "New game" and "Rematch";
+- a **room** has one scoreboard for the room, across every game its two players play there, and both
+  players see the same table.
+
+Results are recorded by the server when a game ends — by a win, a draw, a forfeit, or running out of
+time. **Reset** clears a scoreboard, and is only available once the game in front of you has ended (or
+before a new one has had a move): resetting in the middle of a game would leave it with a scoreboard
+that forgot the games before it. In a room, resetting clears it for both players. Rows are kept per
+scope in the database as `{scope}|{nickname}` (`Scoreboard.x`).
 
 ## Rooms
 
@@ -181,7 +197,8 @@ session has its own game. A move is the path the piece takes, squares named like
 | `GET` | `/api/moves/{sessionId}` | every legal move for the player to move, as paths |
 | `POST` | `/api/move/{sessionId}/{path}` | play a move; an illegal one leaves the game unchanged with a message |
 | `POST` | `/api/computer/{sessionId}` | the computer plays its move, if it is its turn (otherwise the game comes back unchanged) |
-| `GET` | `/api/scores` | today's scoreboard, best first |
+| `GET` | `/api/scores/{sessionId}` | this session's scoreboard, best first |
+| `POST` | `/api/scores/{sessionId}/reset` | clear it, once the game has ended (otherwise refused with a message) |
 
 Rooms live under `/api/online`. `{playerId}` is the private id from `create` or `join`:
 
@@ -194,6 +211,8 @@ Rooms live under `/api/online`. `{playerId}` is the private id from `create` or 
 | `POST` | `/api/online/move/{roomCode}/{playerId}/{path}` | play a move |
 | `POST` | `/api/online/rematch/{roomCode}/{playerId}` | a new game in the same room, once one has ended |
 | `POST` | `/api/online/leave/{roomCode}/{playerId}` | leave; forfeits a game in progress |
+| `GET` | `/api/online/scores/{roomCode}/{playerId}` | the room's scoreboard, across all its games |
+| `POST` | `/api/online/scores/{roomCode}/{playerId}/reset` | clear it for both players, once the game has ended |
 
 Each web service needs its own path on the platform, which is why rooms are not under `/api`.
 
@@ -212,8 +231,8 @@ scripts/test.sh --no-build           # skip recompiling first
 | `DraughtsRulesTest` | squares, the starting position, steps, compulsory and multiple captures, crowning, kings jumping backwards, losing, the draw rule |
 | `DraughtsAiTest` | the levels, how a position is valued, the computer always playing a legal move at every level, taking a compulsory capture, not hanging a piece at High, and a whole game between two computers |
 | `DraughtsClockTest` | the clocks' arithmetic: starting times and their limits, running only on the player to move, not before the first move, increments, never below zero, timing out |
-| `DraughtsOnlineApiTest` | `/api/online` — creating and joining, a full room, turn order, refusing strangers and out-of-turn moves, legal moves, forfeiting by leaving, closing an empty room, a finished game scoring and offering a rematch, and timed rooms: clocks that start at the first move, and losing on time (scored once, rematch resets the clocks) |
-| `DraughtsApiTest` | `/api` — state, legal moves, turn order, illegal moves, forced captures, session isolation, nicknames, playing the computer (its turn, refusing moves for it), and a finished game reaching the scoreboard |
+| `DraughtsOnlineApiTest` | `/api/online` — creating and joining, a full room, turn order, refusing strangers and out-of-turn moves, legal moves, forfeiting by leaving, closing an empty room, a finished game scoring and offering a rematch, a room's scoreboard (kept across rematches, separate per room, reset for both players once the game ends, hidden from strangers), and timed rooms: clocks that start at the first move, and losing on time (scored once, rematch resets the clocks) |
+| `DraughtsApiTest` | `/api` — state, legal moves, turn order, illegal moves, forced captures, session isolation, nicknames, playing the computer (its turn, refusing moves for it), and per-session scoreboards: a finished game reaching it, results adding up across games, reset once the game has ended, and refused mid-game |
 
 ## Differences from the original
 

@@ -2,12 +2,13 @@
  * Draughts Database Schema Module
  *
  * Defines the database schema and data models for the draughts game, using the Object-Oriented
- * Database (OODB) framework to persist game state and the daily scoreboard.
+ * Database (OODB) framework to persist games, rooms and scoreboards.
  *
  * Models live in draughtsDB/models/:
  * - Color, GameStatus: who moves, and how a game stands
  * - MoveEntry, GameRecord: a game and its history
- * - ScoreEntry: one player's results for one day
+ * - TimeControl, RoomRecord: a room and its clocks
+ * - ScoreEntry: one player's results in one match
  */
 @oodb.Database
 module draughtsDB.examples.org {
@@ -28,7 +29,7 @@ module draughtsDB.examples.org {
      * The schema keeps:
      * - the games in progress, one per browser session id
      * - the rooms two people play in over the web, one per room code
-     * - the scoreboard, one row per player per day
+     * - the scoreboards, one row per player per match (a room, or a single-player session)
      *
      * All database operations should be performed within transactions.
      */
@@ -45,7 +46,7 @@ module draughtsDB.examples.org {
         @RO oodb.DBMap<String, RoomRecord> rooms;
 
         /**
-         * Scoreboard rows, indexed by "{date}|{nickname}" (see ScoreEntry).
+         * Scoreboard rows, indexed by "{scope}|{nickname}" (see ScoreEntry).
          */
         @RO oodb.DBMap<String, ScoreEntry> scores;
     }

@@ -1,6 +1,8 @@
 import core.DraughtsGame;
 import core.DraughtsGame.MoveOutcome;
 import core.DraughtsRules.Move;
+import core.Scoreboard;
+import core.Scoreboard.ScoreTable;
 import db.models.GameStatus;
 import db.models.MoveEntry;
 import db.models.ScoreEntry;
@@ -17,10 +19,12 @@ import db.models.ScoreEntry;
  * - GET  /api/moves/{sessionId}                  every legal move for the player to move
  * - POST /api/move/{sessionId}/{path}            play a move, e.g. "c3-d4" or "c3-e5-g7"
  * - POST /api/computer/{sessionId}               the computer plays its move, when it is its turn
- * - GET  /api/scores                             today's scoreboard
+ * - GET  /api/scores/{sessionId}                this session's scoreboard
+ * - POST /api/scores/{sessionId}/reset           clear it, once the game has ended
  *
- * When a game ends, each player's result goes on the day's scoreboard, which `scores` reads. They
- * share this one service because the platform allows only one web service per path.
+ * When a game ends, each player's result goes on the session's own scoreboard, which `scores`
+ * reads and `resetScores` clears. The scoreboard shares this service because the platform allows
+ * only one web service per path.
  * All operations are transactional. Each browser session gets its own game via a session id.
  */
 @WebService("/api")
@@ -123,7 +127,7 @@ service DraughtsApi {
                 }
                 schema.games.put(sessionId, result.record);
                 if (result.record.status != Ongoing) {
-                    recordResult(result.record);
+                    recordResult(sessionId, result.record);
                 }
                 return toApiState(result.record, Null, sessionId);
             } catch (Exception e) {
@@ -155,7 +159,7 @@ service DraughtsApi {
                 }
                 schema.games.put(sessionId, result.record);
                 if (result.record.status != Ongoing) {
-                    recordResult(result.record);
+                    recordResult(sessionId, result.record);
                 }
                 return toApiState(result.record, Null, sessionId);
             } catch (Exception e) {
@@ -198,43 +202,39 @@ service DraughtsApi {
                           Boolean computerToMove = False);
 
     /**
-     * GET /api/scores
+     * GET /api/scores/{sessionId}
      *
-     * Today's table, best first: by points, then wins, then name.
+     * This session's scoreboard: the results of every game finished in it, best first.
      */
-    @Get("scores")
+    @Get("scores/{sessionId}")
     @Produces(Json)
     @HttpsRequired
-    ScoreTable scores() {
+    ScoreTable scores(String sessionId) {
         using (schema.createTransaction()) {
-            String prefix = $"{clock.now.date}|";
-            ScoreRow[] rows = new Array<ScoreRow>();
-            for (String key : schema.scores.keys) {
-                if (key.startsWith(prefix), ScoreEntry entry := schema.scores.get(key)) {
-                    rows.add(new ScoreRow(entry.name, entry.played, entry.won, entry.drawn,
-                                          entry.lost, entry.points));
-                }
-            }
-            return new ScoreTable(rows.sorted((a, b) -> {
-                Ordered byPoints = b.points <=> a.points;
-                if (byPoints != Equal) {
-                    return byPoints;
-                }
-                Ordered byWins = b.won <=> a.won;
-                return byWins != Equal ? byWins : a.name <=> b.name;
-            }));
+            return Scoreboard.table(schema, Scoreboard.sessionScope(sessionId));
         }
     }
 
     /**
-     * One row of the scoreboard.
+     * POST /api/scores/{sessionId}/reset
+     *
+     * Clears this session's scoreboard, once its game has ended (or before it has begun); a game
+     * in progress would be left with a scoreboard that forgets the games before it.
      */
-    static const ScoreRow(String name, Int played, Int won, Int drawn, Int lost, Int points);
-
-    /**
-     * The scoreboard as sent to the client.
-     */
-    static const ScoreTable(ScoreRow[] table);
+    @Post("scores/{sessionId}/reset")
+    @Produces(Json)
+    @HttpsRequired
+    ScoreTable resetScores(String sessionId) {
+        using (schema.createTransaction()) {
+            String scope = Scoreboard.sessionScope(sessionId);
+            if (!Scoreboard.canReset(ensureGame(sessionId))) {
+                return new ScoreTable(Scoreboard.table(schema, scope).table, False,
+                                      "Finish the game before resetting the scoreboard.");
+            }
+            Scoreboard.reset(schema, scope);
+            return Scoreboard.table(schema, scope);
+        }
+    }
 
     // ----- Helper Methods ------------------------------------------------------
 
@@ -251,10 +251,10 @@ service DraughtsApi {
     }
 
     /**
-     * Put a finished game on today's scoreboard, one result for each player.
+     * Put a finished game on the session's scoreboard, one result for each player.
      */
-    void recordResult(GameRecord game) {
-        Scoreboard.record(schema, clock.now.date.toString(), game);
+    void recordResult(String sessionId, GameRecord game) {
+        Scoreboard.record(schema, Scoreboard.sessionScope(sessionId), game);
     }
 
     /**

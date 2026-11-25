@@ -2,6 +2,7 @@ import core.DraughtsGame;
 import core.DraughtsGame.MoveOutcome;
 import core.DraughtsRules.Move;
 import core.Scoreboard;
+import core.Scoreboard.ScoreTable;
 import core.GameClock;
 import db.models.TimeControl;
 import db.models.MoveEntry;
@@ -21,6 +22,8 @@ import api.DraughtsApi.MovesResponse;
  * - POST move/{roomCode}/{playerId}/{path}    play a move, e.g. "c3-d4" or "c3-e5-g7"
  * - POST rematch/{roomCode}/{playerId}        a new game in the same room, once one has finished
  * - POST leave/{roomCode}/{playerId}          leave; leaving a game in progress forfeits it
+ * - GET  scores/{roomCode}/{playerId}         the room's scoreboard, across all its games
+ * - POST scores/{roomCode}/{playerId}/reset   clear it, once the game has ended
  *
  * A room can have clocks: each player has a bank of time that runs down only on their turn, with
  * an increment added after each of their moves (see GameClock). Nothing ticks on the server: a
@@ -189,7 +192,7 @@ service OnlineApi {
                         room.timedOut);
                 schema.rooms.put(roomCode, updated);
                 if (result.record.status != Ongoing) {
-                    Scoreboard.record(schema, clock.now.date.toString(), result.record);
+                    Scoreboard.record(schema, Scoreboard.roomScope(roomCode), result.record);
                 }
                 return stateFor(updated, playerId, Null);
             } catch (Exception e) {
@@ -267,12 +270,64 @@ service OnlineApi {
                 GameStatus forfeit = mine == Black ? WhiteWins : BlackWins;
                 game = new GameRecord(game.board, game.turn, forfeit, game.blackName, game.whiteName,
                                       game.quietPlies, game.lastMove, game.history, game.level);
-                Scoreboard.record(schema, clock.now.date.toString(), game);
+                Scoreboard.record(schema, Scoreboard.roomScope(roomCode), game);
             }
             RoomRecord updated = new RoomRecord(roomCode, game, room.blackId, room.whiteId, playerId,
                                                 room.timeControl, room.timedOut);
             schema.rooms.put(roomCode, updated);
             return stateFor(updated, playerId, "You left the room.");
+        }
+    }
+
+    /**
+     * GET /api/online/scores/{roomCode}/{playerId}
+     *
+     * The room's scoreboard: every game its two players have finished here, rematch after
+     * rematch, best first.
+     */
+    @Get("scores/{roomCode}/{playerId}")
+    @Produces(Json)
+    @HttpsRequired
+    ScoreTable scores(String roomCode, String playerId) {
+        using (schema.createTransaction()) {
+            RoomRecord room;
+            if (!(room := schema.rooms.get(roomCode))) {
+                return new ScoreTable([], False, $"Room {roomCode} was not found.");
+            }
+            if (colorOf(room, playerId) == Null) {
+                return new ScoreTable([], False, "You are not a player in this room.");
+            }
+            room = settle(roomCode, room); // a game lost on time counts as soon as it is asked about
+            return Scoreboard.table(schema, Scoreboard.roomScope(roomCode));
+        }
+    }
+
+    /**
+     * POST /api/online/scores/{roomCode}/{playerId}/reset
+     *
+     * Clears the room's scoreboard, for both players, once the game has ended (or before it has
+     * begun).
+     */
+    @Post("scores/{roomCode}/{playerId}/reset")
+    @Produces(Json)
+    @HttpsRequired
+    ScoreTable resetScores(String roomCode, String playerId) {
+        using (schema.createTransaction()) {
+            RoomRecord room;
+            if (!(room := schema.rooms.get(roomCode))) {
+                return new ScoreTable([], False, $"Room {roomCode} was not found.");
+            }
+            if (colorOf(room, playerId) == Null) {
+                return new ScoreTable([], False, "You are not a player in this room.");
+            }
+            room = settle(roomCode, room);
+            String scope = Scoreboard.roomScope(roomCode);
+            if (!Scoreboard.canReset(room.game)) {
+                return new ScoreTable(Scoreboard.table(schema, scope).table, False,
+                                      "Finish the game before resetting the scoreboard.");
+            }
+            Scoreboard.reset(schema, scope);
+            return Scoreboard.table(schema, scope);
         }
     }
 
@@ -386,7 +441,7 @@ service OnlineApi {
                         : new TimeControl(tc.initialMs, tc.incrementMs, tc.blackMs, 0, clock.now),
                 True);
         schema.rooms.put(roomCode, settled);
-        Scoreboard.record(schema, clock.now.date.toString(), over);
+        Scoreboard.record(schema, Scoreboard.roomScope(roomCode), over);
         return settled;
     }
 

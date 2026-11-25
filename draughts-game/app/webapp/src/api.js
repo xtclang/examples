@@ -44,8 +44,11 @@ export const getMoves = (id) => get(`moves/${session(id)}`);
 /** Play a move, given as the path the piece takes. */
 export const playMove = (id, path) => post(`move/${session(id)}/${encodeURIComponent(path)}`);
 
-/** Today's scoreboard. */
-export const getScores = () => get('scores');
+/** This session's scoreboard: the results of every game finished in it. */
+export const getScores = (id) => get(`scores/${session(id)}`);
+
+/** Clear it, once its game has ended. */
+export const resetScores = (id) => post(`scores/${session(id)}/reset`);
 
 // ----- playing a friend in a room (see OnlineApi.x) -----
 
@@ -76,3 +79,10 @@ export const rematchRoom = (roomCode, playerId) => post(`online/rematch/${code(r
 
 /** Leave the room; leaving a game in progress forfeits it. */
 export const leaveRoom = (roomCode, playerId) => post(`online/leave/${code(roomCode)}/${code(playerId)}`);
+
+/** The room's scoreboard, across all the games its players have played there. */
+export const getRoomScores = (roomCode, playerId) => get(`online/scores/${code(roomCode)}/${code(playerId)}`);
+
+/** Clear it for both players, once the game has ended. */
+export const resetRoomScores = (roomCode, playerId) =>
+  post(`online/scores/${code(roomCode)}/${code(playerId)}/reset`);

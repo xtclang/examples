@@ -18,7 +18,7 @@ import core.Scoreboard;
  * - One game per browser session, persisted in the draughts database schema
  * - A computer opponent (minimax with alpha-beta pruning) at Low, Medium and High strength
  * - Rooms: play a friend from your own device with a shared code (see OnlineApi)
- * - A daily scoreboard of nicknames, kept by the server when a game ends
+ * - A scoreboard for each game or room, kept by the server when a game ends, and resettable
  * - Static content serving for the React client
  */
 @WebApp

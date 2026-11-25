@@ -194,7 +194,7 @@ module DraughtsApiTest {
             assert after.status == "BlackWins";
             assert after.message == "Game already finished";
 
-            val table = api.scores().table;
+            val table = api.scores(id).table;
             Int found = 0;
             for (val row : table) {
                 if (row.name == ann) {
@@ -284,6 +284,91 @@ module DraughtsApiTest {
             for (Int i : 0 ..< state.history.size) {
                 assert state.history[i].color == (i % 2 == 0 ? Black : White);
             }
+        }
+
+        /**
+         * Finish a game in one move: Black takes White's last piece. Returns the move's reply.
+         */
+        static DraughtsApi.ApiState finishGame(DraughtsApi api, String id, String black, String white) {
+            String board = "........" + "..w....." + ".b......" + "........" +
+                           "........" + "........" + "........" + "........";
+            using (api.schema.createTransaction()) {
+                api.schema.games.put(id, new GameRecord(board, Black, Ongoing, black, white));
+            }
+            return api.move(id, "b6-d8");
+        }
+
+        @Test
+        void shouldKeepEachSessionsScoreboardToItself() {
+            DraughtsApi api = new DraughtsApi();
+            String      one = fresh("one");
+            String      two = fresh("two");
+            String      ann = fresh("Ann");
+            finishGame(api, one, ann, fresh("Bo"));
+
+            assert api.scores(one).table.any(r -> r.name == ann && r.won == 1);
+            assert api.scores(two).table.empty;
+        }
+
+        @Test
+        void shouldAddUpEveryGameFinishedInASession() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("series");
+            String      ann = fresh("Ann");
+            String      bo  = fresh("Bo");
+            finishGame(api, id, ann, bo);
+            finishGame(api, id, ann, bo);
+
+            val table = api.scores(id).table;
+            assert table.size == 2;
+            assert table[0].name == ann && table[0].played == 2 && table[0].won == 2 && table[0].points == 6;
+            assert table[1].name == bo  && table[1].played == 2 && table[1].lost == 2 && table[1].points == 0;
+        }
+
+        @Test
+        void shouldResetAScoreboardOnceItsGameHasEnded() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("reset");
+            finishGame(api, id, fresh("Ann"), fresh("Bo"));
+            assert api.scores(id).table.size == 2;
+
+            val cleared = api.resetScores(id);
+            assert cleared.success;
+            assert cleared.table.empty;
+            assert api.scores(id).table.empty;
+
+            // Starting over after a reset scores afresh
+            String ann = fresh("Ann");
+            finishGame(api, id, ann, fresh("Bo"));
+            assert api.scores(id).table.any(r -> r.name == ann && r.played == 1);
+        }
+
+        @Test
+        void shouldNotResetAScoreboardWhileAGameIsInProgress() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("busy");
+            String      ann = fresh("Ann");
+            finishGame(api, id, ann, fresh("Bo"));
+
+            // A new game, with a move played, is in progress
+            api.newGame(id, new DraughtsApi.NewGameRequest(ann, "Bo", ""));
+            api.move(id, "c3-d4");
+
+            val refused = api.resetScores(id);
+            assert !refused.success;
+            assert refused.message == "Finish the game before resetting the scoreboard.";
+            assert refused.table.any(r -> r.name == ann && r.won == 1); // the rows are still there
+            assert api.scores(id).table.any(r -> r.name == ann);
+        }
+
+        @Test
+        void shouldAllowAResetBeforeAGameHasBegun() {
+            DraughtsApi api = new DraughtsApi();
+            String      id  = fresh("fresh");
+            finishGame(api, id, fresh("Ann"), fresh("Bo"));
+            api.newGame(id, new DraughtsApi.NewGameRequest("Ann", "Bo", "")); // nothing played yet
+            assert api.resetScores(id).success;
+            assert api.scores(id).table.empty;
         }
     }
 }

@@ -1,4 +1,4 @@
-import web.HttpClient;
+import web.Client;
 import web.RequestOut;
 import web.ResponseIn;
 /**
@@ -20,7 +20,7 @@ import web.ResponseIn;
  */
 service StockfishApi {
     static String BASE_URI     = "https://stockfish.online/api/s/v2.php";
-    static String USER_AGENT   = "xtc-chess-game-example";
+    static String USER_AGENT   = "xtc-chess-game";
 
     /**
      * Search depth used for computer moves. The upstream API rejects anything over 15, and the
@@ -33,8 +33,9 @@ service StockfishApi {
     // Nibble-to-hex lookup used by urlEncode
     static String HEX_DIGITS = "0123456789ABCDEF";
 
-    // Reused across requests; HttpClient is a const and holds no per-request state
-    HttpClient client = new HttpClient();
+    // Platform-provided client; the host only provisions outbound HTTP(S) through this injection
+    // point, not through a directly-constructed HttpClient.
+    @Inject Client client;
 
     /**
      * One answer from the engine. Every numeric field is kept as text, exactly as the API sent
@@ -71,14 +72,12 @@ service StockfishApi {
         String json;
         try {
             RequestOut request = client.createRequest(GET, new Uri(uri));
-            request.header["User-Agent"] = USER_AGENT;
-            request.header["Accept"]     = "application/json";
 
             ResponseIn response = client.send(request);
             Byte[]     bytes    = response.body?.bytes : [];
             json = bytes.unpackUtf8();
         } catch (Exception e) {
-            return new EngineReply(False, error = "Stockfish request failed");
+            return new EngineReply(False, error = $"Stockfish request failed: {api.ChessComApi.describe(e)}");
         }
 
         if (jsonField(json, "success") != "true") {

@@ -12,33 +12,74 @@ import db.models.MoveHistoryEntry;
  */
 @Abstract
 class CheckDetection {
+    // Knight jumps and the eight king/queen directions, as (rank, file) offsets
+    static Int[] KNIGHT_DR = [-2, -2, -1, -1,  1,  1,  2,  2];
+    static Int[] KNIGHT_DC = [-1,  1, -2,  2, -2,  2, -1,  1];
+    static Int[] RAY_DR    = [-1, -1, -1,  0,  0,  1,  1,  1];
+    static Int[] RAY_DC    = [-1,  0,  1, -1,  1, -1,  0,  1];
+
     /**
-     * Check if a square is under attack by the opponent.
+     * Check if a square is under attack by the given color.
+     *
+     * Looks outward from the square -- pawn and knight offsets, then the eight rays -- rather than
+     * asking every attacking piece whether it can reach the square. That is at most about 30
+     * squares read, instead of a move validation per enemy piece, and it sits inside the loop that
+     * tests every candidate move for check, so it dominates the cost of generating legal moves.
+     *
      * @param square The square to check
      * @param board Current board state
      * @param byColor The color that might be attacking the square
      */
     static Boolean isSquareAttacked(Int square, Char[] board, Color byColor) {
-        // Check all squares on the board for pieces of the attacking color
-        for (Int from : 0 ..< 64) {
-            Char piece = board[from];
-            if (piece == '.') {
-                continue;
+        Int     row   = BoardUtils.getRank(square);
+        Int     col   = BoardUtils.getFile(square);
+        Boolean white = byColor == White;
+
+        Char pawn   = white ? 'P' : 'p';
+        Char knight = white ? 'N' : 'n';
+        Char bishop = white ? 'B' : 'b';
+        Char rook   = white ? 'R' : 'r';
+        Char queen  = white ? 'Q' : 'q';
+        Char king   = white ? 'K' : 'k';
+
+        // White pawns attack up the board (toward lower indices), so an attacking white pawn sits
+        // one rank below the target; an attacking black pawn sits one rank above it.
+        Int pawnRow = white ? row + 1 : row - 1;
+        if (0 <= pawnRow < 8) {
+            if (col > 0 && board[pawnRow * 8 + col - 1] == pawn) {
+                return True;
             }
-            if (BoardUtils.colorOf(piece) != byColor) {
-                continue;
+            if (col < 7 && board[pawnRow * 8 + col + 1] == pawn) {
+                return True;
             }
-            // Check if this piece can attack the target square
-            // Note: Pawns attack diagonally but move forward
-            if (PieceValidator.isPawn(piece)) {
-                if (canPawnAttack(piece, from, square)) {
-                    return True;
+        }
+
+        for (Int i : 0 ..< 8) {
+            Int r = row + KNIGHT_DR[i];
+            Int c = col + KNIGHT_DC[i];
+            if (0 <= r < 8 && 0 <= c < 8 && board[r * 8 + c] == knight) {
+                return True;
+            }
+        }
+
+        for (Int d : 0 ..< 8) {
+            Int     dr       = RAY_DR[d];
+            Int     dc       = RAY_DC[d];
+            Char    slider   = dr == 0 || dc == 0 ? rook : bishop;
+            Boolean adjacent = True;
+            Int     r        = row + dr;
+            Int     c        = col + dc;
+            while (0 <= r < 8 && 0 <= c < 8) {
+                Char piece = board[r * 8 + c];
+                if (piece != '.') {
+                    if (piece == queen || piece == slider || (adjacent && piece == king)) {
+                        return True;
+                    }
+                    break;
                 }
-            } else {
-                // For non-pawns, use regular move validation
-                if (PieceValidator.isLegal(piece, from, square, board, Null, Null)) {
-                    return True;
-                }
+                adjacent = False;
+                r += dr;
+                c += dc;
             }
         }
         return False;
@@ -105,10 +146,15 @@ class CheckDetection {
 
     /**
      * Get all legal moves for a player (excluding moves that leave king in check).
+     *
+     * @param firstOnly  stop at the first legal move found. Enough when the caller only needs to
+     *                   know whether a legal move exists (checkmate/stalemate detection), and far
+     *                   cheaper: each candidate costs a full king-safety scan.
      */
     static MovePair[] getAllLegalMoves(String boardStr, Color turn,
                                         CastlingRights castlingRights,
-                                        String? enPassantTarget) {
+                                        String? enPassantTarget,
+                                        Boolean firstOnly = False) {
         Char[] board = BoardUtils.cloneBoard(boardStr);
         MovePair[] legalMoves = new MovePair[];
         
@@ -142,6 +188,9 @@ class CheckDetection {
                 }
                 
                 legalMoves = legalMoves.addAll([new MovePair(from, to)]);
+                if (firstOnly) {
+                    return legalMoves;
+                }
             }
         }
         
@@ -155,7 +204,7 @@ class CheckDetection {
     static (Boolean checkmate, Boolean stalemate) checkGameEnd(String board, Color turn,
                                                                 CastlingRights castlingRights,
                                                                 String? enPassantTarget) {
-        MovePair[] legalMoves = getAllLegalMoves(board, turn, castlingRights, enPassantTarget);
+        MovePair[] legalMoves = getAllLegalMoves(board, turn, castlingRights, enPassantTarget, True);
         
         if (legalMoves.size > 0) {
             return (False, False); // Game continues

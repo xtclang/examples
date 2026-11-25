@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import Board from './Board.jsx';
 import { moveSquares, toMatrix } from '../lib/play.js';
 import { Segmented, Skeleton, Thinking } from './ui.jsx';
+import './Play.css';
+import './Room.css';
 
 const TIME_CONTROLS = [
   { label: 'No clock', ms: 0, inc: 0 },
@@ -9,15 +11,6 @@ const TIME_CONTROLS = [
   { label: '10 + 5', ms: 10 * 60_000, inc: 5_000 },
 ];
 const TIME_OPTIONS = TIME_CONTROLS.map((t) => ({ value: t.label, label: t.label }));
-
-const END_REASON = {
-  Checkmate: 'Checkmate',
-  Stalemate: 'Stalemate — draw',
-  FiftyMoveRule: 'Fifty-move rule — draw',
-  InsufficientMaterial: 'Insufficient material — draw',
-  ThreefoldRepetition: 'Threefold repetition — draw',
-  Timeout: 'Time out',
-};
 
 const clock = (ms) => {
   if (!Number.isFinite(ms)) return '—';
@@ -223,7 +216,7 @@ export default function Room({ online, joinCode }) {
           : playable
             ? 'Click a piece, then a highlighted square.'
             : over
-              ? END_REASON[state.status] ?? 'Game over.'
+              ? state.message
               : 'Hold on for your opponent’s move.'}
       </p>
 

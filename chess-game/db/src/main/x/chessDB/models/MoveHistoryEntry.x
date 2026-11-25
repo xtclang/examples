@@ -14,6 +14,7 @@
  * @param isEnPassant    Whether the move is an en passant capture
  * @param notation       Standard algebraic notation (e.g., "Nf3", "e4", "O-O")
  * @param boardAfter     Board state after this move
+ * @param fen            Full FEN of the position after this move
  */
 const MoveHistoryEntry(Int moveNumber,
                        Color color,
@@ -27,4 +28,5 @@ const MoveHistoryEntry(Int moveNumber,
                        String? isCastle = Null,
                        Boolean isEnPassant = False,
                        String notation = "",
-                       String boardAfter = "") {}
+                       String boardAfter = "",
+                       String fen = "") {}

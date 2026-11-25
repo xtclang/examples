@@ -1,0 +1,64 @@
+/* Theme, type and motion tokens shared by every page. */
+:root {
+  color-scheme: light;
+  --body: Dosis, system-ui, sans-serif;
+  --display: DynaPuff, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --bg: #ffffff;
+  --canvas: #f4f4f3;
+  --raise: #ffffff;
+  --card: rgba(255, 255, 255, 0.4);
+  --ink: #3a3a3a;
+  --ink-2: #5c5c5a;
+  --ink-strong: #1f1f1f;
+  --on-ink: #ffffff;
+  --line: #c4c4c4;
+  --line-soft: #e2e2e0;
+  --muted: #9a9a9a;
+  --grid: #e7e7e4;
+  --series-w: #b07d1a;
+  --series-b: #3f73bf;
+  --green: #22c55e;
+  --red: #ef4444;
+  --inaccuracy: #b07d1a;
+  --mistake: #c4561f;
+  --blunder: #dc2626;
+  --board-light: #eeeed2;
+  --board-dark: #769656;
+  --board-hl: rgba(246, 246, 105, 0.6);
+  --board-sel: rgba(255, 255, 255, 0.38);
+  --board-mark: rgba(20, 30, 20, 0.26);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --t-press: 140ms;
+  --t-fast: 180ms;
+  --t-base: 240ms;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+:root.dark {
+  color-scheme: dark;
+  --bg: #18181b;
+  --canvas: #1d1d20;
+  --raise: #1f1f22;
+  --card: rgba(24, 24, 27, 0.4);
+  --ink: #c4c4c0;
+  --ink-2: #a3a3a0;
+  --ink-strong: #ececea;
+  --on-ink: #18181b;
+  --line: #3a3a38;
+  --line-soft: #2a2a28;
+  --muted: #6b6b68;
+  --grid: #2a2a28;
+  --series-w: #b8862a;
+  --series-b: #4f7fc9;
+  --inaccuracy: #c9a043;
+  --mistake: #e07a45;
+  --blunder: #f05a5a;
+  --board-mark: rgba(10, 20, 10, 0.32);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.6);
+}

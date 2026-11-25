@@ -1,0 +1,185 @@
+/* Status, players, score sheet and dialogs. */
+.history-banner {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 20px);
+  padding: 6px 6px 6px 14px;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--raise);
+  color: var(--ink);
+  box-shadow: var(--shadow-2xl);
+  font-family: var(--display);
+  font-size: 11px;
+  white-space: nowrap;
+  animation: rise var(--t-base) var(--ease-out);
+}
+.history-banner span { overflow: hidden; text-overflow: ellipsis; }
+@keyframes rise {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+}
+
+.modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  animation: fade-in var(--t-base) var(--ease-out);
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+.modal {
+  width: min(100%, 26rem);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--raise);
+  color: var(--ink);
+  box-shadow: var(--shadow-2xl);
+  animation: pop-in var(--t-base) var(--ease-out);
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+.modal h2 {
+  margin-bottom: 12px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.game-over-modal p { margin: 0 0 18px; color: var(--ink-2); }
+.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.field { display: grid; gap: 4px; margin-bottom: 12px; }
+.field input {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-size: 15px;
+}
+.privacy { margin: 4px 0 16px; color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+.status-dot.busy {
+  background: var(--series-w);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--series-w) 22%, transparent);
+}
+.choice { margin: 0 0 14px; padding: 0; border: 0; }
+.choice legend { margin-bottom: 6px; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip { padding: 6px 14px; font-size: 12px; }
+
+.play-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.play-status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 15px;
+}
+.status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.status-dot.ready {
+  background: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 18%, transparent);
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  transition: border-color var(--t-fast) ease, color var(--t-fast) ease, background-color var(--t-fast) ease;
+}
+.player.on {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.player-name { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-side { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+.player .thinking { margin-left: 6px; }
+.player-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.play-hint { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+.scoresheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 16px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.scoresheet li { display: grid; grid-template-columns: 2rem 1fr 1fr; align-items: center; }
+.scoresheet .no { color: var(--muted); font-size: 11px; }
+.scoresheet button {
+  justify-self: start;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.scoresheet button.on { background: var(--ink); color: var(--on-ink); }
+
+/* The board shares the column with the status line, two player bars and a hint, so size it to
+   what is left of the window rather than the whole of it. */
+.board-pane { --above: 290px; }
+
+/* The dialogs' own pieces. */
+.result-pieces { display: flex; justify-content: center; margin: 4px 0 14px; }
+.game-over-modal { text-align: center; }
+.game-over-modal h2 { margin-bottom: 8px; }
+.game-over-modal .modal-actions { justify-content: center; }
+
+/* A player's clock. It lights while it is running, and turns red in the last half minute. */
+.player-clock {
+  margin-left: auto;
+  padding: 1px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--t-fast) ease, color var(--t-fast) ease, border-color var(--t-fast) ease;
+}
+.player-clock + .player-count { margin-left: 10px; }
+.player-clock.on { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
+.player-clock.low { border-color: var(--blunder); color: var(--blunder); }
+.player-clock.on.low { background: var(--blunder); color: #fff; }

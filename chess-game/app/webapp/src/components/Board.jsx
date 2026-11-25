@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
+import './Board.css';
 
 // Solid glyphs for both sides; colour and outline tell them apart, which reads far better than
 // the hollow outline glyphs at board size.

@@ -1,5 +1,6 @@
 import db.models.CastlingRights;
 import db.models.MoveHistoryEntry;
+import ai.AIUtility;
 
 
 /**
@@ -196,10 +197,12 @@ class ChessGame {
         // Create move history entry
         Int moveNumber = record.moveHistory.size + 1;
         String notation = createMoveNotation(piece, from, to, isCapture, promotedTo, givesCheck, isCheckmate, castleType);
+        String fen = AIUtility.boardToFen(boardStr, nextTurn, newCastlingRights, newEnPassantTarget,
+                newHalfMoveClock, moveNumber);
         MoveHistoryEntry historyEntry = new MoveHistoryEntry(
             moveNumber, record.turn, BoardUtils.toAlgebraic(from), BoardUtils.toAlgebraic(to),
             piece, isCapture ? target : Null, promotedTo, givesCheck, isCheckmate,
-            castleType, isEnPassant, notation, boardStr);
+            castleType, isEnPassant, notation, boardStr, fen);
 
         MoveHistoryEntry[] newHistory = record.moveHistory.addAll([historyEntry]);
 

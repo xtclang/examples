@@ -1,4 +1,4 @@
-import web.HttpClient;
+import web.Client;
 import web.RequestOut;
 import web.ResponseIn;
 import web.responses.SimpleResponse;
@@ -18,10 +18,11 @@ import web.responses.SimpleResponse;
 @WebService("/api/chesscom")
 service ChessComApi {
     static String BASE_URI   = "https://api.chess.com/pub";
-    static String USER_AGENT = "xtc-chess-game-example";
+    static String USER_AGENT = "xtc-chess-game";
 
-    // Reused across requests; HttpClient is a const and holds no per-request state
-    HttpClient client = new HttpClient();
+    // Platform-provided client; the host only provisions outbound HTTP(S) through this injection
+    // point, not through a directly-constructed HttpClient.
+    @Inject Client client;
 
     /**
      * GET /api/chesscom/player/{username}
@@ -80,23 +81,36 @@ service ChessComApi {
         return fetch($"{BASE_URI}/puzzle");
     }
 
-    // ----- helpers -------------------------------------------------------------------------------
-
     /**
      * Performs a GET against chess.com and relays the status and body.
      */
     private SimpleResponse fetch(String uri) {
         try {
             RequestOut request = client.createRequest(GET, new Uri(uri));
-            request.header["User-Agent"] = USER_AGENT;
-            request.header["Accept"]     = "application/json";
 
             ResponseIn response = client.send(request);
             Byte[]     bytes    = response.body?.bytes : [];
             return new SimpleResponse(response.status, Json, bytes);
         } catch (Exception e) {
-            return new SimpleResponse(BadGateway, Json, errorBody("chess.com request failed"));
+            return new SimpleResponse(BadGateway, Json, errorBody($"chess.com request failed: {describe(e)}"));
         }
+    }
+
+    /**
+     * A JSON-safe one-line description of a failure, so the real cause reaches the client
+     * instead of being swallowed.
+     */
+    static String describe(Exception e) {
+        StringBuffer out = new StringBuffer();
+        for (Char ch : e.toString()) {
+            if (ch.asciiLetter() || ch.asciiDigit() || ch == ' ' || ch == '.' || ch == ':' || ch == '_' || ch == '-') {
+                out.add(ch);
+            }
+            if (out.size >= 200) {
+                break;
+            }
+        }
+        return out.toString();
     }
 
     private SimpleResponse badRequest(String message) {

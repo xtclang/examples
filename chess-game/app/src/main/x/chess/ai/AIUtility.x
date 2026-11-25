@@ -1,3 +1,5 @@
+import db.models.CastlingRights;
+
 /**
  * Generic AI utility helpers.
  */
@@ -63,6 +65,20 @@ service AIUtility {
      * Converts current game state to a FEN-like notation string.
      */
     static String boardToFen(GameRecord record) {
+        return boardToFen(record.board, record.turn, record.castlingRights,
+                record.enPassantTarget, record.halfMoveClock, record.moveHistory.size);
+    }
+
+    /**
+     * Converts board state components to a FEN-like notation string, without needing a full
+     * [GameRecord] -- used to render the FEN of an intermediate position while a move is being
+     * applied, before its [MoveHistoryEntry] exists.
+     *
+     * @param moveCount  the number of moves played so far (i.e. `moveHistory.size`), used to
+     *                    derive the fullmove number
+     */
+    static String boardToFen(String board, Color turn, CastlingRights castlingRights,
+                              String? enPassantTarget, Int halfMoveClock, Int moveCount) {
         StringBuffer fen = new StringBuffer();
 
         for (Int rank = 0; rank < 8; rank++) {
@@ -71,7 +87,7 @@ service AIUtility {
             }
             Int emptyCount = 0;
             for (Int file = 0; file < 8; file++) {
-                Char piece = record.board[rank * 8 + file];
+                Char piece = board[rank * 8 + file];
                 if (piece == '.') {
                     emptyCount++;
                 } else {
@@ -87,13 +103,13 @@ service AIUtility {
             }
         }
 
-        fen.addAll(record.turn == Color.White ? " w" : " b");
+        fen.addAll(turn == Color.White ? " w" : " b");
 
         StringBuffer castling = new StringBuffer();
-        if (record.castlingRights.whiteKingside)  { castling.addAll("K"); }
-        if (record.castlingRights.whiteQueenside) { castling.addAll("Q"); }
-        if (record.castlingRights.blackKingside)  { castling.addAll("k"); }
-        if (record.castlingRights.blackQueenside) { castling.addAll("q"); }
+        if (castlingRights.whiteKingside)  { castling.addAll("K"); }
+        if (castlingRights.whiteQueenside) { castling.addAll("Q"); }
+        if (castlingRights.blackKingside)  { castling.addAll("k"); }
+        if (castlingRights.blackQueenside) { castling.addAll("q"); }
         if (castling.size == 0) {
             fen.addAll(" -");
         } else {
@@ -101,16 +117,16 @@ service AIUtility {
             fen.addAll(castling.toString());
         }
 
-        if (record.enPassantTarget != Null) {
+        if (enPassantTarget != Null) {
             fen.addAll(" ");
-            fen.addAll(record.enPassantTarget.toString());
+            fen.addAll(enPassantTarget.toString());
         } else {
             fen.addAll(" -");
         }
         fen.addAll(" ");
-        fen.addAll(record.halfMoveClock.toString());
+        fen.addAll(halfMoveClock.toString());
 
-        Int fullmove = (record.moveHistory.size / 2) + 1;
+        Int fullmove = (moveCount / 2) + 1;
         fen.addAll(" ");
         fen.addAll(fullmove.toString());
 

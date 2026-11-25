@@ -34,8 +34,8 @@ const session = (id) => encodeURIComponent(id);
 const square = (name) => encodeURIComponent(name);
 
 export const getGameState = (id) => get(`state/${session(id)}`);
-export const resetGame = (id, timeControlMs = 0, incrementMs = 0) =>
-  post(`reset/${session(id)}`, timeControlMs > 0 ? { timeControlMs, incrementMs } : undefined);
+export const resetGame = (id, timeControlMs = 0, incrementMs = 0, difficulty = 'strong') =>
+  post(`reset/${session(id)}`, { timeControlMs, incrementMs, difficulty });
 export const playMove = (id, from, to) => post(`move/${session(id)}/${square(from)}/${square(to)}`);
 export const getValidMoves = (id, from) => get(`validmoves/${session(id)}/${square(from)}`);
 
@@ -84,3 +84,19 @@ export const leaveRoom = (roomCode, playerId) =>
   post(`online/leave/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}`);
 export const getRoomValidMoves = (roomCode, playerId, from) =>
   get(`online/validmoves/${encodeURIComponent(roomCode)}/${encodeURIComponent(playerId)}/${square(from)}`);
+
+// ----- replaying a chess.com game or puzzle (see PgnReplayApi.x) -----
+//
+// chess.com games and puzzles arrive as PGN; resolving that into per-move positions needs the
+// backend's own move-legality rules (to disambiguate SAN like "Nbd7"), so it happens there too.
+
+export const replayPgn = (fen, pgn) => post('replay', { fen, pgn });
+export const getReplayValidMoves = (fen, square_) => get('replay/validmoves', { fen, square: square_ });
+
+// ----- the Insights move-choice model (see ModelApi.x) -----
+//
+// Scoring every legal move at every position and fitting the softmax policy's beta needs the
+// same chess rules the rest of the backend already has, so it runs there instead of in the
+// browser (see lib/model.js's removal and lib/analyse.js's useLocalPolicy).
+
+export const analyseMoveChoices = (fens, playedUci) => post('model/analyse', { fens, playedUci });

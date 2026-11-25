@@ -4,6 +4,7 @@ module ChessAIMoveSelectionTest {
 
     import chess.core.ChessLogic;
     import chess.ai.ChessAPIClient;
+    import chess.ai.StockfishApi;
     import chess.utils.BoardUtils;
 
     import db.models.Color;
@@ -12,6 +13,15 @@ module ChessAIMoveSelectionTest {
      * Tests for the computer's move selection.
      */
     class AISelectionTests {
+        @Test
+        void shouldMapDifficultyToSearchDepth() {
+            assert ChessAPIClient.depthForDifficulty("beginner") == 2;
+            assert ChessAPIClient.depthForDifficulty("casual") == 5;
+            assert ChessAPIClient.depthForDifficulty("strong") == 12;
+            assert ChessAPIClient.depthForDifficulty("expert") == StockfishApi.MAX_DEPTH;
+            assert ChessAPIClient.depthForDifficulty("unknown") == 12;
+        }
+
         @Test
         void shouldReturnALegalMoveForTheSideToMove() {
             val afterE4 = ChessLogic.applyHumanMove(ChessLogic.defaultGame(), "e2", "e4", Null).record;

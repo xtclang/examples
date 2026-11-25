@@ -1,4 +1,5 @@
 import Board from './Board.jsx';
+import './Replay.css';
 
 /** Steps through the frames of a game, or shows a single position. */
 export default function Replay({ positions, moves, title, flipped, ply, setPly, error }) {

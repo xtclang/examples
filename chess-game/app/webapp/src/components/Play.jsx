@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
+import './Play.css';
 import Board from './Board.jsx';
 import { moveSquares, toMatrix } from '../lib/play.js';
 import { Segmented, Skeleton, Thinking } from './ui.jsx';
@@ -10,24 +10,12 @@ const TIME_CONTROLS = [
   { label: '10 + 5', ms: 10 * 60_000, inc: 5_000 },
 ];
 const TIME_OPTIONS = TIME_CONTROLS.map((t) => ({ value: t.label, label: t.label }));
-
-/** Why a game ended, read off the status word the server sends. */
-const END_REASON = {
-  Checkmate: 'Checkmate',
-  Stalemate: 'Stalemate — draw',
-  FiftyMoveRule: 'Fifty-move rule — draw',
-  InsufficientMaterial: 'Insufficient material — draw',
-  ThreefoldRepetition: 'Threefold repetition — draw',
-  Timeout: 'Time out',
-};
-
-function isInCheck(fen) {
-  try {
-    return new Chess(fen).inCheck();
-  } catch {
-    return false;
-  }
-}
+const AI_DIFFICULTIES = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'strong', label: 'Strong' },
+  { value: 'expert', label: 'Expert' },
+];
 
 const clock = (ms) => {
   if (!Number.isFinite(ms)) return '—';
@@ -90,7 +78,7 @@ function CheckAlert({ onYou }) {
 }
 
 /** New game + time control, tucked behind one button instead of sitting in the main flow. */
-function GameMenu({ options, value, onChange, onNewGame, busy }) {
+function GameMenu({ options, value, onChange, difficulty, onDifficultyChange, onNewGame, busy }) {
   const ref = useRef(null);
   return (
     <details className="game-menu" ref={ref}>
@@ -102,6 +90,13 @@ function GameMenu({ options, value, onChange, onNewGame, busy }) {
       </summary>
       <div className="game-menu-body">
         <Segmented label="Time control" value={value} onChange={onChange} options={options} size="sm" />
+        <Segmented
+          label="AI difficulty"
+          value={difficulty}
+          onChange={onDifficultyChange}
+          options={AI_DIFFICULTIES}
+          size="sm"
+        />
         <button
           className="btn btn-solid btn-sm"
           onClick={() => {
@@ -118,8 +113,7 @@ function GameMenu({ options, value, onChange, onNewGame, busy }) {
 }
 
 /** The game-state alert: checkmate, stalemate, draw or timeout, with a way to play again. */
-function GameOverModal({ status, message, onRestart, onDismiss, restarting }) {
-  const title = END_REASON[status] ?? 'Game over';
+function GameOverModal({ message, onRestart, onDismiss, restarting }) {
   return (
     <div className="modal-backdrop" role="presentation" onClick={onDismiss}>
       <div
@@ -129,7 +123,7 @@ function GameOverModal({ status, message, onRestart, onDismiss, restarting }) {
         aria-labelledby="game-over-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="game-over-title">{title}</h2>
+        <h2 id="game-over-title">Game over</h2>
         <p>{message}</p>
         <div className="modal-actions">
           <button className="btn" onClick={onDismiss}>
@@ -156,11 +150,15 @@ export default function Play({ play, viewing, onView }) {
 
   const [dismissed, setDismissed] = useState(false);
   const [nextLabel, setNextLabel] = useState(TIME_CONTROLS[0].label);
+  const [nextDifficulty, setNextDifficulty] = useState('strong');
   const lastStatus = useRef(state?.status);
   useEffect(() => {
     if (state?.status !== lastStatus.current) setDismissed(false);
     lastStatus.current = state?.status;
   }, [state?.status]);
+  useEffect(() => {
+    if (state?.difficulty) setNextDifficulty(state.difficulty);
+  }, [state?.difficulty]);
 
   if (!state) return error ? <p className="error">{error}</p> : <PlaySkeleton />;
 
@@ -168,7 +166,7 @@ export default function Play({ play, viewing, onView }) {
   const shown = live ? null : frames.positions[viewing];
   const tc = state.timeControl;
   const over = state.status !== 'Ongoing';
-  const inCheck = live && !over && isInCheck(state.fen);
+  const inCheck = live && !over && state.inCheck;
 
   const status = over
     ? state.message
@@ -182,7 +180,6 @@ export default function Play({ play, viewing, onView }) {
     <div className="play">
       {over && !dismissed && (
         <GameOverModal
-          status={state.status}
           message={state.message}
           onRestart={(ms, inc) => {
             setDismissed(true);
@@ -203,7 +200,7 @@ export default function Play({ play, viewing, onView }) {
           {tc && (
             <div className="clocks" aria-label="Clocks">
               <span className={state.turn === 'Black' && !over ? 'on' : ''}>
-                <span className="clock-side">Engine</span> {clock(tc.blackTimeMs)}
+                <span className="clock-side">Engine · {AI_DIFFICULTIES.find((level) => level.value === state.difficulty)?.label ?? 'Strong'}</span> {clock(tc.blackTimeMs)}
               </span>
               <span className={state.turn === 'White' && !over ? 'on' : ''}>
                 <span className="clock-side">You</span> {clock(tc.whiteTimeMs)}
@@ -214,10 +211,12 @@ export default function Play({ play, viewing, onView }) {
             options={TIME_OPTIONS}
             value={nextLabel}
             onChange={setNextLabel}
+            difficulty={nextDifficulty}
+            onDifficultyChange={setNextDifficulty}
             busy={restarting}
             onNewGame={() => {
               const t = TIME_CONTROLS.find((tc) => tc.label === nextLabel) ?? TIME_CONTROLS[0];
-              restart(t.ms, t.inc);
+              restart(t.ms, t.inc, nextDifficulty);
             }}
           />
         </div>

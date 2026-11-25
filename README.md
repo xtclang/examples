@@ -274,9 +274,9 @@ layer directly. It opens a `jsondb` connection to the `welcomeDB` schema, looks
 up a guest entry in the `counters` map, increments it, and prints the visit count:
 
 ```
-$ ./gradlew runXtc -PmoduleName=welcomeTest
+$ ./gradlew :welcome:runXtc
 Welcome! You are guest #test-guest, visit #1
-$ ./gradlew runXtc -PmoduleName=welcomeTest
+$ ./gradlew :welcome:runXtc
 Welcome! You are guest #test-guest, visit #2
 ```
 
